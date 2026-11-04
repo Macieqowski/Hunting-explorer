@@ -6,7 +6,7 @@
  *   node scripts/import-questions.mjs <input.csv> <public/exams/mysliwy.json> [--replace]
  *
  * Expected columns (header row required, names case-insensitive; separator ; , or TAB):
- *   temat | pytanie | a | b | c | d [| e ...] | poprawna | wyjasnienie | zrodlo
+ *   temat | sekcja | pytanie | a | b | c | d [| e ...] | poprawna | wyjasnienie | zrodlo
  * Optional image columns: obraz (question image) and obraz_a, obraz_b, ... (answer images).
  * Image values are paths relative to public/exams/ (e.g. img/mysliwy/123.png) or URLs.
  * "poprawna" is a letter (A–F) or a 1-based number; several correct answers: "A,C".
@@ -55,6 +55,7 @@ const iQ = col('pytanie', 'question', 'treść', 'tresc');
 const iCorrect = col('poprawna', 'correct', 'odpowiedź poprawna', 'prawidłowa', 'prawidlowa');
 const iExpl = col('wyjasnienie', 'wyjaśnienie', 'explanation', 'komentarz');
 const iSrc = col('zrodlo', 'źródło', 'source');
+const iSection = col('sekcja', 'section', 'pula', 'pool');
 const iImg = col('obraz', 'image', 'img', 'zdjęcie', 'zdjecie');
 const answerImgCol = (letter) => col(`obraz_${letter}`, `image_${letter}`, `img_${letter}`);
 const answerCols = header.map((h, i) => (/^(odp\.?\s*|odpowiedź\s*|odpowiedz\s*)?[a-f]$/.test(h) ? i : -1)).filter((i) => i >= 0);
@@ -88,6 +89,7 @@ rows.forEach((r, n) => {
   questions.push({
     id,
     topic: (iTopic >= 0 && r[iTopic]?.trim()) || 'Ogólne',
+    ...(iSection >= 0 && r[iSection]?.trim() ? { section: r[iSection].trim() } : {}),
     q,
     ...(qImage ? { image: qImage } : {}),
     answers,

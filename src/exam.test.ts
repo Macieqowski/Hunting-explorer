@@ -1,4 +1,4 @@
-import { drawExam, seededRng, shuffleAnswers, scoreExam, isCorrect, validateBank, type Question, type Bank } from './exam';
+import { drawExam, drawSectionedExam, seededRng, shuffleAnswers, scoreExam, isCorrect, validateBank, type Question, type Bank } from './exam';
 import { seasonQuestions } from './seasonQuestions';
 import mysliwy from '../public/exams/mysliwy.json';
 import selekcjoner from '../public/exams/selekcjoner.json';
@@ -69,5 +69,51 @@ describe('question banks', () => {
 
   it('bundled bank files are valid', () => {
     for (const b of [mysliwy, selekcjoner]) expect(validateBank(b as unknown as Bank)).toEqual([]);
+  });
+});
+
+describe('sectioned exams (PZŁ hunter format)', () => {
+  const sq = (id: string, section: string): Question => ({ id, topic: section, section, q: id, answers: ['A', 'B', 'C'], correct: 0 });
+  const hunter: Bank = {
+    id: 'h', title: { pl: '', en: '' }, count: 100, passPct: 80, minutes: 60,
+    sections: [
+      { id: 'bezpieczenstwo', name: { pl: 'Bezpieczeństwo', en: 'Safety' }, count: 30, minPct: 80 },
+      { id: 'ogolne', name: { pl: 'Ogólne', en: 'General' }, count: 70 },
+    ],
+    questions: [...Array.from({ length: 60 }, (_, i) => sq(`s${i}`, 'bezpieczenstwo')), ...Array.from({ length: 150 }, (_, i) => sq(`g${i}`, 'ogolne'))],
+  };
+
+  it('draws 30 safety + 70 general for a full test, safety block first', () => {
+    const d = drawSectionedExam(hunter, 100, seededRng(1));
+    expect(d).toHaveLength(100);
+    expect(d.slice(0, 30).every((x) => x.question.section === 'bezpieczenstwo')).toBe(true);
+    expect(d.slice(30).every((x) => x.question.section === 'ogolne')).toBe(true);
+  });
+
+  it('scales the section quotas for a shorter test', () => {
+    const d = drawSectionedExam(hunter, 20, seededRng(2));
+    expect(d.filter((x) => x.question.section === 'bezpieczenstwo')).toHaveLength(6);
+    expect(d.filter((x) => x.question.section === 'ogolne')).toHaveLength(14);
+  });
+
+  it('fails when safety is below 80% even if the overall score passes', () => {
+    const d = drawSectionedExam(hunter, 100, seededRng(3));
+    // 23/30 safety (76.7%) + 70/70 general = 93% overall
+    const answers = d.map((x, i) => (i < 7 ? [(x.correct[0] + 1) % 3] : x.correct));
+    const r = scoreExam(d, answers, 80, hunter.sections);
+    expect(r.pct).toBeGreaterThanOrEqual(80);
+    expect(r.bySection.find((x) => x.id === 'bezpieczenstwo')!.passed).toBe(false);
+    expect(r.passed).toBe(false);
+    // 24/30 safety (80%) passes
+    const ok = d.map((x, i) => (i < 6 ? [(x.correct[0] + 1) % 3] : x.correct));
+    expect(scoreExam(d, ok, 80, hunter.sections).passed).toBe(true);
+  });
+
+  it('fails when overall is below 80% even if safety passes', () => {
+    const d = drawSectionedExam(hunter, 100, seededRng(4));
+    const answers = d.map((x, i) => (i >= 30 && i < 55 ? [(x.correct[0] + 1) % 3] : x.correct));
+    const r = scoreExam(d, answers, 80, hunter.sections);
+    expect(r.bySection.every((x) => x.passed)).toBe(true);
+    expect(r.passed).toBe(false);
   });
 });

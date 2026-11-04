@@ -44,13 +44,13 @@ Stack: Vite + TypeScript + Leaflet, no framework. Code layout:
 
 ## Exam question banks
 
-Banks live in `public/exams/mysliwy.json` and `public/exams/selekcjoner.json` (count, pass mark, time limit and questions). Import questions from a CSV/TSV file with:
+Banks live in `public/exams/mysliwy.json` and `public/exams/selekcjoner.json` (count, pass mark, time limit, optional sections and questions). The hunter exam follows the PZŁ format: 100 questions, 30 from the `bezpieczenstwo` (safety) section and 70 from `ogolne` (general); passing needs 80% overall **and** 80% in the safety section. Each question's `section` field puts it in a section; shorter practice tests keep the same 30/70 ratio. Import questions from a CSV/TSV file with:
 
 ```bash
 node scripts/import-questions.mjs questions.csv public/exams/mysliwy.json [--replace]
 ```
 
-Columns: `temat; pytanie; a; b; c; d; poprawna; wyjasnienie; zrodlo` (`poprawna` is a letter or 1-based number; several correct answers as `A,C`). Images: optional `obraz` (question) and `obraz_a`, `obraz_b`, … (answers) columns hold paths relative to `public/exams/` (e.g. `img/mysliwy/123.png`) or URLs. In JSON, a question has an optional `image`, and an answer is either a string or `{ "text"?, "image"? }`. Questions from the PZŁ “Sprawdź wiedzę” quiz are used with PZŁ's permission.
+Columns: `temat; sekcja; pytanie; a; b; c; d; poprawna; wyjasnienie; zrodlo` (`poprawna` is a letter or 1-based number; several correct answers as `A,C`). Images: optional `obraz` (question) and `obraz_a`, `obraz_b`, … (answers) columns hold paths relative to `public/exams/` (e.g. `img/mysliwy/123.png`) or URLs. In JSON, a question has an optional `image`, and an answer is either a string or `{ "text"?, "image"? }`. Questions from the PZŁ “Sprawdź wiedzę” quiz are used with PZŁ's permission.
 
 ## Deployment
 

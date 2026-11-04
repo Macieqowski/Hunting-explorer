@@ -3,6 +3,8 @@ import { shuffle } from './exam';
 import { SEASONS, effective, formatRanges } from './seasons';
 
 export const SEASON_TOPIC = 'Okresy polowań';
+/** Season questions belong to the general (non-safety) part of the hunter exam. */
+export const SEASON_SECTION = 'ogolne';
 const SOURCE = 'https://api.sejm.gov.pl/eli/acts/DU/2023/99/text.html';
 
 /**
@@ -28,6 +30,7 @@ export function seasonQuestions(rng: Rng = Math.random): Question[] {
     out.push({
       id: `season-${s.name.pl}`,
       topic: SEASON_TOPIC,
+      section: SEASON_SECTION,
       q: `Okres polowań: ${s.name.pl}${hasRegional ? ' (zasada ogólna, bez wyjątków regionalnych)' : ''}`,
       answers,
       correct: 0,
@@ -46,6 +49,7 @@ export function seasonQuestions(rng: Rng = Math.random): Question[] {
     out.push({
       id: `season-allyear-${name}`,
       topic: SEASON_TOPIC,
+      section: SEASON_SECTION,
       q: 'Na który z wymienionych gatunków można polować przez cały rok?',
       answers: [name, ...shuffle(notAllYear, rng).slice(0, 3)],
       correct: 0,
@@ -56,6 +60,7 @@ export function seasonQuestions(rng: Rng = Math.random): Question[] {
   out.push({
     id: 'season-elk',
     topic: SEASON_TOPIC,
+      section: SEASON_SECTION,
     q: 'Który gatunek zwierzyny łownej jest objęty całoroczną ochroną (moratorium)?',
     answers: ['Łoś', 'Daniel', 'Muflon', 'Jeleń szlachetny'],
     correct: 0,
