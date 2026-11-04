@@ -39,6 +39,8 @@ Firebase's menu was reorganised in 2025. If a menu name below does not match, us
 - Each browser signs in anonymously and gets a random ID, so people can only change their own sign-up. Clearing the browser's site data loses that ID: the person has to sign up again, and a leader loses control of their hunt.
 - Creating a hunt or signing up needs the club passphrase. Anyone with a hunt's link can see its name, time and meeting point; only participants see who else is coming.
 - Only the leader can confirm people, change their role, remove them, close sign-up, start or end the hunt, and delete it.
+- Live positions (`positions/`) and tracks (`tracks/`) can be written only by confirmed participants, only for themselves, and only while the hunt status is "live". Only confirmed participants can read them.
+- Positions and tracks are kept for 7 days after the leader ends the hunt. There is no server code on the free plan, so the leader's browser deletes them the next time the leader opens the hunt or the hunt list after those 7 days. Deleting the hunt deletes them at once.
 
 ## Local development with emulators
 

@@ -18,7 +18,25 @@ export interface MapApi {
   rebuildLayerControl(): void;
 }
 
-const POLAND_BOUNDS = L.latLngBounds([49.0, 14.1], [54.9, 24.15]);
+export const POLAND_BOUNDS = L.latLngBounds([49.0, 14.1], [54.9, 24.15]);
+
+/** Fresh instances of the base maps (a tile layer can belong to one map only). */
+export function baseLayers() {
+  return {
+    osm: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }),
+    topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+      maxZoom: 17,
+      attribution: '&copy; OpenStreetMap, SRTM | &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)',
+    }),
+    sat: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics',
+    }),
+  };
+}
 
 export function createMap(el: HTMLElement, onClick: (lat: number, lng: number) => void): MapApi {
   const map = L.map(el, { zoomControl: false, minZoom: 5, maxBounds: POLAND_BOUNDS.pad(0.6) });
@@ -26,18 +44,7 @@ export function createMap(el: HTMLElement, onClick: (lat: number, lng: number) =
   L.control.zoom({ position: 'topright' }).addTo(map);
   L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);
 
-  const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-  });
-  const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-    maxZoom: 17,
-    attribution: '&copy; OpenStreetMap, SRTM | &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)',
-  });
-  const sat = L.tileLayer(
-    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    { maxZoom: 19, attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics' },
-  );
+  const { osm, topo, sat } = baseLayers();
   osm.addTo(map);
 
   const bdlAttr = '&copy; <a href="https://www.bdl.lasy.gov.pl/portal/obwody-lowieckie">Bank Danych o Lasach</a>';

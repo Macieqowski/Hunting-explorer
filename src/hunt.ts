@@ -8,14 +8,22 @@ export type ParticipantStatus = 'registered' | 'confirmed';
 export const ROLES: Role[] = ['leader', 'hunter', 'beater'];
 export const HUNT_STATUSES: HuntStatus[] = ['open', 'closed', 'live', 'ended'];
 
+/** The hunting district (obwód) a hunt takes place in, as picked from the BDL list. */
+export interface HuntDistrict {
+  id: number; // BDL objectid
+  slug: string; // app route slug, see districtSlug()
+  label: string; // e.g. "Obwód nr 123 · KŁ Darz Bór (mazowieckie)"
+}
+
 /** Fields the leader fills in. Dates and times are local wall-clock strings. */
 export interface HuntInput {
   name: string;
   date: string; // YYYY-MM-DD
   start: string; // HH:MM
   end: string; // HH:MM
-  place: string; // meeting point (zbiórka), free text for now
+  place: string; // meeting point (zbiórka), free text
   notes: string;
+  district: HuntDistrict | null;
 }
 
 export interface Hunt extends HuntInput {
@@ -24,6 +32,24 @@ export interface Hunt extends HuntInput {
   leaderName: string;
   status: HuntStatus;
   createdAt: number;
+  /** Set when the leader ends the hunt; positions and tracks are deleted RETENTION_MS later. */
+  endedAt: number | null;
+}
+
+/** Last known position of one participant. */
+export interface Position {
+  uid: string;
+  lat: number;
+  lng: number;
+  acc: number | null; // metres
+  ts: number; // server time, ms
+  role: Role;
+}
+
+export interface TrackPoint {
+  lat: number;
+  lng: number;
+  ts: number;
 }
 
 export interface Participant {
@@ -34,7 +60,7 @@ export interface Participant {
   joinedAt: number;
 }
 
-export const LIMITS = { name: 40, huntName: 80, place: 200, notes: 1000 } as const;
+export const LIMITS = { name: 40, huntName: 80, place: 200, notes: 1000, districtLabel: 200 } as const;
 
 /** Trim and collapse whitespace; the result is what gets stored. */
 export const cleanText = (s: string, max: number) => s.replace(/\s+/g, ' ').trim().slice(0, max);
@@ -131,8 +157,90 @@ export function parseHunt(id: string, v: unknown): Hunt | null {
     leaderName: str('leaderName'),
     status,
     createdAt: typeof o.createdAt === 'number' ? o.createdAt : 0,
+    endedAt: typeof o.endedAt === 'number' ? o.endedAt : null,
+    district: parseDistrict(o.district),
   };
 }
+
+function parseDistrict(v: unknown): HuntDistrict | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  return typeof o.id === 'number' && typeof o.slug === 'string' && typeof o.label === 'string' ? { id: o.id, slug: o.slug, label: o.label } : null;
+}
+
+const isNum = (v: unknown): v is number => typeof v === 'number' && isFinite(v);
+
+export function parsePositions(v: unknown): Position[] {
+  if (!v || typeof v !== 'object') return [];
+  const out: Position[] = [];
+  for (const [uid, raw] of Object.entries(v as Record<string, unknown>)) {
+    if (!raw || typeof raw !== 'object') continue;
+    const o = raw as Record<string, unknown>;
+    if (!isNum(o.lat) || !isNum(o.lng) || !isNum(o.ts) || !ROLES.includes(o.role as Role)) continue;
+    out.push({ uid, lat: o.lat, lng: o.lng, acc: isNum(o.acc) ? o.acc : null, ts: o.ts, role: o.role as Role });
+  }
+  return out;
+}
+
+/** Tracks per participant, each sorted by time. */
+export function parseTracks(v: unknown): Map<string, TrackPoint[]> {
+  const out = new Map<string, TrackPoint[]>();
+  if (!v || typeof v !== 'object') return out;
+  for (const [uid, pts] of Object.entries(v as Record<string, unknown>)) {
+    if (!pts || typeof pts !== 'object') continue;
+    const list: TrackPoint[] = [];
+    for (const p of Object.values(pts as Record<string, unknown>)) {
+      const o = p as Record<string, unknown> | null;
+      if (o && isNum(o.lat) && isNum(o.lng) && isNum(o.ts)) list.push({ lat: o.lat, lng: o.lng, ts: o.ts });
+    }
+    if (list.length) out.set(uid, list.sort((a, b) => a.ts - b.ts));
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------- location sharing
+
+/** Positions older than this look faded on the map; older than LOST_MS they are drawn hollow. */
+export const STALE_MS = 2 * 60e3;
+export const LOST_MS = 10 * 60e3;
+/** A new position is sent after moving this far, or after HEARTBEAT_MS without moving. */
+export const MIN_MOVE_M = 20;
+export const HEARTBEAT_MS = 30e3;
+/** Positions and tracks are deleted this long after the hunt ends. */
+export const RETENTION_MS = 7 * 24 * 3600e3;
+
+export type Freshness = 'fresh' | 'stale' | 'lost';
+export const freshness = (ts: number, now: number): Freshness => (now - ts < STALE_MS ? 'fresh' : now - ts < LOST_MS ? 'stale' : 'lost');
+
+/** Great-circle distance in metres. */
+export function distanceM(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const R = 6371e3;
+  const rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad;
+  const dLng = (b.lng - a.lng) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/**
+ * Whether a new GPS fix should be sent: always the first one, after MIN_MOVE_M of movement
+ * (also adds a track point), or after HEARTBEAT_MS so others see the position is still current.
+ * Fixes much less accurate than the movement threshold don't count as movement.
+ */
+export function sendDecision(
+  last: { lat: number; lng: number; at: number } | null,
+  fix: { lat: number; lng: number; acc: number | null },
+  now: number,
+): { send: boolean; track: boolean } {
+  if (!last) return { send: true, track: true };
+  const moved = distanceM(last, fix) >= Math.max(MIN_MOVE_M, Math.min(fix.acc ?? 0, 100));
+  if (moved) return { send: true, track: true };
+  return { send: now - last.at >= HEARTBEAT_MS, track: false };
+}
+
+/** True when the leader's app should delete the hunt's positions and tracks. */
+export const shouldPurge = (h: Pick<Hunt, 'status' | 'endedAt'>, now: number) =>
+  h.status === 'ended' && h.endedAt != null && now - h.endedAt >= RETENTION_MS;
 
 export function parseParticipants(v: unknown): Participant[] {
   if (!v || typeof v !== 'object') return [];
@@ -150,4 +258,60 @@ export function parseParticipants(v: unknown): Participant[] {
     });
   }
   return sortParticipants(out);
+}
+
+// ---------------------------------------------------------------- export
+
+const xml = (s: string) => s.replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[c]!);
+const iso = (ms: number) => new Date(ms).toISOString();
+
+/**
+ * GPX 1.1 file with one track per participant and a waypoint at each last known position.
+ * Opens in Google Earth, Locus, mapy.cz, OsmAnd, Garmin BaseCamp and most GPS apps.
+ */
+export function toGpx(
+  huntName: string,
+  tracks: Map<string, TrackPoint[]>,
+  positions: Position[],
+  people: Map<string, { name: string; role: Role }>,
+  roleName: (r: Role) => string,
+): string {
+  const label = (uid: string) => {
+    const p = people.get(uid);
+    return p ? `${p.name} (${roleName(p.role)})` : uid;
+  };
+  const wpts = positions
+    .filter((p) => people.has(p.uid))
+    .map((p) => `  <wpt lat="${p.lat}" lon="${p.lng}"><time>${iso(p.ts)}</time><name>${xml(label(p.uid))}</name><type>${people.get(p.uid)!.role}</type></wpt>`);
+  const trks = [...tracks]
+    .filter(([uid]) => people.has(uid))
+    .map(
+      ([uid, pts]) =>
+        `  <trk><name>${xml(label(uid))}</name><type>${people.get(uid)!.role}</type><trkseg>\n` +
+        pts.map((p) => `    <trkpt lat="${p.lat}" lon="${p.lng}"><time>${iso(p.ts)}</time></trkpt>`).join('\n') +
+        `\n  </trkseg></trk>`,
+    );
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<gpx version="1.1" creator="Hunting Explorer" xmlns="http://www.topografix.com/GPX/1/1">',
+    `  <metadata><name>${xml(huntName)}</name></metadata>`,
+    ...wpts,
+    ...trks,
+    '</gpx>',
+    '',
+  ].join('\n');
+}
+
+/** File name like "2026-12-12-polowanie-na-dziki.gpx". */
+export function gpxFileName(h: Pick<Hunt, 'date' | 'name'>): string {
+  const slug = h.name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ł/g, 'l')
+    .replace(/Ł/g, 'L')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 50);
+  return `${h.date}-${slug || 'polowanie'}.gpx`;
 }

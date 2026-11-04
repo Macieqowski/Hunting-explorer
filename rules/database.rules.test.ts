@@ -169,3 +169,76 @@ describe('userHunts', () => {
     await assertFails(set(ref(db('a'), 'userHunts/lead/h2'), true));
   });
 });
+
+describe('hunt district and end time', () => {
+  beforeEach(() => createHunt('lead'));
+  it('accepts a district and rejects extra fields in it', async () => {
+    await assertSucceeds(update(ref(db('lead'), 'hunts/h1'), { district: { id: 123, slug: '14-123', label: 'Obwód nr 123' } }));
+    await assertFails(update(ref(db('lead'), 'hunts/h1'), { district: { id: 123, slug: '14-123', label: 'x', extra: 1 } }));
+    await assertFails(update(ref(db('lead'), 'hunts/h1'), { district: { id: 'x', slug: '14-123', label: 'x' } }));
+  });
+  it('records endedAt only together with ending the hunt', async () => {
+    await assertFails(update(ref(db('lead'), 'hunts/h1'), { endedAt: serverTimestamp() }));
+    await assertSucceeds(update(ref(db('lead'), 'hunts/h1'), { status: 'ended', endedAt: serverTimestamp() }));
+    await assertSucceeds(update(ref(db('lead'), 'hunts/h1'), { status: 'live', endedAt: null }));
+  });
+});
+
+describe('positions and tracks', () => {
+  const pos = (role = 'hunter') => ({ lat: 52.1, lng: 21.2, acc: 8, ts: serverTimestamp(), role });
+  const share = (uid: string, role = 'hunter', p = 'p1') =>
+    update(ref(db(uid)), { [`positions/h1/${uid}`]: pos(role), [`tracks/h1/${uid}/${p}`]: { lat: 52.1, lng: 21.2, ts: serverTimestamp() } });
+
+  beforeEach(async () => {
+    await createHunt('lead');
+    await join('a');
+    await join('b', 'beater');
+    await join('c');
+    await update(ref(db('lead'), 'participants/h1/a'), { status: 'confirmed' });
+    await update(ref(db('lead'), 'participants/h1/b'), { status: 'confirmed' });
+  });
+
+  it('can only be shared while the hunt is live', async () => {
+    await assertFails(share('a'));
+    await update(ref(db('lead'), 'hunts/h1'), { status: 'live' });
+    await assertSucceeds(share('a'));
+    await update(ref(db('lead'), 'hunts/h1'), { status: 'ended', endedAt: serverTimestamp() });
+    await assertFails(share('a', 'hunter', 'p2'));
+  });
+  it('need a confirmed participant, their own slot and their real role', async () => {
+    await update(ref(db('lead'), 'hunts/h1'), { status: 'live' });
+    await assertFails(share('c')); // not confirmed
+    await assertFails(set(ref(db('a'), 'positions/h1/b'), pos('beater')));
+    await assertFails(set(ref(db('a'), 'positions/h1/a'), pos('leader')));
+    await assertFails(set(ref(db('a'), 'positions/h1/a'), { ...pos(), lat: 123 }));
+    await assertSucceeds(share('b', 'beater'));
+    await assertSucceeds(share('lead', 'leader'));
+  });
+  it('track points cannot be rewritten', async () => {
+    await update(ref(db('lead'), 'hunts/h1'), { status: 'live' });
+    await share('a');
+    await assertFails(set(ref(db('a'), 'tracks/h1/a/p1'), { lat: 50, lng: 20, ts: serverTimestamp() }));
+  });
+  it('are visible to confirmed participants only', async () => {
+    await update(ref(db('lead'), 'hunts/h1'), { status: 'live' });
+    await share('a');
+    await assertSucceeds(get(ref(db('b'), 'positions/h1')));
+    await assertSucceeds(get(ref(db('lead'), 'tracks/h1')));
+    await assertFails(get(ref(db('c'), 'positions/h1')));
+    await assertFails(get(ref(db('stranger'), 'tracks/h1')));
+  });
+  it('can be stopped by the owner and cleared by the leader', async () => {
+    await update(ref(db('lead'), 'hunts/h1'), { status: 'live' });
+    await share('a');
+    await share('b', 'beater');
+    await assertSucceeds(set(ref(db('a'), 'positions/h1/a'), null));
+    await assertFails(set(ref(db('a'), 'positions/h1/b'), null));
+    await assertFails(set(ref(db('a'), 'tracks/h1'), null));
+    await assertSucceeds(update(ref(db('lead')), { 'positions/h1': null, 'tracks/h1': null }));
+  });
+  it('are deleted together with the hunt', async () => {
+    await update(ref(db('lead'), 'hunts/h1'), { status: 'live' });
+    await share('a');
+    await assertSucceeds(update(ref(db('lead')), { 'hunts/h1': null, 'participants/h1': null, 'positions/h1': null, 'tracks/h1': null }));
+  });
+});

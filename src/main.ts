@@ -17,7 +17,7 @@ import { t, tt, getLang, setLang, fmtHa, fmtKm2, fmtNum, type Key } from './i18n
 import { SEASONS, isOpen, effective, formatRanges, yearFrac, openOnlyIn, type Season } from './seasons';
 import { renderExams, handleExamClick, handleExamChange } from './examUi';
 import { renderWeather, handleWeatherClick, handleWeatherInput, handleWeatherSubmit, showWeatherAt } from './weatherUi';
-import { renderHunts, handleHuntClick, handleHuntInput, handleHuntSubmit, leaveHunts } from './huntUi';
+import { renderHunts, handleHuntClick, handleHuntInput, handleHuntSubmit, leaveHunts, mountHuntMap } from './huntUi';
 
 // ---------------------------------------------------------------- helpers
 
@@ -264,7 +264,12 @@ function renderHuntSection(id: string | null) {
   const active = document.activeElement as HTMLInputElement | null;
   const focusName = active && content.contains(active) && active.name ? active.name : null;
   const caret = focusName ? [active!.selectionStart, active!.selectionEnd] : null;
-  content.innerHTML = renderHunts(id, render, goTo);
+  content.innerHTML = renderHunts(id, {
+    onChange: render,
+    go: goTo,
+    districts: () => ({ list: state.loaded ? state.districts : null, error: state.error }),
+  });
+  mountHuntMap();
   if (focusName) {
     const again = content.querySelector<HTMLInputElement>(`[name="${focusName}"]`);
     if (again && again !== document.activeElement) {
