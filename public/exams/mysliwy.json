@@ -3195,6 +3195,18 @@
    "correct": 2
   },
   {
+   "id": "pzl-mysliwy-1901",
+   "topic": "Wiedza ogólna",
+   "q": "Zatarcie ukarania przez sąd łowiecki następuje po upływie:",
+   "answers": [
+    "2 lat od dnia popełnienia przewinienia łowieckiego",
+    "3 lat od dnia popełnienia przewinienia łowieckiego",
+    "5 lat od dnia uprawomocnienia się orzeczenia dyscyplinarnego",
+    "1 roku od dnia wydania orzeczenia dyscyplinarnego"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-1902",
    "topic": "Wiedza ogólna",
    "q": "Organami postępowania dyscyplinarnego Polskiego Związku Łowieckiego na szczeblu krajowym są:",
@@ -4035,6 +4047,18 @@
    "correct": 3
   },
   {
+   "id": "pzl-mysliwy-1976",
+   "topic": "Wiedza ogólna",
+   "q": "Instytucja tzw. \"urlopowania członka\", czyli czasowego zawieszenia, na wniosek zainteresowanego, w prawach i obowiązkach członka Polskiego Związku Łowieckiego polega na:",
+   "answers": [
+    "zawieszeniu praw i obowiązków członkowskich na okres do jednego roku",
+    "zawieszeniu praw i obowiązków członkowskich na okres do dwóch lat",
+    "zawieszeniu praw i obowiązków członkowskich na okres do trzech lat",
+    "zawieszeniu praw członkowskich przy zachowaniu obowiązków na okres do 6 miesięcy"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-1977",
    "topic": "Wiedza ogólna",
    "q": "Przynależność do Polskiego Związku Łowieckiego potwierdza:",
@@ -4179,6 +4203,18 @@
    "correct": 2
   },
   {
+   "id": "pzl-mysliwy-1989",
+   "topic": "Wiedza ogólna",
+   "q": "Najwyższą władzę w kole stanowi:",
+   "answers": [
+    "zarząd koła",
+    "komisja rewizyjna",
+    "prezes koła, jako reprezentant koła na zewnątrz",
+    "walne zgromadzenie koła"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-mysliwy-1990",
    "topic": "Wiedza ogólna",
    "q": "Członek koła może brać udział w walnym zgromadzeniu:",
@@ -4199,6 +4235,18 @@
     "wyłącznie macierzyści członkowie koła",
     "wyłącznie członkowie koła będący myśliwymi co najmniej 5 lat",
     "członkowie koła, delegowani przedstawiciele organów PZŁ i goście zaproszeni przez zarząd koła"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-mysliwy-1992",
+   "topic": "Wiedza ogólna",
+   "q": "Określenie nazwy, siedziby i adresu koła, to kompetencja:",
+   "answers": [
+    "zarządu koła",
+    "zarządu okręgowego PZŁ",
+    "okręgowego zjazdu delegatów",
+    "walnego zgromadzenia koła"
    ],
    "correct": 3
   },

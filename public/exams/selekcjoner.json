@@ -1985,6 +1985,18 @@
    "correct": 0
   },
   {
+   "id": "pzl-selekcjoner-752",
+   "topic": "Selekcja",
+   "q": "Wskaż czynnik, który nie należy do przyczyn przyjmowania przez parostki rogaczy formy myłkusa:",
+   "answers": [
+    "silne zapasożycenie",
+    "uszkodzenia mechaniczne możdżeni lub czaszki oraz przemrożenie scypułu",
+    "choroby i zaburzenia przemiany materii",
+    "wysoki poziom hormonów u osobników w średnim wieku"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-selekcjoner-754",
    "topic": "Selekcja",
    "q": "Okres polowań na byki danieli przypada:",
