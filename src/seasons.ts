@@ -228,6 +228,14 @@ export function isOpen(season: Season, date: Date, voivodeship?: string | null):
   return e.allYear || e.ranges.some((rg) => inRange(date, rg));
 }
 
+/** Voivodeships whose regional exception opens a season that is closed by default on this date. */
+export function openOnlyIn(season: Season, date: Date): string[] {
+  if (isOpen(season, date)) return [];
+  return (season.variants ?? [])
+    .filter((v) => v.voivodeships && (v.allYear || v.ranges.some((rg) => inRange(date, rg))))
+    .flatMap((v) => v.voivodeships!);
+}
+
 const MONTHS_PL = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
 const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 

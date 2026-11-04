@@ -44,6 +44,13 @@ const dict = {
   copyLink: { pl: 'Kopiuj link', en: 'Copy link' },
   copied: { pl: 'Skopiowano', en: 'Copied' },
   openToday: { pl: 'Dziś można polować na', en: 'In season today' },
+  allSeasons: { pl: 'Wszystkie okresy polowań', en: 'All hunting seasons' },
+  inSeason: { pl: 'dziś', en: 'today' },
+  inSeasonSome: { pl: 'dziś w części województw', en: 'today in some regions' },
+  pickVoivHint: {
+    pl: 'Bez wybranego województwa pokazujemy okresy ogólnokrajowe. Gatunki oznaczone „w części województw” są dziś dostępne tylko tam, gdzie obowiązuje wyjątek regionalny.',
+    en: 'With no voivodeship picked, national seasons apply. Species marked “some regions” are open today only where a regional exception applies.',
+  },
   seasonsFor: { pl: 'dla woj.', en: 'for' },
   clickHint: { pl: 'Kliknij na mapie obwód, aby zobaczyć szczegóły.', en: 'Click a district on the map to see its details.' },
   locate: { pl: 'Gdzie jestem?', en: 'Where am I?' },

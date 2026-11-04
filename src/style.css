@@ -148,6 +148,13 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; text-transform: uppercase; le
 .seasons tr.open td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .seasons tr.open { background: var(--open-bg); }
 .seasons tr.closed .period { color: var(--warn); }
+.seasons tr.open td:first-child strong { color: var(--accent); }
+.seasons tr.partly td:first-child { box-shadow: inset 3px 0 0 color-mix(in srgb, var(--accent) 45%, transparent); }
+.in-season { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: var(--accent); color: var(--accent-text); vertical-align: 1px; }
+.in-season.partly { background: transparent; color: var(--accent); border: 1px dashed var(--accent); }
+.today-box { margin: 12px 0 16px; padding: 12px 14px; border-radius: 10px; background: var(--open-bg); border: 1px solid var(--accent-soft); }
+.today-box h3 { margin: 0 0 8px; }
+.today-box p { margin: 8px 0 0; }
 .timeline, .months { position: relative; height: 8px; background: var(--surface-2); border-radius: 4px; margin-top: 4px; overflow: hidden; }
 .timeline .seg { position: absolute; top: 0; bottom: 0; background: var(--bar); }
 .timeline .now { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--warn); }
