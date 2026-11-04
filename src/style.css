@@ -181,3 +181,23 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; text-transform: uppercase; le
   .content { padding: 10px 16px 24px; }
   .legend { display: none; }
 }
+
+/* District number labels drawn over the map */
+.dist-label { background: none; border: 0; pointer-events: none; }
+.dist-label > span { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); }
+.dist-label b,
+.dist-label small {
+  display: block;
+  text-align: center;
+  white-space: nowrap;
+  color: #431407;
+  text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 0 3px #fff, 0 0 4px #fff;
+}
+.dist-label b { font-size: 15px; font-weight: 800; line-height: 1; }
+.dist-label small { font-size: 11px; font-weight: 600; margin-top: 1px; }
+.zoom-hint {
+  position: absolute; left: 50%; top: 12px; transform: translateX(-50%); z-index: 500;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 999px;
+  padding: 6px 12px; font-size: 0.82rem; box-shadow: var(--shadow); white-space: nowrap; pointer-events: none;
+}
+@media (max-width: 760px) { .zoom-hint { top: auto; bottom: 12px; } }

@@ -81,6 +81,8 @@ const dict = {
   today: { pl: 'dziś', en: 'today' },
   layers: { pl: 'Warstwy', en: 'Layers' },
   lDistricts: { pl: 'Obwody łowieckie (BDL)', en: 'Hunting districts (BDL)' },
+  lOutlines: { pl: 'Granice i numery obwodów', en: 'District borders & numbers' },
+  zoomForBorders: { pl: 'Przybliż mapę, by zobaczyć granice i numery obwodów', en: 'Zoom in to see district borders and numbers' },
   lForest: { pl: 'Nadleśnictwa (BDL)', en: 'Forest districts (BDL)' },
   lBans: { pl: 'Zakazy wstępu do lasu', en: 'Forest entry bans' },
   lFire: { pl: 'Zagrożenie pożarowe', en: 'Fire danger' },
