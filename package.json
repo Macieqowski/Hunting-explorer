@@ -1,0 +1,33 @@
+{
+  "name": "hunting-explorer",
+  "version": "1.0.0",
+  "description": "Interactive map of Polish hunting districts (obwody łowieckie) and the hunting clubs (koła łowieckie) that lease them.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Macieqowski/Hunting-explorer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Macieqowski/Hunting-explorer/issues"
+  },
+  "homepage": "https://github.com/Macieqowski/Hunting-explorer#readme",
+  "dependencies": {
+    "leaflet": "^1.9.4"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.22",
+    "typescript": "5.6",
+    "vite": "^5.4.21",
+    "vitest": "^2.1.9"
+  },
+  "private": true,
+  "type": "module"
+}
