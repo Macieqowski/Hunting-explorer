@@ -349,6 +349,18 @@
    "correct": 3
   },
   {
+   "id": "pzl-mysliwy-1646",
+   "topic": "Bezpieczeństwo",
+   "q": "Dopuszczalna górna granica strzału do zająca wynosi:",
+   "answers": [
+    "35 m",
+    "40 m",
+    "50 m",
+    "60 m"
+   ],
+   "correct": 1
+  },
+  {
    "id": "pzl-mysliwy-1647",
    "topic": "Bezpieczeństwo",
    "q": "Dopuszczalna górna granica strzału do dzika poza miot na polowaniu zbiorowym, z broni o lufie gwintowanej wynosi:",
@@ -443,6 +455,18 @@
     "włączyć się do polowania po zakończeniu pędzenia, bez zgłaszania tego faktu prowadzącemu polowanie"
    ],
    "correct": 2
+  },
+  {
+   "id": "pzl-mysliwy-1655",
+   "topic": "Bezpieczeństwo",
+   "q": "Myśliwy może oddać rozładowaną broń do chwilowego potrzymania:",
+   "answers": [
+    "naganiaczowi",
+    "osobie towarzyszącej",
+    "stażyście",
+    "innemu myśliwemu"
+   ],
+   "correct": 3
   },
   {
    "id": "pzl-mysliwy-1656",
@@ -1839,6 +1863,18 @@
    "correct": 3
   },
   {
+   "id": "pzl-mysliwy-1775",
+   "topic": "Wiedza ogólna",
+   "q": "Nogi łosia w języku łowieckim nazywane są:",
+   "answers": [
+    "stawkami",
+    "cewkami",
+    "biegami",
+    "badylami"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-mysliwy-1776",
    "topic": "Wiedza ogólna",
    "q": "Wadera to samica:",
@@ -2103,6 +2139,18 @@
    "correct": 0
   },
   {
+   "id": "pzl-mysliwy-1803",
+   "topic": "Wiedza ogólna",
+   "q": "Loftkami nazywamy:",
+   "answers": [
+    "pociski do broni pneumatycznej",
+    "pociski do broni myśliwskiej o gładkim przewodzie lufy",
+    "odcinek drutu ołowianego o długości 5-8 mm",
+    "rodzaj śrutu o średnicy śrucin powyżej 4,5 mm"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-mysliwy-1804",
    "topic": "Wiedza ogólna",
    "q": "Czy wolno używać w Polsce broni gwintowanej bez muszki i szczerbinki, zaopatrzonej jedynie w celownik optyczny:",
@@ -2209,6 +2257,18 @@
     "wypukłość na kolbie, do której przykłada się policzek"
    ],
    "correct": 0
+  },
+  {
+   "id": "pzl-mysliwy-1813",
+   "topic": "Wiedza ogólna",
+   "q": "Awantaż jest to:",
+   "answers": [
+    "wypukłość na kolbie, do której przykłada się policzek",
+    "część broni łącząca lufę z baskilą",
+    "odległość między muszką i szczerbinką",
+    "odchylenie boczne kolby (w prawo lub w lewo) w stosunku do osi lufy"
+   ],
+   "correct": 3
   },
   {
    "id": "pzl-mysliwy-1814",
@@ -2715,6 +2775,18 @@
    "correct": 0
   },
   {
+   "id": "pzl-mysliwy-1859",
+   "topic": "Wiedza ogólna",
+   "q": "Istotnymi częściami amunicji myśliwskiej są:",
+   "answers": [
+    "pocisk, łuska, spłonka",
+    "spłonka, proch strzelniczy",
+    "pocisk, spłonka, proch strzelniczy, przybitka",
+    "pocisk, spłonka, łuska, proch strzelniczy"
+   ],
+   "correct": 1
+  },
+  {
    "id": "pzl-mysliwy-1860",
    "topic": "Wiedza ogólna",
    "q": "Co to jest broń samopowtarzalna (półautomatyczna):",
@@ -2797,6 +2869,18 @@
     "bażanty, kuropatwy, zające, lisy"
    ],
    "correct": 0
+  },
+  {
+   "id": "pzl-mysliwy-1870",
+   "topic": "Wiedza ogólna",
+   "q": "Oddanie strzału przy niedrożnej lufie może doprowadzić do:",
+   "answers": [
+    "strzału niecelnego, bez wpływu na bezpieczeństwo",
+    "rozdęcia lub rozerwania przewodu lufy",
+    "niewypału",
+    "strzału o bardzo małym zasięgu śrucin"
+   ],
+   "correct": 1
   },
   {
    "id": "pzl-mysliwy-1871",
@@ -2907,6 +2991,30 @@
    "correct": 2
   },
   {
+   "id": "pzl-mysliwy-1881",
+   "topic": "Wiedza ogólna",
+   "q": "Odstrzał redukcyjny bobrów możliwy jest za zgodą:",
+   "answers": [
+    "właściwego nadleśniczego",
+    "właściwego wojewody",
+    "właściwego dyrektora Regionalnej Dyrekcji Ochrony Środowiska",
+    "dyrektora Generalnej Dyrekcji Ochrony Środowiska"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-mysliwy-1882",
+   "topic": "Wiedza ogólna",
+   "q": "Czapla siwa to gatunek:",
+   "answers": [
+    "łowny",
+    "łowny, z całorocznym okresem ochronnym",
+    "objęty ochroną całkowitą",
+    "objęty ochroną gatunkową - częściową"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-mysliwy-1885",
    "topic": "Wiedza ogólna",
    "q": "Okres polowań na dziki przypada:",
@@ -2917,6 +3025,18 @@
     "cały rok"
    ],
    "correct": 3
+  },
+  {
+   "id": "pzl-mysliwy-1886",
+   "topic": "Wiedza ogólna",
+   "q": "Okres polowań na gołębie grzywacze trwa:",
+   "answers": [
+    "od 15 sierpnia do 30 listopada",
+    "od 15 sierpnia do 31 października",
+    "od 1 października do 31 grudnia",
+    "od 15 sierpnia do 21 grudnia"
+   ],
+   "correct": 0
   },
   {
    "id": "pzl-mysliwy-1890",
@@ -2955,6 +3075,18 @@
    "correct": 3
   },
   {
+   "id": "pzl-mysliwy-1893",
+   "topic": "Wiedza ogólna",
+   "q": "Kormoran to ptak:",
+   "answers": [
+    "łowny",
+    "łowny, z całorocznym okresem ochronnym",
+    "objęty ochroną gatunkową częściową",
+    "objęty ochroną gatunkową całkowitą"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-1894",
    "topic": "Wiedza ogólna",
    "q": "Odłowy kuropatw można prowadzić wyłącznie w okresie:",
@@ -2979,6 +3111,18 @@
    "correct": 1
   },
   {
+   "id": "pzl-mysliwy-1897",
+   "topic": "Wiedza ogólna",
+   "q": "Czy dopuszcza się poszukiwanie postrzałka z użyciem źródła sztucznego światła?",
+   "answers": [
+    "nie, w żadnych okolicznościach",
+    "tak, lecz tylko podczas poszukiwania dzików bez użycia psów",
+    "tak, ale jedynie nieprzytwierdzonego do broni",
+    "tak, w tym także przymocowanego do broni"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-mysliwy-1898",
    "topic": "Wiedza ogólna",
    "q": "Czy do polowania w nocy dopuszcza się używanie noktowizyjnych i termowizyjnych celowniczych urządzeń optycznych?",
@@ -2989,6 +3133,18 @@
     "tak, lecz tylko na dziki"
    ],
    "correct": 3
+  },
+  {
+   "id": "pzl-mysliwy-1899",
+   "topic": "Wiedza ogólna",
+   "q": "Myśliwy, który spóźnił się na polowanie zbiorowe może wziąć w nim udział:",
+   "answers": [
+    "od momentu przybycia na miejsce pędzenia, nawet w trakcie jego trwania, bez ograniczeń",
+    "od momentu przybycia na miejsce pędzenia, nawet w trakcie jego trwania, o ile zajmie ostatnie stanowisko",
+    "za zgodą prowadzącego polowanie, nie wcześniej niż po zakończeniu rozpoczętego pędzenia",
+    "nie może wziąć udziału w polowaniu"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-mysliwy-1900",
@@ -3015,6 +3171,18 @@
    "correct": 1
   },
   {
+   "id": "pzl-mysliwy-1903",
+   "topic": "Wiedza ogólna",
+   "q": "W skład obwodów łowieckich nie wchodzą:",
+   "answers": [
+    "parki krajobrazowe",
+    "obszary NATURA 2000",
+    "poligony wojskowe",
+    "tereny przeznaczone na cele przemysłowe w granicach ich ogrodzeń"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-mysliwy-1904",
    "topic": "Wiedza ogólna",
    "q": "W skład obwodów łowieckich nie wchodzą m.in.:",
@@ -3023,6 +3191,18 @@
     "prywatne lasy",
     "parki narodowe i rezerwaty przyrody",
     "ostoje zwierzyny"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-mysliwy-1905",
+   "topic": "Wiedza ogólna",
+   "q": "Podziału na obwody łowieckie oraz zmiany ich granic dokonuje:",
+   "answers": [
+    "wojewoda",
+    "starosta",
+    "sejmik województwa",
+    "zarząd okręgowy Polskiego Związku Łowieckiego"
    ],
    "correct": 2
   },
@@ -3075,6 +3255,30 @@
    "correct": 0
   },
   {
+   "id": "pzl-mysliwy-1911",
+   "topic": "Wiedza ogólna",
+   "q": "Straż łowiecką stanowią:",
+   "answers": [
+    "leśnicy i myśliwi wspólnie z państwową strażą łowiecką",
+    "policja i straż miejska",
+    "okręgowi rzecznicy dyscyplinarni",
+    "państwowa straż łowiecka i strażnicy łowieccy powoływani lub zatrudniani przez dzierżawców i zarządców obwodów łowieckich"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-mysliwy-1912",
+   "topic": "Wiedza ogólna",
+   "q": "Myśliwy podczas wykonywania polowania indywidualnego winien posiadać m. in.:",
+   "answers": [
+    "zaświadczenie o przebytych badaniach lekarskich",
+    "zaświadczenie o przystrzelaniu broni",
+    "pisemne upoważnienie do wykonywania polowania",
+    "mapę obwodu łowieckiego w skali 1:25000"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-1913",
    "topic": "Wiedza ogólna",
    "q": "Odstrzału samców zwierzyny płowej może dokonać:",
@@ -3087,6 +3291,18 @@
    "correct": 2
   },
   {
+   "id": "pzl-mysliwy-1914",
+   "topic": "Wiedza ogólna",
+   "q": "Najwyższym rangą aktem prawnym regulującym działalność Polskiego Związku Łowieckiego jest:",
+   "answers": [
+    "Statut Polskiego Związku Łowieckiego",
+    "Ustawa z dnia 13 października 1995 r. - Prawo łowieckie",
+    "Rozporządzenie Ministra Środowiska w sprawie szczegółowych warunków wykonywania polowania i znakowania tusz",
+    "Ustawa o stowarzyszeniach"
+   ],
+   "correct": 1
+  },
+  {
    "id": "pzl-mysliwy-1915",
    "topic": "Wiedza ogólna",
    "q": "Staż kandydacki do Polskiego Związku Łowieckiego trwa:",
@@ -3097,6 +3313,18 @@
     "żadna odpowiedź nie jest prawidłowa"
    ],
    "correct": 0
+  },
+  {
+   "id": "pzl-mysliwy-1916",
+   "topic": "Wiedza ogólna",
+   "q": "Po ustaniu członkostwa w PZŁ, wygaśnięcie uprawnień łowieckich następuje po upływie:",
+   "answers": [
+    "1 roku",
+    "3 lat",
+    "4 lat",
+    "5 lat"
+   ],
+   "correct": 3
   },
   {
    "id": "pzl-mysliwy-1917",
@@ -3131,6 +3359,18 @@
     "po uzyskaniu zgody zarządu koła na wzięcie tuszy na użytek własny",
     "niezwłocznie po zakończeniu polowania",
     "najpóźniej w ciągu 24 godzin po zakończeniu polowania"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-mysliwy-1920",
+   "topic": "Wiedza ogólna",
+   "q": "Decyzję o odłowie lub odstrzale redukcyjnym zwierzyny wydaje:",
+   "answers": [
+    "łowczy okręgowy",
+    "zarząd koła",
+    "nadleśniczy lub starosta",
+    "Minister Środowiska"
    ],
    "correct": 2
   },
@@ -3183,6 +3423,18 @@
    "correct": 2
   },
   {
+   "id": "pzl-mysliwy-1926",
+   "topic": "Wiedza ogólna",
+   "q": "Dozwolonym sposobem polowania jest:",
+   "answers": [
+    "używanie urządzeń odtwarzających nagrania głosów zwierząt w celu ich przywabienia i odstrzelenia",
+    "odstrzał dokonywany z pojazdów konnych i silnikowych",
+    "strzelanie do zajęcy pozostających w bezruchu",
+    "chwytanie zwierzyny przy użyciu ptaków łowczych"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-mysliwy-1927",
    "topic": "Wiedza ogólna",
    "q": "Listę gatunków zwierząt łownych oraz okresy polowań na nie ustala:",
@@ -3219,6 +3471,30 @@
    "correct": 0
   },
   {
+   "id": "pzl-mysliwy-1930",
+   "topic": "Wiedza ogólna",
+   "q": "Zwierzyna bezprawnie pozyskana stanowi własność:",
+   "answers": [
+    "dzierżawcy bądź zarządcy obwodu łowieckiego",
+    "nadleśnictwa",
+    "Skarbu Państwa",
+    "policji"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-mysliwy-1931",
+   "topic": "Wiedza ogólna",
+   "q": "Czy w Polsce poluje się na głuszce:",
+   "answers": [
+    "nie, bo choć głuszec jest gatunkiem łownym, to już w u nas nie występuje",
+    "tak, lecz tylko w niektórych rejonach kraju",
+    "tak, lecz tylko na koguty w okresie toków",
+    "nie, gdyż jest to gatunek objęty ochroną gatunkową ścisłą"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-mysliwy-1932",
    "topic": "Wiedza ogólna",
    "q": "Czy w obrębie zabudowań gospodarskich można polować na drapieżniki?",
@@ -3239,6 +3515,18 @@
     "łownym, z całorocznym okresem ochronnym",
     "objętym ochroną gatunkową częściową",
     "objętym ochroną gatunkową ścisłą"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-mysliwy-1934",
+   "topic": "Wiedza ogólna",
+   "q": "Czy polowanie indywidualne może odbywać się równocześnie z polowaniem zbiorowym w tym samym obwodzie łowieckim?",
+   "answers": [
+    "nie",
+    "tak, bez żadnych ograniczeń",
+    "tak, za ustną zgodą dzierżawcy lub zarządcy obwodu łowieckiego, w warunkach zapewniających bezpieczeństwo uczestnikom polowania i otoczenia",
+    "tak, lecz wyłącznie za pisemną zgodą dzierżawcy lub zarządcy obwodu łowieckiego, w warunkach zapewniających bezpieczeństwo uczestnikom polowania i otoczenia"
    ],
    "correct": 3
   },
@@ -3339,6 +3627,30 @@
    "correct": 0
   },
   {
+   "id": "pzl-mysliwy-1944",
+   "topic": "Wiedza ogólna",
+   "q": "O planowanym terminie, w tym godzinie rozpoczęcia i zakończenia oraz miejscu polowania zbiorowego, dzierżawca lub zarządca obwodu łowieckiego jest zobowiązany powiadomić:",
+   "answers": [
+    "wójta (burmistrza, prezydenta miasta) oraz nadleśniczego właściwych ze względu na miejsce polowania w terminie 14 dni przed planowanym terminem jego rozpoczęcia, w formie papierowej lub elektronicznej",
+    "wójta (burmistrza, prezydenta miasta) oraz nadleśniczego właściwych ze względu na miejsce polowania, w terminie 7 dni przed planowanym terminem jego rozpoczęcia, w formie papierowej lub elektronicznej",
+    "jedynie nadleśniczego właściwego ze względu na miejsce polowania, w terminie 7 dni przed planowanym terminem jego rozpoczęcia wyłącznie w formie papierowej",
+    "jedynie nadleśniczego właściwego ze względu na miejsce polowania w terminie 14 dni przed planowanym terminem jego rozpoczęcia w formie papierowej lub elektronicznej"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-mysliwy-1945",
+   "topic": "Wiedza ogólna",
+   "q": "Czy dozwolony jest odłów drapieżników przez dzierżawców lub zarządców obwodów łowieckich w pułapki żywołowne:",
+   "answers": [
+    "tak, bez żadnych ograniczeń",
+    "tak, ale tylko na warunkach wynikających z rozporządzenia ministra właściwego do spraw środowiska",
+    "nie",
+    "tak, ale tylko lisów w określonych okresach roku"
+   ],
+   "correct": 1
+  },
+  {
    "id": "pzl-mysliwy-1946",
    "topic": "Wiedza ogólna",
    "q": "W skład zespołu opiniodawczo-doradczego w zakresie przygotowania projektu uchwały w sprawie podziału województwa na obwody łowieckie wchodzą przedstawiciele Polskiego Związku Łowieckiego, tj.:",
@@ -3361,6 +3673,30 @@
     "tak, lecz tylko przez właściciela nieruchomości, na podstawie oświadczenia złożonego do właściwego nadleśniczego"
    ],
    "correct": 1
+  },
+  {
+   "id": "pzl-mysliwy-1948",
+   "topic": "Wiedza ogólna",
+   "q": "Członkom Zrzeszenia - osobom fizycznym, szczególnie zasłużonym dla łowiectwa, tytuł Członka Honorowego Polskiego Związku Łowieckiego może zostać nadany przez:",
+   "answers": [
+    "walne zgromadzenie koła",
+    "okręgową radę łowiecką",
+    "Naczelną Radę Łowiecką",
+    "Krajowy Zjazd Delegatów PZŁ"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-mysliwy-1949",
+   "topic": "Wiedza ogólna",
+   "q": "Polowaniem indywidualnym nie jest:",
+   "answers": [
+    "polowanie wykonywane jest przez jednego myśliwego działającego niezależnie od innych myśliwych znajdujących się w tym samym obwodzie łowieckim",
+    "polowanie na drapieżniki przy stogach wykonywane przez kilku myśliwych z psami",
+    "polowanie na dziki wykonywane w dzień przez jednego myśliwego i jednego naganiacza",
+    "polowanie na ptactwo wykonywane przez pięciu współpracujących ze sobą myśliwych"
+   ],
+   "correct": 3
   },
   {
    "id": "pzl-mysliwy-1951",
@@ -3411,6 +3747,54 @@
    "correct": 2
   },
   {
+   "id": "pzl-mysliwy-1955",
+   "topic": "Wiedza ogólna",
+   "q": "Minimalna energia pocisku w odległości 100 metrów od wylotu lufy, jaką musi się charakteryzować broń gwintowana do celów łowieckich to:",
+   "answers": [
+    "2000 J",
+    "2500 J",
+    "1500 J",
+    "400 J"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-mysliwy-1956",
+   "topic": "Wiedza ogólna",
+   "q": "Używanie myśliwskich naboi pełnopłaszczowych do polowania jest:",
+   "answers": [
+    "zabronione",
+    "dopuszczalne, ale tylko na zwierzynę drobną",
+    "dopuszczalne, ale tylko na drapieżniki",
+    "dopuszczalne, ale tylko na zwierzynę grubą"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-mysliwy-1957",
+   "topic": "Wiedza ogólna",
+   "q": "Polowanie na zwierzynę grubą może odbywać się przy użyciu:",
+   "answers": [
+    "tylko broni gwintowanej",
+    "tylko broni kombinowanej",
+    "tylko broni gładkolufowej",
+    "broni o lufach gwintowanych, a także broni o lufach gładkich z wyjątkiem polowania na łosie i jelenie byki"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-mysliwy-1958",
+   "topic": "Wiedza ogólna",
+   "q": "Myśliwy udający się na polowanie na zające winien posiadać broń:",
+   "answers": [
+    "gładkolufową oraz myśliwskie naboje kulowe",
+    "gwintowaną",
+    "gładkolufową oraz naboje śrutowe o średnicy 3,5 – 4,0 mm",
+    "gładkolufową oraz naboje śrutowe o średnicy 2,0 – 2,5 mm"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-1959",
    "topic": "Wiedza ogólna",
    "q": "Polowanie na lisy może odbywać się przy użyciu:",
@@ -3435,6 +3819,18 @@
    "correct": 0
   },
   {
+   "id": "pzl-mysliwy-1962",
+   "topic": "Wiedza ogólna",
+   "q": "Używanie sztucznego światła w czasie polowania jest:",
+   "answers": [
+    "zawsze zabronione",
+    "dozwolone przy poszukiwaniu zwierzyny do odstrzału",
+    "dozwolone przy rozpoznawaniu celu przed strzałem",
+    "dozwolone podczas poszukiwania postrzałka"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-mysliwy-1963",
    "topic": "Wiedza ogólna",
    "q": "Polowanie zbiorowe z psami lub naganką na zwierzynę inną niż ptactwo i drapieżniki może odbywać się:",
@@ -3457,6 +3853,18 @@
     "pięciu myśliwych"
    ],
    "correct": 1
+  },
+  {
+   "id": "pzl-mysliwy-1967",
+   "topic": "Wiedza ogólna",
+   "q": "W nocy można polować na:",
+   "answers": [
+    "jelenie, sarny, drapieżniki i gęsi",
+    "sarny, piżmaki, dziki i kaczki – na zlotach i przelotach",
+    "dziki, drapieżniki, piżmaki oraz kaczki i gęsi – na zlotach i przelotach",
+    "tylko ptactwo na zlotach i przelotach"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-mysliwy-1969",
@@ -3519,6 +3927,18 @@
    "correct": 0
   },
   {
+   "id": "pzl-mysliwy-1977",
+   "topic": "Wiedza ogólna",
+   "q": "Przynależność do Polskiego Związku Łowieckiego potwierdza:",
+   "answers": [
+    "aktualnie opłacona składka członkowska",
+    "posiadanie pozwolenia na broń wydanego w celach łowieckich",
+    "posiadanie ważnego upoważnienia do wykonywania polowania",
+    "legitymacja członkowska Polskiego Związku Łowieckiego"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-mysliwy-1978",
    "topic": "Wiedza ogólna",
    "q": "Koło łowieckie, jako podstawowe ogniwo organizacyjne w Polskim Związku Łowieckim:",
@@ -3567,6 +3987,18 @@
    "correct": 0
   },
   {
+   "id": "pzl-mysliwy-1984",
+   "topic": "Wiedza ogólna",
+   "q": "Zrzeszenie Polski Związek Łowiecki tworzą:",
+   "answers": [
+    "tylko myśliwi posiadający zarówno podstawowe, jak i selekcjonerskie uprawnienia do wykonywania polowania",
+    "myśliwi, ale tylko ci, którzy należą do koła łowieckiego",
+    "osoby fizyczne, które są członkami kół łowieckich lub członkami niezrzeszonymi w kołach łowieckich oraz koła łowieckie",
+    "tylko myśliwi z aktualnie opłaconą składką członkowską"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-1985",
    "topic": "Wiedza ogólna",
    "q": "Doskonalenie umiejętności strzeleckich to:",
@@ -3613,6 +4045,18 @@
     "może ustanowić pełnomocnika, ale tylko za zgodą zarządu koła"
    ],
    "correct": 0
+  },
+  {
+   "id": "pzl-mysliwy-1991",
+   "topic": "Wiedza ogólna",
+   "q": "W walnym zgromadzeniu koła uczestniczyć mogą:",
+   "answers": [
+    "wyłącznie członkowie koła",
+    "wyłącznie macierzyści członkowie koła",
+    "wyłącznie członkowie koła będący myśliwymi co najmniej 5 lat",
+    "członkowie koła, delegowani przedstawiciele organów PZŁ i goście zaproszeni przez zarząd koła"
+   ],
+   "correct": 3
   },
   {
    "id": "pzl-mysliwy-1993",
@@ -3675,6 +4119,30 @@
    "correct": 3
   },
   {
+   "id": "pzl-mysliwy-1998",
+   "topic": "Wiedza ogólna",
+   "q": "Statut Polskiego Związku Łowieckiego przewiduje nadanie myśliwemu statusu rezydenta w kole łowieckim. Okres rezydentury może trwać:",
+   "answers": [
+    "nie dłużej niż 1 rok w danym kole",
+    "maksymalnie do 3 lat w trakcie przynależności do PZŁ",
+    "maksymalnie do 5 lat w jednym okręgu",
+    "od roku do 5 lat"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-mysliwy-1999",
+   "topic": "Wiedza ogólna",
+   "q": "Zarząd koła to organ składający się z:",
+   "answers": [
+    "trzech do czterech członków",
+    "do trzech członków",
+    "dowolnej liczby członków ustalonej przez walne zgromadzenie",
+    "czterech do siedmiu członków"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-mysliwy-2000",
    "topic": "Wiedza ogólna",
    "q": "Zarząd koła wybierany jest:",
@@ -3685,6 +4153,18 @@
     "żadna z powyższych odpowiedzi nie jest prawidłowa"
    ],
    "correct": 0
+  },
+  {
+   "id": "pzl-mysliwy-2001",
+   "topic": "Wiedza ogólna",
+   "q": "Pracami zarządu koła kieruje:",
+   "answers": [
+    "łowczy koła jako osoba odpowiedzialna za prowadzenie gospodarki łowieckiej",
+    "członek zarządu wyznaczany każdorazowo, w zależności od charakteru zadania",
+    "prezes koła",
+    "statut nie określa kompetencji poszczególnych członków zarządu koła"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-mysliwy-2002",
@@ -3783,6 +4263,30 @@
    "correct": 2
   },
   {
+   "id": "pzl-mysliwy-2013",
+   "topic": "Wiedza ogólna",
+   "q": "Uchwalanie wytycznych dotyczących racjonalnej gospodarki łowieckiej oraz zasad selekcji populacyjnej i osobniczej zwierząt łownych, a także zasad postępowania z trofeami łowieckimi należy do kompetencji:",
+   "answers": [
+    "Krajowego Zjazdu Delegatów",
+    "Naczelnej Rady Łowieckiej",
+    "ministra właściwego do spraw środowiska",
+    "właściwych terytorialnie prezydiów okręgowych zjazdów delegatów"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-mysliwy-2014",
+   "topic": "Wiedza ogólna",
+   "q": "Organem zarządzającym Polskiego Związku Łowieckiego jest Zarząd Główny, który składa się z przewodniczącego (Łowczego Krajowego) oraz:",
+   "answers": [
+    "maksymalnie dwóch członków",
+    "minimalnie czterech członków",
+    "od dwóch do czterech członków",
+    "nie ma ograniczeń w zakresie obsady składu Zarządu Głównego"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-2015",
    "topic": "Wiedza ogólna",
    "q": "W skład Naczelnej Rady Łowieckiej wchodzą przedstawiciele poszczególnych okręgów, którzy wybierani są w liczbie:",
@@ -3829,6 +4333,18 @@
     "Krajowy Zjazd Delegatów"
    ],
    "correct": 1
+  },
+  {
+   "id": "pzl-mysliwy-2020",
+   "topic": "Wiedza ogólna",
+   "q": "Członka Naczelnej Rady Łowieckiej z danego okręgu wybiera się na nową kadencję:",
+   "answers": [
+    "spośród członków dotychczasowej okręgowej rady łowieckiej",
+    "jest nim zawsze dotychczasowy członek Naczelnej Rady Łowieckiej",
+    "spośród delegatów na okręgowy zjazd delegatów PZŁ",
+    "okręgowy zjazd delegatów wyznacza osobę najbardziej zasłużoną dla okręgu, niekoniecznie spośród delegatów"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-mysliwy-2021",
@@ -3889,6 +4405,30 @@
     "okręgowy rzecznik dyscyplinarny"
    ],
    "correct": 0
+  },
+  {
+   "id": "pzl-mysliwy-2026",
+   "topic": "Wiedza ogólna",
+   "q": "Roczny plan łowiecki to dokument, który wymaga:",
+   "answers": [
+    "zatwierdzenia przez właściwy zarząd okręgowy PZŁ",
+    "uzgodnienia z nadleśniczym",
+    "uzgodnienia z zarządem okręgowym PZŁ",
+    "jedynie podpisu dzierżawcy obwodu, który nadaje mu moc obowiązującą"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-mysliwy-2028",
+   "topic": "Wiedza ogólna",
+   "q": "Postępowanie w przypadku naruszenia obowiązków członkowskich przez członków Polskiego Związku Łowieckiego będących osobami fizycznymi obejmuje:",
+   "answers": [
+    "postępowanie dyscyplinarne prowadzone przez rzeczników dyscyplinarnych i sądy łowieckie",
+    "postępowanie porządkowe prowadzone przez organy koła i Zrzeszenia",
+    "postępowanie dyscyplinujące w trakcie wykonywania polowania",
+    "wszystkie odpowiedzi są prawidłowe"
+   ],
+   "correct": 3
   },
   {
    "id": "pzl-mysliwy-2029",
@@ -3985,6 +4525,18 @@
     "zawsze w marcu, na zakończenie roku gospodarczego"
    ],
    "correct": 2
+  },
+  {
+   "id": "pzl-mysliwy-2038",
+   "topic": "Wiedza ogólna",
+   "q": "Środkami dyscyplinującymi stosowanymi przez prowadzącego polowanie zbiorowe za naruszenie zasad bezpiecznego polowania są:",
+   "answers": [
+    "nagana lub wydanie myśliwemu zakazu strzelania do zwierzyny do zakończenia polowania",
+    "nagana lub skierowanie myśliwego do naganki do zakończenia polowania",
+    "skierowanie myśliwego do naganki w 1 do 3 pędzeń",
+    "upomnienie lub wykluczenie z polowania"
+   ],
+   "correct": 3
   },
   {
    "id": "pzl-mysliwy-2039",
@@ -4095,6 +4647,18 @@
    "correct": 1
   },
   {
+   "id": "pzl-mysliwy-2050",
+   "topic": "Wiedza ogólna",
+   "q": "Zarząd koła, który podjął uchwałę odmawiającą przyjęcia myśliwego do koła, winien:",
+   "answers": [
+    "zawiadomić o tym fakcie zainteresowanego pismem",
+    "zamieścić treść uchwały na stronie internetowej koła lub zarządu okręgowego",
+    "zapoznać zainteresowanego myśliwego z treścią uchwały na najbliższym posiedzeniu zarządu",
+    "doręczyć zainteresowanemu myśliwemu treść uchwały w formie pisemnej, wraz z uzasadnieniem i pouczeniem o trybie odwołania"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-mysliwy-2051",
    "topic": "Wiedza ogólna",
    "q": "Myśliwy, członek koła niezadowolony z treści uchwały zarządu koła wniósł odwołanie do organu odwoławczego, jakim jest w tym przypadku walne zgromadzenie. Organ odwoławczy nie może:",
@@ -4105,6 +4669,30 @@
     "zmienić zaskarżonej uchwały"
    ],
    "correct": 2
+  },
+  {
+   "id": "pzl-mysliwy-2052",
+   "topic": "Wiedza ogólna",
+   "q": "Zarząd okręgowy PZŁ w ramach nadzoru nad działalnością podległych kół łowieckich:",
+   "answers": [
+    "może uchylić każdą uchwałę organu koła",
+    "może zmienić uchwałę wadliwą prawnie i orzec co do istoty sprawy",
+    "stwierdza nieważność uchwały organu koła, w przypadku jej niezgodności z prawem lub Statutem",
+    "nie może ingerować w samodzielność koła poprzez kontrolę uchwał jego organów"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-mysliwy-2053",
+   "topic": "Wiedza ogólna",
+   "q": "Polski Związek Łowiecki może prowadzić działalność gospodarczą:",
+   "answers": [
+    "zawsze",
+    "nigdy",
+    "tak, ale tylko w zakresie obrotu zwierzyną żywą",
+    "tak, ale wyłącznie dla realizacji celów statutowych"
+   ],
+   "correct": 3
   },
   {
    "id": "pzl-mysliwy-2054",
@@ -4129,6 +4717,18 @@
     "obywatele państw UE"
    ],
    "correct": 1
+  },
+  {
+   "id": "pzl-mysliwy-2056",
+   "topic": "Wiedza ogólna",
+   "q": "Utrata członkostwa w Zrzeszeniu Polski Związek Łowiecki może nastąpić na podstawie:",
+   "answers": [
+    "uchwały zarządu koła łowieckiego",
+    "tylko prawomocnego orzeczenia sądu powszechnego",
+    "skreślenia z rejestru członków Zrzeszenia lub wykluczenia ze Zrzeszenia",
+    "tylko prawomocnego orzeczenia sądu łowieckiego"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-mysliwy-2057",
@@ -4179,6 +4779,18 @@
    "correct": 3
   },
   {
+   "id": "pzl-mysliwy-2062",
+   "topic": "Wiedza ogólna",
+   "q": "Czy osoba, która utraciła członkostwo w Polskim Związku Łowieckim, przed powtórnym przyjęciem musi odbyć staż:",
+   "answers": [
+    "bezwzględnie tak",
+    "nie",
+    "tak, ale okres stażu jest skrócony do 6 miesięcy",
+    "tak, z zastrzeżeniem, że w takich przypadkach okres stażu jest wydłużony do 1,5 roku"
+   ],
+   "correct": 1
+  },
+  {
    "id": "pzl-mysliwy-2063",
    "topic": "Wiedza ogólna",
    "q": "Kiedy można polować na szakala złocistego?",
@@ -4227,6 +4839,30 @@
    "correct": 3
   },
   {
+   "id": "pzl-mysliwy-2067",
+   "topic": "Wiedza ogólna",
+   "q": "Za szkody powstałe przy wykonywania polowania odpowiedzialność ponosi:",
+   "answers": [
+    "Skarb Państwa",
+    "dzierżawca lub zarządca obwodu, na terenie którego powstała szkoda",
+    "myśliwy, który szkodę wyrządził",
+    "prawodawstwo nie przewiduje takiej odpowiedzialności"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-mysliwy-2068",
+   "topic": "Wiedza ogólna",
+   "q": "Za szkody w uprawach i płodach rolnych wyrządzone przez żurawie odpowiedzialność ponosi:",
+   "answers": [
+    "nadleśnictwo, właściwe ze względu na miejsce wystąpienia szkody",
+    "dzierżawca lub zarządca obwodu łowieckiego, właściwy ze względu na wystąpienie szkody",
+    "obowiązujące przepisy prawa nie wskazują podmiotu odpowiedzialnego takie szkody",
+    "Regionalna Dyrekcja Ochrony Środowiska"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-2069",
    "topic": "Wiedza ogólna",
    "q": "Za szkody wyrządzone przez wilki w pogłowiu zwierząt gospodarskich odpowiedzialność ponosi:",
@@ -4237,6 +4873,18 @@
     "nadleśnictwo, właściwe ze względu na miejsce wystąpienia szkody"
    ],
    "correct": 0
+  },
+  {
+   "id": "pzl-mysliwy-2070",
+   "topic": "Wiedza ogólna",
+   "q": "Wilk na terenie naszego kraju jest gatunkiem:",
+   "answers": [
+    "łownym",
+    "objętym ochroną częściową",
+    "objętym ochroną gatunkową ścisłą",
+    "łownym, z całorocznym okresem ochronnym"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-mysliwy-2072",
@@ -4359,6 +5007,18 @@
    "correct": 1
   },
   {
+   "id": "pzl-mysliwy-2083",
+   "topic": "Wiedza ogólna",
+   "q": "Martwa stójka to taka, w której wyżeł:",
+   "answers": [
+    "wystawia, mimo iż przed nim nie ma zwierzyny",
+    "wystawia zwierzynę i nie przerywa wystawiania, mimo otrzymania rozkazu ruszenia zwierzyny",
+    "wystawia leżącego przed nim na ziemi martwego ptaka na chwilę przed jego zaaportowaniem",
+    "wystawia leżącego przed nim na ziemi martwego (upolowanego) ptaka i nie chce go aportować"
+   ],
+   "correct": 1
+  },
+  {
    "id": "pzl-mysliwy-2086",
    "topic": "Wiedza ogólna",
    "q": "Na wystawach psów rasowych sędziowie oceniają zgodność budowy danego psa z wzorcem rasy. Organizatorem tych wystaw jest:",
@@ -4405,6 +5065,18 @@
     "z wyłączeniem wyżłów wielostronnych (górny wiatr) pozostałe rasy psów myśliwskich, ułożone do poszukiwania postrzałków po sfarbowanym tropie"
    ],
    "correct": 1
+  },
+  {
+   "id": "pzl-mysliwy-2090",
+   "topic": "Wiedza ogólna",
+   "q": "Psy myśliwskie pod względem użytkowości dzielą się między innymi na następujące grupy:",
+   "answers": [
+    "wyżły, norowce, legawe, gończe, jamniki",
+    "tropowce, gończe, płochacze, teriery",
+    "legawce, płochacze, gończe, posokowce, norowce",
+    "posokowce, gończe, płochacze, legawce, ogary, szpice"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-mysliwy-2092",
@@ -4683,6 +5355,18 @@
    "correct": 1
   },
   {
+   "id": "pzl-mysliwy-2117",
+   "topic": "Wiedza ogólna",
+   "q": "Memłanie w terminologii kynologii łowieckiej to:",
+   "answers": [
+    "pożeranie upolowanej zwierzyny",
+    "gwałtowne chwytanie przez psa zabitej lub postrzelonej zwierzyny drobnej, lub podrzucanie jej a następnie silne ściskanie",
+    "powolne i niedokładne okładanie pola przez psa",
+    "zakopywanie przez psa ustrzelonej zwierzyny"
+   ],
+   "correct": 1
+  },
+  {
    "id": "pzl-mysliwy-2118",
    "topic": "Wiedza ogólna",
    "q": "Do której grupy zaliczamy jamnika szorstkowłosego?",
@@ -4801,6 +5485,30 @@
     "pozostawienie psa przez przewodnika w pozycji leżącej – warującej"
    ],
    "correct": 1
+  },
+  {
+   "id": "pzl-mysliwy-2128",
+   "topic": "Wiedza ogólna",
+   "q": "Jakie psy mogą brać udział testach hodowlanych i ocenach pracy psów myśliwskich?",
+   "answers": [
+    "wszystkie polujące",
+    "wszystkie będące w rękach myśliwych",
+    "wyłącznie zarejestrowane w Związku Kynologicznym w Polsce lub zagranicznych organizacjach kynologicznych zrzeszonych w FCI",
+    "wszystkie psy zarejestrowane w organizacjach kynologicznych działających na terenie Polski"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-mysliwy-2130",
+   "topic": "Wiedza ogólna",
+   "q": "Czy suki w wysokiej ciąży mogą brać udział w ocenach psów myśliwskich?",
+   "answers": [
+    "tak, wszystkie",
+    "tak, ale pod warunkiem posiadania zaświadczenia od lekarza weterynarii",
+    "nie",
+    "tak, ale tylko posokowce"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-mysliwy-2131",
@@ -4947,6 +5655,18 @@
    "correct": 0
   },
   {
+   "id": "pzl-mysliwy-2145",
+   "topic": "Wiedza ogólna",
+   "q": "Do gończych należą między innymi następujące rasy psów:",
+   "answers": [
+    "słowacki gończy kopov, pointer",
+    "mały munsterlander, beagle",
+    "ogar polski, gończy słowacki (kopov), beagle",
+    "cocker spaniel, jamnikogończy, gończy słowacki kopov"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-2146",
    "topic": "Wiedza ogólna",
    "q": "Polowanie na drapieżniki przy stogach i norach, wykonywane przez więcej niż jednego myśliwego z udziałem podkładacza z psem jest polowaniem:",
@@ -4957,6 +5677,18 @@
     "zbiorowym, jeśli bierze w nim udział więcej niż 5 myśliwych, w innym przypadku jest to polowanie indywidualne"
    ],
    "correct": 1
+  },
+  {
+   "id": "pzl-mysliwy-2147",
+   "topic": "Wiedza ogólna",
+   "q": "Para to w kynologii łowieckiej:",
+   "answers": [
+    "pies i suka tej samej rasy",
+    "grupa co najmniej trzech psów należących do dwóch ras",
+    "dwa psy tej samej rasy i płci, lub dwa psy różnych ras bez względu na płeć",
+    "dwie sfory"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-mysliwy-2148",
@@ -5127,6 +5859,18 @@
    "correct": 3
   },
   {
+   "id": "pzl-mysliwy-2163",
+   "topic": "Wiedza ogólna",
+   "q": "Młodego koguta bażanta od starego odróżniamy na podstawie:",
+   "answers": [
+    "wyglądu głowy i dzioba",
+    "masy ciała",
+    "długości ostrogi",
+    "długości ogona"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-2164",
    "topic": "Wiedza ogólna",
    "q": "Karmiska urządza się w celu:",
@@ -5137,6 +5881,18 @@
     "podania pokarmu w hodowli zamkniętej"
    ],
    "correct": 0
+  },
+  {
+   "id": "pzl-mysliwy-2165",
+   "topic": "Wiedza ogólna",
+   "q": "Roczny Plan Łowiecki jest uzgadniany z właściwym:",
+   "answers": [
+    "wójtem, burmistrzem, prezydentem",
+    "nadleśnictwem",
+    "starostą powiatowym",
+    "łowczym okręgowym – przedstawicielem PZŁ"
+   ],
+   "correct": 3
   },
   {
    "id": "pzl-mysliwy-2166",
@@ -5245,6 +6001,18 @@
     "gdy dzierżawca lub zarządca obwodu łowieckiego odstąpi tuszę myśliwemu"
    ],
    "correct": 3
+  },
+  {
+   "id": "pzl-mysliwy-2175",
+   "topic": "Wiedza ogólna",
+   "q": "Według Ustawy Prawo łowieckie minimalna powierzchnia obwodu łowieckiego w Polsce wynosi:",
+   "answers": [
+    "1 000 ha",
+    "2 000 ha",
+    "3 000 ha",
+    "5 000 ha"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-mysliwy-2176",
@@ -5547,6 +6315,18 @@
    "correct": 3
   },
   {
+   "id": "pzl-mysliwy-2204",
+   "topic": "Wiedza ogólna",
+   "q": "Ostatni kęs, to gałązka drzewa lub krzewu typowego dla środowiska (ostępu), w którym zwierz został odstrzelony:",
+   "answers": [
+    "układana na ranie postrzałowej ubitego zwierza",
+    "wkładana zwierzynie do pyska",
+    "przekazywana myśliwemu wraz z gratulacjami z tytułu pozyskania zwierzyny",
+    "umieszczana w jamie brzusznej zwierzyny po jej wypatroszeniu"
+   ],
+   "correct": 1
+  },
+  {
    "id": "pzl-mysliwy-2205",
    "topic": "Wiedza ogólna",
    "q": "Czy nasze prawodawstwo łowieckie dopuszcza możliwość odłowu zajęcy?",
@@ -5605,6 +6385,18 @@
     "obserwowania zwierzyny"
    ],
    "correct": 1
+  },
+  {
+   "id": "pzl-mysliwy-2210",
+   "topic": "Wiedza ogólna",
+   "q": "Tusza dzika, w której lekarz weterynarii stwierdził obecność włośnia:",
+   "answers": [
+    "nie może trafić do spożycia przez ludzi, można ją wykorzystać na nęcisku przy polowaniu na drapieżniki",
+    "nie może trafić do spożycia przez ludzi, można ją wykorzystać na karmę dla psów myśliwskich, pod warunkiem gotowania każdej porcji",
+    "nie może trafić do spożycia przez ludzi, zostaje poddana utylizacji",
+    "choroba nie jest zagrożeniem dla ludzi i nie ma przeciwwskazań do jej spożycia"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-mysliwy-2211",
@@ -5691,6 +6483,18 @@
    "correct": 0
   },
   {
+   "id": "pzl-mysliwy-2218",
+   "topic": "Wiedza ogólna",
+   "q": "Kategoryzację obwodów łowieckich przeprowadza się w celu:",
+   "answers": [
+    "oszacowania liczebności zwierzyny",
+    "ustalenia wielkości odstrzału w danym sezonie łowieckim",
+    "wartościowania obwodu pod względem łowieckim i ustalenia wielkości czynszu dzierżawnego",
+    "oceny możliwości wsiedleń poszczególnych gatunków zwierzyny"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-2219",
    "topic": "Wiedza ogólna",
    "q": "Zagęszczenie zwierzyny to parametr określający:",
@@ -5747,6 +6551,18 @@
     "uszkadzanie drzew i krzewów przez jeleniowate, polegające na zdzieraniu kory wraz z łykiem przy pomocy siekaczy",
     "uszkadzanie sadzonek na uprawach leśnych przez sarny poprzez zgryzanie pączków wierzchołkowych",
     "zdzieranie kory drzew iglastych przez dziki przy wycieraniu się o nie, mającym na celu wcieranie żywicy w okrywę włosową i skórę"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-mysliwy-2224",
+   "topic": "Wiedza ogólna",
+   "q": "Remiza stała to:",
+   "answers": [
+    "teren stałego gniazdowania ptactwa wodno-błotnego",
+    "śródpolna kępa drzew, krzewów, zapewniająca zwierzynie żer i schronienie",
+    "śródleśna polana z obfitą roślinnością zielną, zapewniającą zwierzynie zróżnicowany żer",
+    "miejsce dokarmiania zwierzyny wewnątrz kompleksu leśnego"
    ],
    "correct": 1
   },
@@ -5809,6 +6625,18 @@
     "dzików"
    ],
    "correct": 1
+  },
+  {
+   "id": "pzl-mysliwy-2230",
+   "topic": "Wiedza ogólna",
+   "q": "Ścinka to określenie oznaczające:",
+   "answers": [
+    "podcinanie dolnych gałęzi w młodnikach leśnych przed sezonem polowań zbiorowych, celem lepszej widoczności zwierzyny",
+    "siewki drzew zgryzione przez zwierzynę",
+    "sierść pozostawianą przez zwierzynę płową na roślinach, w czasie zmiany okrywy włosowej",
+    "uciętą kępkę sierści zwierzyny po trafieniu, znalezioną w miejscu zestrzału"
+   ],
+   "correct": 3
   },
   {
    "id": "pzl-mysliwy-2231",
@@ -5979,6 +6807,18 @@
    "correct": 1
   },
   {
+   "id": "pzl-mysliwy-2247",
+   "topic": "Wiedza ogólna",
+   "q": "Oględzin patroszonej zwierzyny dokonuje:",
+   "answers": [
+    "lekarz weterynarii",
+    "myśliwy, który ją patroszy",
+    "osoba prowadząca punkt skupu",
+    "lekarz weterynarii w zakładzie rozbioru tusz"
+   ],
+   "correct": 1
+  },
+  {
    "id": "pzl-mysliwy-2248",
    "topic": "Wiedza ogólna",
    "q": "Patroszenie to:",
@@ -6051,6 +6891,18 @@
    "correct": 2
   },
   {
+   "id": "pzl-mysliwy-2254",
+   "topic": "Wiedza ogólna",
+   "q": "Karta stanowiskowa wykorzystywana jest do:",
+   "answers": [
+    "zapisywania wyników inwentaryzacji zwierzyny metodą pędzeń przez poszczególnych uczestników (obserwatorów)",
+    "zapisywania ilości pozyskanej zwierzyny przez poszczególnych uczestników polowania zbiorowego",
+    "rozstawiania myśliwych na poszczególnych stanowiskach w czasie polowania zbiorowego przez prowadzącego polowanie, zgodnie z numerami znajdującymi się na wylosowanej karcie",
+    "ustawienia myśliwych w kolejności podczas odprawy rozpoczynającej polowanie, zgodnie z numerami znajdującymi się na wylosowanej karcie"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-2255",
    "topic": "Wiedza ogólna",
    "q": "Polowanie na kury bażanta w obwodach dzierżawionych przez koła łowieckie:",
@@ -6097,6 +6949,18 @@
     "przedstawiciele gmin i ośrodków doradztwa rolniczego"
    ],
    "correct": 2
+  },
+  {
+   "id": "pzl-mysliwy-2261",
+   "topic": "Wiedza ogólna",
+   "q": "Partycypacja - udział kół łowieckich w odpowiedzialności za szkody łowieckie wyrządzone przez zwierzynę w uprawach i płodach rolnych wynosi:",
+   "answers": [
+    "100%",
+    "75%",
+    "60%",
+    "50%"
+   ],
+   "correct": 0
   },
   {
    "id": "pzl-mysliwy-2262",
@@ -6507,6 +7371,18 @@
    "correct": 1
   },
   {
+   "id": "pzl-mysliwy-2297",
+   "topic": "Wiedza ogólna",
+   "q": "W języku łowieckim określenie \"Nemrod\" kojarzone jest z:",
+   "answers": [
+    "patronem myśliwych",
+    "opieszałym myśliwym, który zawsze ma czas",
+    "doświadczonym myśliwym",
+    "młodym myśliwym"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-2299",
    "topic": "Wiedza ogólna",
    "q": "Na polowaniu indywidualnym dekoracji złomem dokonuje:",
@@ -6517,6 +7393,18 @@
     "dekoracja złomem dokonuje się wyłącznie na polowaniach zbiorowych"
    ],
    "correct": 1
+  },
+  {
+   "id": "pzl-mysliwy-2300",
+   "topic": "Wiedza ogólna",
+   "q": "Przejawem kultu św. Huberta jest:",
+   "answers": [
+    "uczestnictwo w mszach hubertowskich odprawianych z racji uroczystości łowieckich",
+    "budowa kapliczek i obelisków ku czci św. Huberta",
+    "organizowanie uroczystych polowań hubertowskich",
+    "wszystkie odpowiedzi są poprawne"
+   ],
+   "correct": 3
   },
   {
    "id": "pzl-mysliwy-2301",
@@ -6759,6 +7647,18 @@
    "correct": 2
   },
   {
+   "id": "pzl-mysliwy-2321",
+   "topic": "Wiedza ogólna",
+   "q": "Daniel w Polsce jest gatunkiem:",
+   "answers": [
+    "rodzimym",
+    "introdukowanym, sprowadzonym z Australii",
+    "obcym, sprowadzonym przez człowieka",
+    "introdukowanym, sprowadzonym z Ameryki Północnej"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-2322",
    "topic": "Wiedza ogólna",
    "q": "Wskaż prawidłowe stwierdzenie dotyczące struktury socjalnej danieli:",
@@ -6867,6 +7767,18 @@
    "correct": 3
   },
   {
+   "id": "pzl-mysliwy-2332",
+   "topic": "Wiedza ogólna",
+   "q": "Pełne uzębienie stałe u dzików występuje :",
+   "answers": [
+    "w pierwszym roku życia",
+    "w drugim roku życia",
+    "w trzecim roku życia",
+    "wymiana siekaczy nie jest powiązana z wiekiem"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-2333",
    "topic": "Wiedza ogólna",
    "q": "Typowy termin rui (huczki) u dzików przypada na:",
@@ -6901,6 +7813,18 @@
     "od dnia urodzenia do 31 marca następnego roku"
    ],
    "correct": 3
+  },
+  {
+   "id": "pzl-mysliwy-2336",
+   "topic": "Wiedza ogólna",
+   "q": "Dziki płci męskiej w trzecim i czwartym roku życia nazywamy:",
+   "answers": [
+    "wycinkami",
+    "przelatkami",
+    "loszkami",
+    "odyńcami"
+   ],
+   "correct": 0
   },
   {
    "id": "pzl-mysliwy-2337",
@@ -7239,6 +8163,18 @@
    "correct": 2
   },
   {
+   "id": "pzl-mysliwy-2367",
+   "topic": "Wiedza ogólna",
+   "q": "Gomółą w języku łowieckim nazywamy:",
+   "answers": [
+    "byka jelenia szlachetnego rozpoczynającego rykowisko, pobudzającego inne uczestniczące w godach byki",
+    "byka jelenia po zrzuceniu poroża",
+    "młodego byka jelenia, kręcącego się wokół chmary łań, odpędzanego przez byka stadnego",
+    "starego byka, który ze względu na wiek i kondycje nie może wziąć udziału w rykowisku"
+   ],
+   "correct": 1
+  },
+  {
    "id": "pzl-mysliwy-2368",
    "topic": "Wiedza ogólna",
    "q": "Po zakończeniu rykowiska:",
@@ -7419,6 +8355,18 @@
    "correct": 0
   },
   {
+   "id": "pzl-mysliwy-2384",
+   "topic": "Wiedza ogólna",
+   "q": "Okres kocenia się kóz saren przypada głównie na:",
+   "answers": [
+    "przełomie marca i kwietnia",
+    "przełomie kwietnia i maja",
+    "przełomie maja i czerwca",
+    "drugą połowę czerwca i lipiec"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-2385",
    "topic": "Wiedza ogólna",
    "q": "Samica sarny rodzi:",
@@ -7455,6 +8403,18 @@
    "correct": 2
   },
   {
+   "id": "pzl-mysliwy-2388",
+   "topic": "Wiedza ogólna",
+   "q": "W pełni wykształcone poroże rogacza zbudowane jest z:",
+   "answers": [
+    "róż, tyk i korony przynajmniej na jednej tyce",
+    "róż, tyk oraz oczniaka i opieraka na każdej tyce",
+    "róż, tyk oraz odnóg tylnych przynajmniej na jednej tyce",
+    "róż, tyk i dwóch odnóg na każdej z nich"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-mysliwy-2389",
    "topic": "Wiedza ogólna",
    "q": "Poroże jeleniowatych jest wytworem:",
@@ -7477,6 +8437,18 @@
     "wychodzą na żer bardzo późno wieczorem i wczesnym świtem wracają do ostoi, są mało czujne i rzadko podnoszą głowę podczas żerowania"
    ],
    "correct": 0
+  },
+  {
+   "id": "pzl-mysliwy-2391",
+   "topic": "Wiedza ogólna",
+   "q": "Wskaż prawidłowe stwierdzenie dotyczące relacji socjalnych wśród saren:",
+   "answers": [
+    "przez cały rok przebywają w dużych grupach zwanych rudlami",
+    "żyją w rudlach w okresie zimowym",
+    "nigdy nie łączą się w grupy i przez cały rok wiodą samotny tryb życia",
+    "łączą się w rudle jedynie w okresie rui"
+   ],
+   "correct": 1
   },
   {
    "id": "pzl-mysliwy-2392",
@@ -7635,6 +8607,30 @@
    "correct": 2
   },
   {
+   "id": "pzl-mysliwy-2405",
+   "topic": "Wiedza ogólna",
+   "q": "Czy albinizm występuje u zwierząt łownych?",
+   "answers": [
+    "tak, jest powszechny u wielu gatunków",
+    "tak, lecz wyłącznie u ptactwa",
+    "tak, lecz rzadko",
+    "nie występuje"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-mysliwy-2406",
+   "topic": "Wiedza ogólna",
+   "q": "Fartuszek w języku łowieckim to:",
+   "answers": [
+    "biała plama na zadzie samców saren",
+    "pęk dłuższych włosów na pędzlu samców saren",
+    "pęk dłuższych włosów w okolicy sromu sarny kozy",
+    "biała plama na spodniej części szyi sarny"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-2407",
    "topic": "Wiedza ogólna",
    "q": "Przeciętna masa ciała dorosłej sarny na terenie Polski wynosi:",
@@ -7731,6 +8727,18 @@
    "correct": 1
   },
   {
+   "id": "pzl-mysliwy-2416",
+   "topic": "Wiedza ogólna",
+   "q": "Jedynym łownym gatunkiem gołębia w naszym kraju jest:",
+   "answers": [
+    "synogarlica",
+    "sierpówka",
+    "grzywacz",
+    "turkawka"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-2417",
    "topic": "Wiedza ogólna",
    "q": "Typowym siedliskiem gołębia grzywacza są:",
@@ -7741,6 +8749,18 @@
     "wyłącznie tereny zurbanizowane (wsie i miasta)"
    ],
    "correct": 1
+  },
+  {
+   "id": "pzl-mysliwy-2418",
+   "topic": "Wiedza ogólna",
+   "q": "Jenot jest gatunkiem:",
+   "answers": [
+    "aktywnym zarówno w dzień jak i w nocy",
+    "aktywnym w dzień i przesypiającym całą zimę",
+    "aktywnym głównie nocą i przesypiającym część zimy",
+    "latem aktywnym w nocy, a zimą w dzień"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-mysliwy-2419",
@@ -7789,6 +8809,18 @@
     "talerzyk"
    ],
    "correct": 0
+  },
+  {
+   "id": "pzl-mysliwy-2423",
+   "topic": "Wiedza ogólna",
+   "q": "Kaczki krzyżówki gniazdujące w Polsce to ptaki:",
+   "answers": [
+    "osiadłe, przez całe życie związane z jednym zbiornikiem wodnym",
+    "wędrowne, przemieszczające się głównie w obrębie Europy",
+    "migrujące na zimę do południowej Afryki",
+    "koczujące jako młode, lecz osiadłe po osiągnięciu dojrzałości"
+   ],
+   "correct": 1
   },
   {
    "id": "pzl-mysliwy-2424",
@@ -7945,6 +8977,18 @@
     "charakterystycznym kształcie i ubarwieniu ogona"
    ],
    "correct": 1
+  },
+  {
+   "id": "pzl-mysliwy-2437",
+   "topic": "Wiedza ogólna",
+   "q": "Zniesienia kuropatw zazwyczaj liczą:",
+   "answers": [
+    "1-2 jaja",
+    "od 3 do 5 jaj",
+    "powyżej 10",
+    "zawsze ponad 25 jaj"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-mysliwy-2438",
@@ -8175,6 +9219,18 @@
    "correct": 0
   },
   {
+   "id": "pzl-mysliwy-2459",
+   "topic": "Wiedza ogólna",
+   "q": "Skrzekot to:",
+   "answers": [
+    "niepłodny mieszaniec głowienki i czernicy",
+    "niepłodny mieszaniec krakwy i krzyżówki",
+    "niepłodny mieszaniec koguta cietrzewia z samicą głuszca",
+    "niepłodny mieszaniec koguta przepiórki z samicą kuropatwy"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-2460",
    "topic": "Wiedza ogólna",
    "q": "Kuna domowa wydaje na świat w ciągu roku:",
@@ -8281,6 +9337,30 @@
     "1 miot co drugi rok"
    ],
    "correct": 0
+  },
+  {
+   "id": "pzl-mysliwy-2469",
+   "topic": "Wiedza ogólna",
+   "q": "Płeć pozyskanych zajęcy określamy na podstawie:",
+   "answers": [
+    "ubarwienia turzycy",
+    "długości skoków",
+    "masy ciała",
+    "oględziny narządów rozrodczych"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-mysliwy-2470",
+   "topic": "Wiedza ogólna",
+   "q": "Parkoty odbywają się:",
+   "answers": [
+    "od grudnia do lutego",
+    "od kwietnia do lipca",
+    "od stycznia do sierpnia",
+    "od września do listopada"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-mysliwy-2471",
@@ -8428,6 +9508,19 @@
     "1. dubeltówka nadlufka (bok) 2. dubeltówka horyzontalna 3. Kniejówka"
    ],
    "correct": 0
+  },
+  {
+   "id": "pzl-mysliwy-2487",
+   "topic": "Wiedza ogólna",
+   "q": "Na rycinie przedstawiono przekrój przez nabój śrutowy. Wybierz prawidłową odpowiedź opisującą jego budowę:",
+   "image": "img/mysliwy/123.png",
+   "answers": [
+    "1. spłonka 2. przybitka 3. śrut 4. proch 5. łuska",
+    "1. proch 2. śrut 3. przybitka 4. łuska 5. spłonka",
+    "1. spłonka 2. proch 3. przybitka 4. łuska 5. śrut",
+    "1. spłonka 2. proch 3. śrut 4. łuska 5. przybitka"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-mysliwy-2488",
@@ -8715,6 +9808,19 @@
    "correct": 0
   },
   {
+   "id": "pzl-mysliwy-2515",
+   "topic": "Wiedza ogólna",
+   "q": "Na zamieszczonej fotografii widzimy:",
+   "image": "img/mysliwy/152.png",
+   "answers": [
+    "kozę wraz z koźlęciem",
+    "łanię daniela wraz z cielęciem",
+    "owcę muflona wraz z jagnięciem",
+    "klępę wraz z łoszakiem"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-2518",
    "topic": "Wiedza ogólna",
    "q": "Kniejówka jest to broń:",
@@ -8751,18 +9857,6 @@
    "correct": 0
   },
   {
-   "id": "pzl-mysliwy-2522",
-   "topic": "Wiedza ogólna",
-   "q": "Remiza stała to:",
-   "answers": [
-    "teren stałego gniazdowania ptactwa wodno-błotnego",
-    "śródpolna kępa drzew, krzewów, zapewniająca zwierzynie żer i schronienie",
-    "śródleśna polana z obfitą roślinnością zielną, zapewniającą zwierzynie zróżnicowany żer",
-    "miejsce dokarmiania zwierzyny wewnątrz kompleksu leśnego"
-   ],
-   "correct": 1
-  },
-  {
    "id": "pzl-mysliwy-2523",
    "topic": "Wiedza ogólna",
    "q": "Ciche pędzenie to:",
@@ -8785,6 +9879,18 @@
     "20 myśliwych"
    ],
    "correct": 1
+  },
+  {
+   "id": "pzl-mysliwy-2526",
+   "topic": "Wiedza ogólna",
+   "q": "Wniosek w sprawie udzielenia absolutorium poszczególnym członkom zarządu koła składa:",
+   "answers": [
+    "walne zgromadzenie koła",
+    "wyznaczony przez zarząd koła przedstawiciel",
+    "zawsze członek koła biorący udział podczas posiedzenia walnego zgromadzenia",
+    "komisja rewizyjna koła"
+   ],
+   "correct": 3
   },
   {
    "id": "pzl-mysliwy-2527",

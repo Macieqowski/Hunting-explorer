@@ -281,6 +281,18 @@
    "correct": 2
   },
   {
+   "id": "pzl-selekcjoner-37",
+   "topic": "Selekcja",
+   "q": "Stałe uzębienie łosia składa się:",
+   "answers": [
+    "z 34 zębów",
+    "z 22 zębów",
+    "z 32 zębów",
+    "z 36 zębów"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-selekcjoner-38",
    "topic": "Selekcja",
    "q": "Stałe uzębienie daniela składa się:",
@@ -979,6 +991,18 @@
    "correct": 1
   },
   {
+   "id": "pzl-selekcjoner-133",
+   "topic": "Selekcja",
+   "q": "Który z naszych jeleniowatych może nałożyć dwa poroża w ciągu jednego roku kalendarzowego?",
+   "answers": [
+    "daniel",
+    "łoś",
+    "jeleń sika",
+    "żaden"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-selekcjoner-136",
    "topic": "Selekcja",
    "q": "Podczas wyceny medalowej trofeów, poroże daniela otrzyma złoty medal uzyskując minimum:",
@@ -1037,6 +1061,30 @@
     "140 kg"
    ],
    "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-505",
+   "topic": "Selekcja",
+   "q": "Okres godowy jeleni to:",
+   "answers": [
+    "huczka",
+    "bukowisko",
+    "bekowisko",
+    "rykowisko"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-507",
+   "topic": "Selekcja",
+   "q": "Łania jelenia cieli się na ogół:",
+   "answers": [
+    "dwa razy w roku",
+    "co rok",
+    "co dwa lata",
+    "co trzy lata"
+   ],
+   "correct": 1
   },
   {
    "id": "pzl-selekcjoner-515",
@@ -1150,6 +1198,18 @@
    "correct": 0
   },
   {
+   "id": "pzl-selekcjoner-549",
+   "topic": "Selekcja",
+   "q": "Większość młodych łosi przychodzi na świat:",
+   "answers": [
+    "w marcu, w liczbie 1-2 osobniki",
+    "w kwietniu, zawsze jeden osobnik",
+    "w maju, w liczbie 1-2 osobniki",
+    "w czerwcu, zawsze jeden osobnik"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-selekcjoner-551",
    "topic": "Selekcja",
    "q": "Ruja łosi z reguły trwa:",
@@ -1237,6 +1297,18 @@
    "correct": 2
   },
   {
+   "id": "pzl-selekcjoner-573",
+   "topic": "Selekcja",
+   "q": "Czas rozpoczęcia i zakończenia rykowiska u jelenia szlachetnego zależy od wielu czynników, w tym od warunków pogodowych, jednak najczęściej przypada ono na:",
+   "answers": [
+    "przełom lipca i sierpnia",
+    "wrzesień i początek października",
+    "przełom października i listopada",
+    "listopad"
+   ],
+   "correct": 1
+  },
+  {
    "id": "pzl-selekcjoner-575",
    "topic": "Selekcja",
    "q": "W czasie rykowiska jelenie szlachetne:",
@@ -1259,6 +1331,18 @@
     "metoda polowania zbiorowego bez naganki, gdy myśliwi samodzielnie przeczesują teren płosząc zwierzynę"
    ],
    "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-579",
+   "topic": "Selekcja",
+   "q": "\"Chłystem\" w języku łowieckim nazywamy:",
+   "answers": [
+    "byka jelenia szlachetnego rozpoczynającego rykowisko, pobudzającego inne uczestniczące w godach byki",
+    "byka jelenia po zrzuceniu poroża",
+    "młodego byka jelenia, kręcącego się wokół haremu łań, odpędzanego przez byka stadnego",
+    "starego byka, który ze względu na wiek i kondycję nie może wziąć udziału w rykowisku"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-selekcjoner-581",
@@ -1295,6 +1379,18 @@
     "nie ma takiej nazwy, ponieważ chmarą zawsze przewodzi najstarsza łania"
    ],
    "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-587",
+   "topic": "Selekcja",
+   "q": "Charakterystyczną cechą chmary jeleni podczas rykowiska jest jej struktura. Podczas przemieszczania się chmary w kolejności podążają:",
+   "answers": [
+    "łania zwana licówką, byk stadny, cielęta, inne osobniki z chmary",
+    "łania zwana licówką, jej cielę, kolejne osobniki z chmary, byk stadny",
+    "byk stadny, grzejne łanie, młode byki i jałowe łanie",
+    "byk stadny, najstarsza łania, kolejne osobniki z chmary"
+   ],
+   "correct": 1
   },
   {
    "id": "pzl-selekcjoner-589",
@@ -1341,6 +1437,18 @@
     "12 kg",
     "17 kg",
     "30 kg"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-599",
+   "topic": "Selekcja",
+   "q": "Okres godowy saren trwa:",
+   "answers": [
+    "od połowy stycznia, do połowy lutego",
+    "od połowy kwietnia, do połowy maja",
+    "od połowy lipca, do połowy sierpnia",
+    "od połowy września, do połowy października"
    ],
    "correct": 2
   },
@@ -1526,6 +1634,18 @@
    "correct": 1
   },
   {
+   "id": "pzl-selekcjoner-690",
+   "topic": "Selekcja",
+   "q": "Ile osobników jelenia sika występuje w Polsce?",
+   "answers": [
+    "20-50",
+    "200 - 250",
+    "2 000 - 2 500",
+    "20 000 - 25 000"
+   ],
+   "correct": 1
+  },
+  {
    "id": "pzl-selekcjoner-692",
    "topic": "Selekcja",
    "q": "Jeleń sika w porównaniu do jelenia szlachetnego:",
@@ -1561,6 +1681,19 @@
     "rosochami"
    ],
    "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-696",
+   "topic": "Selekcja",
+   "q": "Na rysunku przedstawiono w kolejności poroża:",
+   "image": "img/selekcjoner/q696-combo.jpg",
+   "answers": [
+    "byka jelenia sika, byka jelenia szlachetnego, sarny rogacza",
+    "byka daniela, byka jelenia sika, sarny rogacza",
+    "byka jelenia szlachetnego, sarny rogacza, jelenia sika",
+    "byka daniela, byka jelenia szlachetnego, sarny rogacza"
+   ],
+   "correct": 3
   },
   {
    "id": "pzl-selekcjoner-700",
@@ -1623,6 +1756,18 @@
    "correct": 1
   },
   {
+   "id": "pzl-selekcjoner-710",
+   "topic": "Selekcja",
+   "q": "Wskaż prawidłowe stwierdzenie dotyczące struktury socjalnej danieli:",
+   "answers": [
+    "żyją pojedynczo, łącząc się w grupy jedynie w okresie bekowiska",
+    "przez cały rok przebywają w różnopłciowych grupach o silnej hierarchii",
+    "żyją w chmarach, oddzielnie byki i oddzielnie samice wraz z młodymi, łącząc się w różnopłciowe stada tylko w okresie rui",
+    "przez cały rok tworzą różnopłciowe chmary, w których przewodzi byk stadny"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-selekcjoner-714",
    "topic": "Selekcja",
    "q": "Sarny żerują:",
@@ -1643,6 +1788,18 @@
     "12-15 kg",
     "24-26 kg",
     "30-35 kg"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-718",
+   "topic": "Selekcja",
+   "q": "Podczas obserwacji terenowych w okresie zimowym, samicę sarny można najpewniej odróżnić od samca po:",
+   "answers": [
+    "braku parostków",
+    "większym i jaśniejszym lustrze",
+    "obecności fartuszka",
+    "wyraźnie jaśniejszej sukni"
    ],
    "correct": 2
   },
@@ -1681,6 +1838,42 @@
     "samiec przebywa w towarzystwie grzejącej się kozy do momentu, aż przestaje być rujna, po czym szuka kolejnej samicy"
    ],
    "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-727",
+   "topic": "Selekcja",
+   "q": "Wskaż prawidłowe stwierdzenie dotyczące relacji socjalnych wśród saren.",
+   "answers": [
+    "przez cały rok przebywają w grupach zwanych rudlami",
+    "łączą się w rudle jedynie w okresie rui",
+    "łączą się w rudle okresie zimowym",
+    "nigdy nie łączą się w grupy i przez cały rok wiodą samotny tryb życia"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-733",
+   "topic": "Selekcja",
+   "q": "Rudle saren rozpadają się w okresie:",
+   "answers": [
+    "wiosennym, po czym rogacze zaczynają zajmować terytoria godowe, których później bronią",
+    "letnim, ze względu na dokuczliwe owady, gromadzące się przy dużych stadach zwierząt",
+    "jesiennym, po zakończeniu rui",
+    "zimowym, ponieważ dużej grupie trudno wtedy zdobyć pożywienie"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-736",
+   "topic": "Selekcja",
+   "q": "Okres kocenia się kóz saren przypada głównie na:",
+   "answers": [
+    "przełom marca i kwietnia",
+    "przełom kwietnia i maja",
+    "drugą połowę maja i pierwszą połowę czerwca",
+    "drugą połowę czerwca i lipiec"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-selekcjoner-742",
@@ -2407,6 +2600,18 @@
    "correct": 2
   },
   {
+   "id": "pzl-selekcjoner-1266",
+   "topic": "Selekcja",
+   "q": "Korona to zakończenie tyk wieńca jelenia zawierające:",
+   "answers": [
+    "co najmniej 2 odnogi",
+    "minimum 5 odnóg",
+    "co najmniej 3 odnogi",
+    "minimum 4 odnogi"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-selekcjoner-1267",
    "topic": "Selekcja",
    "q": "Poroże jeleniowatych jest wytworem:",
@@ -2427,6 +2632,42 @@
     "wyłącznie z tkanki kostnej gąbczastej",
     "z tkanki kostnej zbitej i gąbczastej",
     "z tkanki chrzęstnej"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1269",
+   "topic": "Selekcja",
+   "q": "Czy grandle występują u saren?",
+   "answers": [
+    "tak, u wszystkich osobników",
+    "nie",
+    "występują, ale bardzo rzadko",
+    "tak, u wszystkich samców"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1270",
+   "topic": "Selekcja",
+   "q": "Aby starać się o uprawnienia selekcjonerskie należy posiadać podstawowe uprawnienia do wykonywania polowania przez okres co najmiej:",
+   "answers": [
+    "pół roku",
+    "1 roku",
+    "3 lat",
+    "5 lat"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1271",
+   "topic": "Selekcja",
+   "q": "Celem odstrzału selekcyjnego samców zwierzyny płowej jest:",
+   "answers": [
+    "usunięcie z łowiska jak największej liczby osobników wyrządzających szkody łowieckie",
+    "zredukowanie nadmiaru samców, celem ustabilizowania struktury płci",
+    "usunięcie z łowiska osobników o niepożądanych cechach, co sprzyja uzyskaniu potomstwa odpowiedniej jakości w następnych pokoleniach",
+    "zredukowanie liczebności całej populacji"
    ],
    "correct": 2
   },
@@ -2575,6 +2816,18 @@
    "correct": 1
   },
   {
+   "id": "pzl-selekcjoner-1289",
+   "topic": "Selekcja",
+   "q": "Wykorzystywanie broni o lufach gładkich przy polowaniu na samce zwierzyny płowej jest:",
+   "answers": [
+    "zabronione",
+    "dozwolone, na wszystkie gatunki",
+    "dozwolone, lecz nie na wszystkie gatunki",
+    "dozwolone, lecz tylko na polowaniach indywidualnych"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-selekcjoner-1290",
    "topic": "Selekcja",
    "q": "Który ząb w uzębieniu stałym jeleniowatych jest zębem najstarszym?",
@@ -2585,6 +2838,30 @@
     "kieł"
    ],
    "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1291",
+   "topic": "Selekcja",
+   "q": "Pojęcie difiodontyzm oznacza:",
+   "answers": [
+    "roczne cykle zmiany poroża samców jeleni",
+    "dwuzmianowość zębów u ssaków",
+    "zdolność samic jeleniowatych do nakładania poroży",
+    "specyficzną budowę zębów u gatunków korzystających z dwóch typów pokarmu"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1292",
+   "topic": "Selekcja",
+   "q": "Charakterystyczną oznaką trafienia pocisku na komorę zwierzyny płowej jest:",
+   "answers": [
+    "padnięcie zwierzęcia „w ogniu”",
+    "wierzgnięcie zadem, poprzez gwałtowne wyrzucenie tylnych kończyn do tyłu",
+    "wykonanie świecy, czyli gwałtownego wyskoku przodem do góry",
+    "przegięcie grzbietu ku górze"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-selekcjoner-1293",
@@ -2732,6 +3009,18 @@
    "correct": 2
   },
   {
+   "id": "pzl-selekcjoner-1306",
+   "topic": "Selekcja",
+   "q": "Rejestry to:",
+   "answers": [
+    "charakterystyczne guzki na zębach przedtrzonowych i trzonowych, zmieniające się wraz z wiekiem zwierząt, pomocne w ocenie wieku jeleniowatych",
+    "charakterystyczne wgłębienia na zębach przedtrzonowych i trzonowych, zmieniające wraz z wiekiem zwierząt kształty i głębokość, pomocne w ocenie wieku jeleniowatych",
+    "charakterystyczne guzki na zębach trzonowych dzików, zmieniające się wraz z wiekiem zwierząt, pomocne w ocenie wieku",
+    "charakterystyczny sposób ścierania się siekaczy jeleniowatych"
+   ],
+   "correct": 1
+  },
+  {
    "id": "pzl-selekcjoner-1307",
    "topic": "Selekcja",
    "q": "Linia demarkacyjna to:",
@@ -2742,6 +3031,18 @@
     "potoczna nazwa granicy obwodu łowieckiego"
    ],
    "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1308",
+   "topic": "Selekcja",
+   "q": "Rogacza nazywamy krzyżakiem, wówczas gdy:",
+   "answers": [
+    "posiada on charakterystyczną ciemną pręgę na grzbiecie",
+    "zrzuci on jedną tykę, a z drugą chodzi jeszcze przez kilka dni",
+    "posiada poroże, w którym odnogi tylne i przednie wyrastają na tej samej wysokości tyk",
+    "posiada na czole ciemną plamę w kształcie krzyża"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-selekcjoner-1309",
@@ -3090,6 +3391,18 @@
    "correct": 3
   },
   {
+   "id": "pzl-selekcjoner-1441",
+   "topic": "Selekcja",
+   "q": "Poroże pierwiastkowe występuje u:",
+   "answers": [
+    "wszystkich gatunków jeleniowatych żyjących w naszym kraju",
+    "tylko u jelenia szlachetnego",
+    "u sarny, a czasami również łosia",
+    "wyłącznie u jelenia sika"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-selekcjoner-1446",
    "topic": "Selekcja",
    "q": "Przedstawiony na rycinie rogacz i jego żuchwa wskazują, iż:",
@@ -3248,6 +3561,18 @@
    "correct": 2
   },
   {
+   "id": "pzl-selekcjoner-1520",
+   "topic": "Selekcja",
+   "q": "Łyżkarz to charakterystyczna forma poroża o spłaszczonej górnej części tyki występująca u:",
+   "answers": [
+    "jelenia szlachetnego",
+    "jelenia sika",
+    "łosia",
+    "daniela"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-selekcjoner-1537",
    "topic": "Selekcja",
    "q": "Określenie uperlenie odnosi się do:",
@@ -3268,6 +3593,18 @@
     "stopniowe zmniejszanie się rozmiarów i liczby odnóg poroża u starzejących się samców jeleniowatych",
     "cecha objawiająca się brakiem nadoczniaków w wieńcu jelenia szlachetnego",
     "cecha poroża młodego rogacza polegająca na braku odnóg"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1539",
+   "topic": "Selekcja",
+   "q": "Wieczny ósmak to:",
+   "answers": [
+    "samiec sarny, który nakłada parostki w formie ósmaka",
+    "samiec jelenia szlachetnego, który rokrocznie nakłada poroże w formie ósmaka",
+    "samiec łosia o porożu w formie badylarza o 4 odnogach na każdej tyce",
+    "przyszłościowy samiec jelenia szlachetnego, który jako drugie poroże wykształcił formę ósmaka"
    ],
    "correct": 1
   },
