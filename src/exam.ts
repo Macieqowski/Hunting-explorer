@@ -28,9 +28,54 @@ export interface Bank {
   count: number;
   passPct: number;
   minutes: number;
+  /**
+   * Optional exam parts, drawn and shown in this order (e.g. PZŁ hunter test: 30 safety
+   * questions first, then 70 general). `count` is the part's share of a full exam; shorter
+   * attempts keep the same proportions. A part without `topics` takes every question no other
+   * part claims. `minPct` is an extra pass condition for that part alone.
+   */
+  sections?: Section[];
   /** Where the questions come from (shown in the UI). */
   origin?: { name: string; url?: string };
   questions: Question[];
+}
+
+export interface Section {
+  name: { pl: string; en: string };
+  topics?: string[];
+  count: number;
+  minPct?: number;
+}
+
+/** Index of the section a question belongs to. */
+export function sectionOf(q: Question, sections: Section[]): number {
+  const i = sections.findIndex((s) => s.topics?.includes(q.topic));
+  return i >= 0 ? i : sections.findIndex((s) => !s.topics);
+}
+
+/** Splits `n` slots across weights with largest-remainder rounding, never exceeding `caps`. */
+function apportion(weights: number[], caps: number[], n: number, rng: Rng): number[] {
+  const sum = weights.reduce((s, x) => s + x, 0) || 1;
+  const quotas = weights.map((w) => (w / sum) * n);
+  const take = quotas.map((q, i) => Math.min(Math.floor(q), caps[i]));
+  let left = n - take.reduce((s, x) => s + x, 0);
+  // Hand out the remaining slots to the largest fractional parts (ties broken randomly).
+  const order = shuffle(
+    weights.map((_, i) => i),
+    rng,
+  ).sort((a, b) => quotas[b] - take[b] - (quotas[a] - take[a]));
+  while (left > 0) {
+    const before = left;
+    for (const i of order) {
+      if (left <= 0) break;
+      if (take[i] < caps[i]) {
+        take[i]++;
+        left--;
+      }
+    }
+    if (left === before) break;
+  }
+  return take;
 }
 
 /** A question as presented in one attempt: answers shuffled, correct indices remapped. */
@@ -82,10 +127,25 @@ export function shuffleAnswers(q: Question, rng: Rng = Math.random): DrawnQuesti
 /**
  * Draws `count` distinct questions, spread across topics in proportion to their size
  * (largest-remainder rounding), then shuffles question order and answer order.
+ * With `sections`, the count is first split across the sections by their `count`s and the
+ * sections are kept in order (questions are shuffled only within a section).
  */
-export function drawExam(questions: Question[], count: number, rng: Rng = Math.random, topics?: string[]): DrawnQuestion[] {
+export function drawExam(questions: Question[], count: number, rng: Rng = Math.random, topics?: string[], sections?: Section[]): DrawnQuestion[] {
   const pool = topics?.length ? questions.filter((q) => topics.includes(q.topic)) : questions;
   const n = Math.min(count, pool.length);
+  const parts = sections?.length ? sections.map((_, i) => pool.filter((q) => sectionOf(q, sections) === i)) : [pool];
+  const partTake = sections?.length
+    ? apportion(
+        sections.map((s, i) => (parts[i].length ? s.count : 0)),
+        parts.map((p) => p.length),
+        n,
+        rng,
+      )
+    : [n];
+  return parts.flatMap((part, i) => shuffle(drawByTopic(part, partTake[i], rng), rng)).map((q) => shuffleAnswers(q, rng));
+}
+
+function drawByTopic(pool: Question[], n: number, rng: Rng): Question[] {
   const byTopic = new Map<string, Question[]>();
   for (const q of pool) {
     const arr = byTopic.get(q.topic);
@@ -93,23 +153,13 @@ export function drawExam(questions: Question[], count: number, rng: Rng = Math.r
     else byTopic.set(q.topic, [q]);
   }
   const groups = [...byTopic.values()];
-  const quotas = groups.map((g) => (g.length / pool.length) * n);
-  const take = quotas.map(Math.floor);
-  let left = n - take.reduce((s, x) => s + x, 0);
-  // Hand out the remaining slots to the groups with the largest fractional parts (ties broken randomly).
-  const order = shuffle(
-    groups.map((_, i) => i),
+  const take = apportion(
+    groups.map((g) => g.length),
+    groups.map((g) => g.length),
+    n,
     rng,
-  ).sort((a, b) => quotas[b] - take[b] - (quotas[a] - take[a]));
-  for (const i of order) {
-    if (left <= 0) break;
-    if (take[i] < groups[i].length) {
-      take[i]++;
-      left--;
-    }
-  }
-  const picked = groups.flatMap((g, i) => shuffle(g, rng).slice(0, take[i]));
-  return shuffle(picked, rng).map((q) => shuffleAnswers(q, rng));
+  );
+  return groups.flatMap((g, i) => shuffle(g, rng).slice(0, take[i]));
 }
 
 export function isCorrect(d: DrawnQuestion, chosen: number[] | undefined): boolean {
@@ -125,15 +175,26 @@ export interface TopicScore {
   total: number;
 }
 
+export interface SectionScore {
+  name: { pl: string; en: string };
+  correct: number;
+  total: number;
+  pct: number;
+  minPct?: number;
+  passed: boolean;
+}
+
 export interface ExamResult {
   correct: number;
   total: number;
   pct: number;
   passed: boolean;
   byTopic: TopicScore[];
+  /** Per-section scores when the bank defines sections (only sections present in the attempt). */
+  bySection: SectionScore[];
 }
 
-export function scoreExam(drawn: DrawnQuestion[], answers: (number[] | undefined)[], passPct: number): ExamResult {
+export function scoreExam(drawn: DrawnQuestion[], answers: (number[] | undefined)[], passPct: number, sections?: Section[]): ExamResult {
   const topics = new Map<string, TopicScore>();
   let correct = 0;
   drawn.forEach((d, i) => {
@@ -146,7 +207,22 @@ export function scoreExam(drawn: DrawnQuestion[], answers: (number[] | undefined
   });
   const total = drawn.length;
   const pct = total ? (correct / total) * 100 : 0;
-  return { correct, total, pct, passed: pct >= passPct, byTopic: [...topics.values()].sort((a, b) => a.topic.localeCompare(b.topic, 'pl')) };
+  const bySection: SectionScore[] = (sections ?? [])
+    .map((s, si) => {
+      const idx = drawn.map((d, i) => (sectionOf(d.question, sections!) === si ? i : -1)).filter((i) => i >= 0);
+      const c = idx.filter((i) => isCorrect(drawn[i], answers[i])).length;
+      const p = idx.length ? (c / idx.length) * 100 : 0;
+      return { name: s.name, correct: c, total: idx.length, pct: p, minPct: s.minPct, passed: s.minPct == null || p >= s.minPct };
+    })
+    .filter((s) => s.total > 0);
+  return {
+    correct,
+    total,
+    pct,
+    passed: pct >= passPct && bySection.every((s) => s.passed),
+    byTopic: [...topics.values()].sort((a, b) => a.topic.localeCompare(b.topic, 'pl')),
+    bySection,
+  };
 }
 
 /** Basic sanity checks for a question bank (used by tests and the import script). */

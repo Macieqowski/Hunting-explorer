@@ -55,6 +55,7 @@ app.innerHTML = `
       <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M12 2 4 14h4l-3 5h6v3h2v-3h6l-3-5h4z"/></svg>
       <div><h1 data-t="title"></h1><p data-t="subtitle"></p></div>
     </div>
+    <nav class="sections" id="sections" aria-label="Sections"></nav>
     <button class="lang" id="lang" type="button" aria-label="Language"></button>
   </header>
   <main class="layout">
@@ -73,6 +74,17 @@ app.innerHTML = `
 
 const content = $('#content');
 const mapApi: MapApi = createMap($('#map'), (lat, lng) => navigate({ kind: 'point', lat, lng }));
+
+// Top-level sections. The map section holds the panel tabs; every other section is a
+// full-width page without the map (add new features here).
+type Section = 'map' | 'exams';
+const SECTIONS: [Section, Key][] = [
+  ['map', 'sectionMap'],
+  ['exams', 'tabExams'],
+];
+const sectionOf = (v: View): Section => (v.kind === 'tab' && v.tab === 'exams' ? 'exams' : 'map');
+let lastSection: Section = 'map';
+let lastMapView: View = { kind: 'tab', tab: 'clubs' };
 
 // ---------------------------------------------------------------- routing
 
@@ -159,12 +171,23 @@ function renderStatic() {
   $('#lang').textContent = getLang() === 'pl' ? 'EN' : 'PL';
   $('#locate').textContent = '◎ ' + t('locate');
   document.title = t('title');
+  const section = sectionOf(state.view);
+  $('#sections').innerHTML = SECTIONS.map(
+    ([id, k]) => `<button type="button" data-section="${id}" aria-current="${section === id ? 'page' : 'false'}">${t(k)}</button>`,
+  ).join('');
+  app.classList.toggle('page-mode', section !== 'map');
+  if (section !== lastSection) {
+    lastSection = section;
+    content.scrollTop = 0;
+    // Leaflet needs a size refresh after its container was hidden.
+    if (section === 'map') setTimeout(() => mapApi.map.invalidateSize(), 0);
+  }
+  if (section === 'map') lastMapView = state.view;
   const tabs: [Tab, Key][] = [
     ['clubs', 'tabClubs'],
     ['districts', 'tabDistricts'],
     ['stats', 'tabStats'],
     ['seasons', 'tabSeasons'],
-    ['exams', 'tabExams'],
     ['about', 'tabAbout'],
   ];
   $('#tabs').innerHTML = tabs
@@ -544,6 +567,12 @@ $('#lang').addEventListener('click', () => {
   setLang(getLang() === 'pl' ? 'en' : 'pl');
   mapApi.rebuildLayerControl();
   render();
+});
+
+$('#sections').addEventListener('click', (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLElement>('[data-section]');
+  if (!b || b.dataset.section === sectionOf(state.view)) return;
+  navigate(b.dataset.section === 'exams' ? { kind: 'tab', tab: 'exams' } : lastMapView);
 });
 
 $('#tabs').addEventListener('click', (e) => {
