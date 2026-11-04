@@ -4,7 +4,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, connectAuthEmulator } from 'firebase/auth';
 import { getDatabase, ref, child, push, get, update, onValue, serverTimestamp, connectDatabaseEmulator } from 'firebase/database';
-import { parseHunt, parseParticipants, cleanText, cleanNotes, LIMITS, type Hunt, type HuntInput } from './hunt';
+import { parseHunt, parseParticipants, parsePositions, parseTracks, shouldPurge, cleanText, cleanNotes, LIMITS, type Hunt, type HuntInput } from './hunt';
 import { HuntError, type FirebaseConfig, type HuntBackend } from './huntBackend';
 
 function wrap(e: unknown): HuntError {
@@ -30,6 +30,8 @@ function cleanInput(i: Partial<HuntInput>): Partial<HuntInput> {
   if (i.end !== undefined) out.end = i.end;
   if (i.place !== undefined) out.place = cleanText(i.place, LIMITS.place);
   if (i.notes !== undefined) out.notes = cleanNotes(i.notes);
+  if (i.district !== undefined)
+    out.district = i.district && { id: i.district.id, slug: i.district.slug.slice(0, 40), label: cleanText(i.district.label, LIMITS.districtLabel) };
   return out;
 }
 
@@ -46,6 +48,9 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
   const user = auth.currentUser ?? (await guard(signInAnonymously(auth))).user;
   const uid = user.uid;
   const root = ref(db);
+  let offset = 0;
+  onValue(ref(db, '.info/serverTimeOffset'), (s) => (offset = Number(s.val()) || 0));
+  const purge = (id: string) => update(root, { [`positions/${id}`]: null, [`tracks/${id}`]: null });
 
   return {
     uid,
@@ -64,13 +69,21 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
       return id;
     },
 
-    updateHunt: (id, patch) => guard(update(child(root, `hunts/${id}`), { ...cleanInput(patch), ...(patch.status ? { status: patch.status } : {}) })),
+    updateHunt: (id, patch) =>
+      guard(
+        update(child(root, `hunts/${id}`), {
+          ...cleanInput(patch),
+          ...(patch.status ? { status: patch.status, endedAt: patch.status === 'ended' ? serverTimestamp() : null } : {}),
+        }),
+      ),
 
     deleteHunt: (id) =>
       guard(
         update(root, {
           [`hunts/${id}`]: null,
           [`participants/${id}`]: null,
+          [`positions/${id}`]: null,
+          [`tracks/${id}`]: null,
           [`joins/${id}/${uid}`]: null,
           // Other people's "my hunts" entries are cleaned up by their own browsers (see myHunts).
           [`userHunts/${uid}/${id}`]: null,
@@ -108,6 +121,8 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
       guard(
         update(root, {
           [`participants/${id}/${uid}`]: null,
+          [`positions/${id}/${uid}`]: null,
+          [`tracks/${id}/${uid}`]: null,
           [`joins/${id}/${uid}`]: null,
           [`userHunts/${uid}/${id}`]: null,
         }),
@@ -115,7 +130,8 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
 
     setParticipant: (id, who, patch) => guard(update(child(root, `participants/${id}/${who}`), patch)),
 
-    removeParticipant: (id, who) => guard(update(root, { [`participants/${id}/${who}`]: null })),
+    removeParticipant: (id, who) =>
+      guard(update(root, { [`participants/${id}/${who}`]: null, [`positions/${id}/${who}`]: null, [`tracks/${id}/${who}`]: null })),
 
     async myHunts() {
       const ids = Object.keys((await guard(get(child(root, `userHunts/${uid}`)))).val() ?? {});
@@ -128,9 +144,40 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
           }
         }),
       );
+      for (const h of hunts) if (h && h.leaderUid === uid && shouldPurge(h, Date.now() + offset)) purge(h.id).catch(() => {});
       const gone = ids.filter((_, i) => !hunts[i]);
       if (gone.length) update(root, Object.fromEntries(gone.map((id) => [`userHunts/${uid}/${id}`, null]))).catch(() => {});
       return hunts.filter((h): h is Hunt => !!h);
     },
+
+    serverNow: () => Date.now() + offset,
+
+    publishPosition(id, fix, role, track) {
+      const pos: Record<string, unknown> = { lat: fix.lat, lng: fix.lng, ts: serverTimestamp(), role };
+      if (fix.acc != null && isFinite(fix.acc)) pos.acc = Math.round(fix.acc);
+      const upd: Record<string, unknown> = { [`positions/${id}/${uid}`]: pos };
+      if (track) upd[`tracks/${id}/${uid}/${push(child(root, `tracks/${id}/${uid}`)).key}`] = { lat: fix.lat, lng: fix.lng, ts: serverTimestamp() };
+      return guard(update(root, upd));
+    },
+
+    clearPosition: (id) => guard(update(root, { [`positions/${id}/${uid}`]: null })),
+
+    watchPositions(id, cb, onDenied) {
+      return onValue(
+        child(root, `positions/${id}`),
+        (s) => cb(parsePositions(s.val())),
+        () => onDenied(),
+      );
+    },
+
+    watchTracks(id, cb, onDenied) {
+      return onValue(
+        child(root, `tracks/${id}`),
+        (s) => cb(parseTracks(s.val())),
+        () => onDenied(),
+      );
+    },
+
+    purgeLocations: (id) => guard(purge(id)),
   };
 }

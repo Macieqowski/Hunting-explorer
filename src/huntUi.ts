@@ -16,7 +16,19 @@ import {
   type HuntStatus,
   type Participant,
   type Role,
+  type HuntDistrict,
+  type Position,
+  shouldPurge,
+  toGpx,
+  gpxFileName,
+  type TrackPoint,
 } from './hunt';
+import type { District } from './bdl';
+import { fetchDistrictsAtPoint } from './bdl';
+import { fold, districtSlug } from './data';
+import { createHuntMap, type HuntMap, type PersonInfo } from './huntMap';
+import { Sharer } from './huntShare';
+import { roleIcon } from './huntIcons';
 import { firebaseConfig, getBackend, HuntError, type HuntBackend, type Unsubscribe } from './huntBackend';
 
 const esc = (s: unknown) =>
@@ -131,10 +143,71 @@ const L = {
   deleteSure: { pl: 'Tak, usuń polowanie i listę uczestników', en: 'Yes, delete the hunt and its participant list' },
   withdraw: { pl: 'Wypisz się', en: 'Withdraw' },
   withdrawSure: { pl: 'Tak, wypisz mnie', en: 'Yes, withdraw me' },
-  mapSoon: {
-    pl: 'Wkrótce: mapa z położeniem uczestników podczas polowania.',
-    en: 'Coming next: a live map of participants during the hunt.',
+  fDistrict: { pl: 'Obwód łowiecki', en: 'Hunting district' },
+  fDistrictHint: {
+    pl: 'Opcjonalnie. Mapa polowania pokaże granice obwodu.',
+    en: 'Optional. The hunt map will show the district boundary.',
   },
+  districtPh: { pl: 'Numer obwodu, koło, nadleśnictwo…', en: 'District number, club, forest district…' },
+  districtLoading: { pl: 'Wczytywanie listy obwodów…', en: 'Loading the district list…' },
+  districtUnavailable: { pl: 'Lista obwodów jest niedostępna.', en: 'The district list is unavailable.' },
+  districtNone: { pl: 'Nie znaleziono obwodu.', en: 'No district found.' },
+  districtHere: { pl: '◎ Obwód, w którym jestem', en: '◎ District I am in' },
+  districtHereNone: { pl: 'W tym miejscu nie ma obwodu łowieckiego.', en: 'There is no hunting district here.' },
+  districtHereError: { pl: 'Nie udało się ustalić obwodu z lokalizacji.', en: 'Could not find the district from your location.' },
+  districtClear: { pl: 'Usuń obwód', en: 'Remove district' },
+  district: { pl: 'Obwód', en: 'District' },
+  districtNo: { pl: 'Obwód nr', en: 'District no.' },
+  mapTitle: { pl: 'Mapa polowania', en: 'Hunt map' },
+  unconfirmedMap: {
+    pl: 'Mapę z uczestnikami zobaczysz, gdy prowadzący potwierdzi Twój udział.',
+    en: 'You will see the map of participants once the hunt leader confirms you.',
+  },
+  shareTitle: { pl: 'Udostępnianie lokalizacji', en: 'Sharing your location' },
+  shareConsent: {
+    pl: 'Twoje położenie zobaczą tylko potwierdzeni uczestnicy tego polowania, wyłącznie gdy polowanie trwa. Zapisywany jest też ślad Twojej trasy; położenie i ślady są przechowywane 7 dni po zakończeniu polowania, potem są usuwane. Możesz przestać w każdej chwili.',
+    en: 'Only confirmed participants of this hunt will see your position, and only while the hunt is in progress. Your track is recorded too; positions and tracks are kept for 7 days after the hunt ends, then deleted. You can stop at any time.',
+  },
+  shareKeepOpen: {
+    pl: 'Zostaw tę stronę otwartą: po zablokowaniu ekranu telefon przestaje wysyłać położenie.',
+    en: 'Keep this page open: phones stop sending your position when the screen locks.',
+  },
+  shareSafety: {
+    pl: 'Położenie na mapie może mieć kilka minut i kilkadziesiąt metrów błędu. Nie zastępuje zasad bezpieczeństwa ani odprawy.',
+    en: 'Positions on the map can be minutes old and tens of metres off. They do not replace safety rules or the briefing.',
+  },
+  shareStart: { pl: 'Udostępniaj moją lokalizację', en: 'Share my location' },
+  shareStop: { pl: 'Zatrzymaj', en: 'Stop' },
+  shareOn: { pl: 'Udostępniasz lokalizację', en: 'You are sharing your location' },
+  shareStarting: { pl: 'Ustalanie położenia…', en: 'Getting your position…' },
+  shareDenied: {
+    pl: 'Przeglądarka nie ma dostępu do lokalizacji. Zezwól na nią w ustawieniach strony i spróbuj ponownie.',
+    en: 'The browser has no access to your location. Allow it in the site settings and try again.',
+  },
+  shareUnavailable: { pl: 'To urządzenie nie udostępnia lokalizacji.', en: 'This device does not provide a location.' },
+  shareStopped: { pl: 'Udostępnianie zatrzymane:', en: 'Sharing stopped:' },
+  shareNotLive: {
+    pl: 'Udostępnianie lokalizacji będzie możliwe, gdy prowadzący rozpocznie polowanie.',
+    en: 'Location sharing becomes available when the leader starts the hunt.',
+  },
+  shareEnded: { pl: 'Polowanie zakończone. Położenie i ślady są dostępne jeszcze przez 7 dni od zakończenia.', en: 'The hunt has ended. Positions and tracks stay available for 7 days after the end.' },
+  lastSent: { pl: 'ostatnio wysłano', en: 'last sent' },
+  visible: { pl: 'na mapie', en: 'on the map' },
+  showTracks: { pl: 'Pokaż ślady', en: 'Show tracks' },
+  hideTracks: { pl: 'Ukryj ślady', en: 'Hide tracks' },
+  fitAll: { pl: 'Pokaż wszystkich', en: 'Show everyone' },
+  centerMe: { pl: 'Moje położenie', en: 'My position' },
+  justNow: { pl: 'przed chwilą', en: 'just now' },
+  minAgo: { pl: 'min temu', en: 'min ago' },
+  hAgo: { pl: 'godz. temu', en: 'h ago' },
+  accuracy: { pl: 'Dokładność', en: 'Accuracy' },
+  distanceFromYou: { pl: 'Odległość od Ciebie', en: 'Distance from you' },
+  exportGpx: { pl: '⤓ Pobierz ślady (GPX)', en: '⤓ Download tracks (GPX)' },
+  exportEmpty: { pl: 'Brak śladów do pobrania.', en: 'No tracks to download.' },
+  lOsm: { pl: 'Mapa (OSM)', en: 'Map (OSM)' },
+  lTopo: { pl: 'Topograficzna', en: 'Topographic' },
+  lSat: { pl: 'Satelitarna', en: 'Satellite' },
+  lDistricts: { pl: 'Obwody łowieckie', en: 'Hunting districts' },
 } as const;
 const l = (k: keyof typeof L) => tt(L[k]);
 
@@ -163,6 +236,25 @@ let badFields = new Set<string>();
 let copied = false;
 /** Text typed into forms, kept across re-renders caused by live updates. */
 const draft = new Map<string, string>();
+
+/** Supplied by main.ts: the BDL district list, null while loading, or an error. */
+export interface HuntContext {
+  onChange: () => void;
+  go: (id: string | null) => void;
+  districts: () => { list: District[] | null; error: string };
+}
+let districtsOf: HuntContext['districts'] = () => ({ list: null, error: '' });
+let locatingDistrict = false;
+
+let hmap: HuntMap | null = null;
+let positions: Position[] = [];
+let posUnsub: Unsubscribe | null = null;
+let tracksUnsub: Unsubscribe | null = null;
+let showTracks = false;
+let ticker: ReturnType<typeof setInterval> | undefined;
+let sharer: Sharer | null = null;
+let purged = new Set<string>();
+const SHARE_KEY = 'huntSharing';
 
 const NAME_KEY = 'huntPersonName';
 const storedName = () => {
@@ -201,6 +293,218 @@ function connect() {
 function unsubscribe() {
   unsubs.forEach((u) => u());
   unsubs = [];
+}
+
+// ---------------------------------------------------------------- live map
+
+function stopLive() {
+  posUnsub?.();
+  posUnsub = null;
+  tracksUnsub?.();
+  tracksUnsub = null;
+  showTracks = false;
+  positions = [];
+  clearInterval(ticker);
+  ticker = undefined;
+  hmap?.destroy();
+  hmap = null;
+}
+
+const people = (): Map<string, PersonInfo> => new Map((members ?? []).map((p) => [p.uid, { name: p.name, role: p.role }]));
+const myUid = () => (conn.s === 'ready' ? conn.be.uid : '');
+const now = () => (conn.s === 'ready' ? conn.be.serverNow() : Date.now());
+
+function ago(ms: number) {
+  const m = Math.floor(ms / 60e3);
+  if (m < 1) return l('justNow');
+  if (m < 60) return `${m} ${l('minAgo')}`;
+  return `${Math.floor(m / 60)} ${l('hAgo')}`;
+}
+
+/** Start or stop the position listener depending on whether I may read positions. */
+function syncLive() {
+  const id = watched;
+  const me = members?.find((p) => p.uid === myUid());
+  const allowed = !!(id && hunt && me && me.status === 'confirmed');
+  if (!allowed) {
+    if (posUnsub || hmap) stopLive();
+  } else if (conn.s === 'ready' && !posUnsub) {
+    posUnsub = conn.be.watchPositions(
+      id!,
+      (ps) => {
+        positions = ps;
+        drawPositions();
+      },
+      () => {
+        posUnsub = null;
+      },
+    );
+    ticker = setInterval(() => {
+      hmap?.refreshAges(now());
+      updateLiveText();
+    }, 15_000);
+  }
+  // Sharing follows the hunt: only while it is live and I am confirmed.
+  // (Deferred: these re-render, and syncLive runs during rendering.)
+  if (sharer && sharer.huntId === id && sharer.active && (!allowed || hunt?.status !== 'live')) {
+    const s = sharer;
+    const clear = hunt?.status === 'live';
+    queueMicrotask(() => s.stop(clear));
+    forgetSharing();
+  }
+  // Resume sharing after a reload if it was on for this hunt.
+  if (allowed && hunt?.status === 'live' && rememberedSharing() === id && !sharer?.active && sharer?.state !== 'denied')
+    queueMicrotask(startSharing);
+  // The leader's app deletes positions and tracks RETENTION_MS after the end (there is no server code).
+  if (id && hunt && hunt.leaderUid === myUid() && shouldPurge(hunt, now()) && !purged.has(id) && conn.s === 'ready') {
+    purged.add(id);
+    conn.be.purgeLocations(id).catch(() => purged.delete(id));
+  }
+}
+
+function drawPositions() {
+  if (!hmap) return;
+  hmap.setPositions(positions, people(), myUid(), now());
+  updateLiveText();
+}
+
+function ensureMap(): HuntMap {
+  if (!hmap) {
+    hmap = createHuntMap({
+      you: l('you'),
+      role: (r) => l(`r_${r}`),
+      ago,
+      accuracy: l('accuracy'),
+      distance: l('distanceFromYou'),
+      layers: { osm: l('lOsm'), topo: l('lTopo'), sat: l('lSat'), districts: l('lDistricts') },
+    });
+  }
+  return hmap;
+}
+
+/** Called by main.ts after the page HTML is in place: put the live map into its slot. */
+export function mountHuntMap() {
+  const slot = document.querySelector<HTMLElement>('.hm-slot');
+  if (!slot) return;
+  const m = ensureMap();
+  slot.replaceWith(m.el);
+  m.invalidate();
+  m.setDistrict(hunt?.district?.id ?? null);
+  drawPositions();
+  if (showTracks) m.setTracks(lastTracks, people());
+  updateLiveText();
+}
+
+let lastTracks: Map<string, TrackPoint[]> | null = null;
+
+/** Download everyone's tracks and last positions as a GPX file. */
+function exportGpx() {
+  const id = watched;
+  const h = hunt;
+  if (!id || !h || conn.s !== 'ready') return;
+  let done = false;
+  let unsub: Unsubscribe | null = null;
+  unsub = conn.be.watchTracks(
+    id,
+    (tracks) => {
+      if (done) return;
+      done = true;
+      setTimeout(() => unsub?.(), 0);
+      if (!tracks.size && !positions.length) {
+        formError = l('exportEmpty');
+        rerender();
+        return;
+      }
+      const gpx = toGpx(h.name, tracks, positions, people(), (r) => l(`r_${r}`));
+      const url = URL.createObjectURL(new Blob([gpx], { type: 'application/gpx+xml' }));
+      const a = Object.assign(document.createElement('a'), { href: url, download: gpxFileName(h) });
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    },
+    () => {},
+  );
+}
+
+function toggleTracks() {
+  if (!watched || conn.s !== 'ready') return;
+  showTracks = !showTracks;
+  tracksUnsub?.();
+  tracksUnsub = null;
+  if (showTracks)
+    tracksUnsub = conn.be.watchTracks(
+      watched,
+      (t) => {
+        lastTracks = t;
+        hmap?.setTracks(t, people());
+      },
+      () => {},
+    );
+  else {
+    lastTracks = null;
+    hmap?.setTracks(null, people());
+  }
+}
+
+/** Counts and the "last sent" line change with every position; update them without re-rendering the page. */
+function updateLiveText() {
+  const el = document.querySelector('.hm-counts');
+  if (el) el.innerHTML = liveCounts();
+  const sent = document.querySelector('.h-share-sent');
+  if (sent && sharer?.lastSentAt) sent.textContent = `${l('lastSent')} ${ago(Date.now() - sharer.lastSentAt)}`;
+}
+
+function liveCounts(): string {
+  const ppl = people();
+  const visible = positions.filter((p) => ppl.has(p.uid));
+  const by = (r: Role) => visible.filter((p) => ppl.get(p.uid)!.role === r).length;
+  return (['leader', 'hunter', 'beater'] as Role[])
+    .map((r) => `<span class="hm-count">${roleIcon(r, 16)} ${by(r)}</span>`)
+    .join('') + `<span class="muted small">${l('visible')}</span>`;
+}
+
+const rememberedSharing = () => {
+  try {
+    return localStorage.getItem(SHARE_KEY);
+  } catch {
+    return null;
+  }
+};
+const forgetSharing = () => {
+  try {
+    localStorage.removeItem(SHARE_KEY);
+  } catch {
+    /* ignore */
+  }
+};
+
+function startSharing() {
+  const id = watched;
+  if (!id || conn.s !== 'ready') return;
+  const be = conn.be;
+  if (sharer && sharer.huntId !== id) sharer.stop();
+  if (!sharer || sharer.huntId !== id)
+    sharer = new Sharer(id, {
+      publish: async (fix, track) => {
+        const role = members?.find((p) => p.uid === be.uid)?.role ?? 'hunter';
+        try {
+          await be.publishPosition(id, fix, role, track);
+        } catch (e) {
+          // Refused by the rules: the hunt ended or I was removed. Stop instead of retrying forever.
+          if (e instanceof HuntError && e.code === 'denied') throw Object.assign(new Error(l('shareNotLive')), { stop: true });
+          throw e;
+        }
+      },
+      clear: () => be.clearPosition(id),
+      onChange: () => rerender(),
+    });
+  try {
+    localStorage.setItem(SHARE_KEY, id);
+  } catch {
+    /* ignore */
+  }
+  sharer.start();
 }
 
 function subscribe(id: string) {
@@ -261,6 +565,7 @@ function loadMine() {
 function setRoute(id: string | null) {
   if (id === watched) return;
   unsubscribe();
+  stopLive();
   watched = id;
   hunt = undefined;
   huntError = '';
@@ -314,24 +619,6 @@ function fmtDate(date: string, long = true) {
 }
 const statusBadge = (s: HuntStatus) => `<span class="h-status h-st-${s}">${l(`st_${s}`)}</span>`;
 
-/** Role symbols, the same shapes the live map will use: star = leader, crosshair = hunter, flag triangle = beater. */
-export function roleIcon(role: Role, size = 20): string {
-  const svg = (body: string) =>
-    `<svg class="h-icon h-icon-${role}" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
-  switch (role) {
-    case 'leader':
-      return svg(
-        '<circle cx="12" cy="12" r="11" fill="#166534" stroke="#fff" stroke-width="1.5"/><path fill="#fff" d="m12 5 2.1 4.3 4.7.7-3.4 3.3.8 4.7-4.2-2.2-4.2 2.2.8-4.7L5.2 10l4.7-.7z"/>',
-      );
-    case 'hunter':
-      return svg(
-        '<circle cx="12" cy="12" r="11" fill="#b91c1c" stroke="#fff" stroke-width="1.5"/><circle cx="12" cy="12" r="5" fill="none" stroke="#fff" stroke-width="2"/><path stroke="#fff" stroke-width="2" d="M12 3v5M12 16v5M3 12h5M16 12h5"/>',
-      );
-    case 'beater':
-      return svg('<path d="M12 1.5 23 21.5H1z" fill="#ea580c" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/><path stroke="#fff" stroke-width="2" d="M7 17h10"/>');
-  }
-}
-
 function field(form: string, name: string, label: string, def: string, opts: { type?: string; ph?: string; max?: number; hint?: string; req?: boolean; area?: boolean; auto?: string } = {}) {
   const v = draft.get(`${form}.${name}`) ?? def;
   const id = `hf-${form}-${name}`;
@@ -348,9 +635,10 @@ const btnBusy = () => (busy ? ' disabled aria-busy="true"' : '');
 
 // ---------------------------------------------------------------- rendering
 
-export function renderHunts(id: string | null, onChange: () => void, navigateTo: (id: string | null) => void): string {
-  rerender = onChange;
-  go = navigateTo;
+export function renderHunts(id: string | null, ctx: HuntContext): string {
+  rerender = ctx.onChange;
+  go = ctx.go;
+  districtsOf = ctx.districts;
   if (!firebaseConfig()) return `<div class="hunts"><h2>${tt({ pl: 'Polowanie zbiorowe', en: 'Group hunts' })}</h2><div class="notice">${l('notConfigured')}</div></div>`;
   setRoute(id);
   connect();
@@ -402,6 +690,7 @@ function renderHuntForm(kind: 'create' | 'edit'): string {
       ${field(kind, 'start', l('fStart'), h.start ?? '08:00', { type: 'time', req: true })}
       ${field(kind, 'end', l('fEnd'), h.end ?? '15:00', { type: 'time', req: true })}
     </div>
+    ${renderDistrictPicker(kind, h.district ?? null)}
     ${field(kind, 'place', l('fPlace'), h.place ?? '', { max: LIMITS.place, ph: l('fPlacePh') })}
     ${field(kind, 'notes', l('fNotes'), h.notes ?? '', { max: LIMITS.notes, ph: l('fNotesPh'), area: true })}
     ${who}
@@ -411,6 +700,103 @@ function renderHuntForm(kind: 'create' | 'edit'): string {
       <button type="button" class="btn ghost" data-hunt="${kind === 'create' ? 'cancelNew' : 'cancelEdit'}">${l('cancel')}</button>
     </div>
   </form>`;
+}
+
+function pickedDistrict(form: string, def: HuntDistrict | null): HuntDistrict | null {
+  const v = draft.get(`${form}.district`);
+  if (v === undefined) return def;
+  try {
+    return JSON.parse(v) as HuntDistrict | null;
+  } catch {
+    return null;
+  }
+}
+
+const cap = (s: string | null) => (s ? s.charAt(0).toLocaleUpperCase('pl') + s.slice(1) : '');
+
+export function districtToHunt(d: District): HuntDistrict {
+  const where = [d.lease_holder_name, d.county_name && `woj. ${d.county_name}`].filter(Boolean).join(', ');
+  return { id: d.objectid, slug: districtSlug(d), label: `Obwód nr ${d.hunt_dist_nr ?? '?'}${where ? ` · ${where}` : ''}` };
+}
+
+/** Districts matching every word of the query: exact district number, or holder / forest district / county / voivodeship text. */
+export function searchDistricts(list: District[], q: string, limit = 8): District[] {
+  const terms = fold(q.trim()).split(/\s+/).filter(Boolean);
+  if (!terms.length) return [];
+  const out: District[] = [];
+  for (const d of list) {
+    const text = fold([d.lease_holder_name, d.inspectorate_name, d.district_name, d.county_name].join(' '));
+    if (terms.every((t) => d.hunt_dist_nr === t || text.includes(t))) {
+      out.push(d);
+      if (out.length >= limit) break;
+    }
+  }
+  return out;
+}
+
+function renderDistrictPicker(form: string, def: HuntDistrict | null): string {
+  const picked = pickedDistrict(form, def);
+  const head = `<span>${l('fDistrict')}</span>`;
+  if (picked)
+    return `<div class="h-field">${head}<div class="h-district-picked"><span>${esc(picked.label)}</span>
+      <button type="button" class="btn small ghost" data-hunt="clearDistrict" data-form="${form}" aria-label="${l('districtClear')}">✕</button></div></div>`;
+  const q = draft.get(`${form}.districtQ`) ?? '';
+  const { list, error } = districtsOf();
+  let results = '';
+  if (q.trim()) {
+    if (!list) results = `<li class="muted small">${error ? l('districtUnavailable') : l('districtLoading')}</li>`;
+    else {
+      const hits = searchDistricts(list, q);
+      results = hits.length
+        ? hits
+            .map((d) => {
+              const hd = districtToHunt(d);
+              return `<li><button type="button" data-hunt="pickDistrict" data-form="${form}" data-district="${esc(JSON.stringify(hd))}">
+                <strong>${l('districtNo')} ${esc(d.hunt_dist_nr)}</strong> <span class="muted">· ${esc(cap(d.county_name))}</span>
+                <small class="muted">${esc(d.lease_holder_name ?? '—')} · ${esc(d.inspectorate_name ?? '')}</small></button></li>`;
+            })
+            .join('')
+        : `<li class="muted small">${l('districtNone')}</li>`;
+    }
+  }
+  const id = `hf-${form}-districtQ`;
+  return `<div class="h-field"><label for="${id}">${head}</label>
+    <input type="search" id="${id}" name="districtQ" data-hunt-field="${form}" value="${esc(q)}" placeholder="${esc(l('districtPh'))}" autocomplete="off" />
+    ${results ? `<ul class="h-district-results">${results}</ul>` : ''}
+    <div><button type="button" class="btn small ghost" data-hunt="districtHere" data-form="${form}"${locatingDistrict ? ' disabled aria-busy="true"' : ''}>${l('districtHere')}</button></div>
+    <small class="muted">${l('fDistrictHint')}</small></div>`;
+}
+
+function renderLive(h: Hunt, me: Participant): string {
+  if (me.status !== 'confirmed') return `<div class="notice">${l('unconfirmedMap')}</div>`;
+  let share = '';
+  if (h.status === 'live') {
+    const st = sharer && sharer.huntId === h.id ? sharer.state : 'off';
+    if (st === 'on' || st === 'starting')
+      share = `<div class="h-share on" role="status"><span class="h-share-dot" aria-hidden="true"></span>
+        <div><strong>${st === 'on' ? l('shareOn') : l('shareStarting')}</strong><br><small class="h-share-sent muted"></small>
+        <small class="muted">${l('shareKeepOpen')}</small></div>
+        <button type="button" class="btn danger" data-hunt="shareStop">${l('shareStop')}</button></div>`;
+    else {
+      const problem =
+        st === 'denied' ? l('shareDenied') : st === 'unavailable' ? l('shareUnavailable') : st === 'error' ? `${l('shareStopped')} ${sharer?.error ?? ''}` : '';
+      share = `<div class="h-share card"><strong>${l('shareTitle')}</strong>
+        <p class="small">${l('shareConsent')}</p><p class="small muted">${l('shareSafety')}</p>
+        ${problem ? `<p class="h-error">${esc(problem)}</p>` : ''}
+        <button type="button" class="btn" data-hunt="shareStart">${l('shareStart')}</button></div>`;
+    }
+  } else if (h.status === 'ended') share = `<p class="muted small">${l('shareEnded')}</p>`;
+  else share = `<p class="muted small">${l('shareNotLive')}</p>`;
+  const iShare = !!sharer?.active && sharer.huntId === h.id;
+  return `<h3>${l('mapTitle')}</h3>${share}
+    <div class="hm-bar"><div class="hm-counts">${liveCounts()}</div>
+      <div class="hm-tools">
+        ${iShare ? `<button type="button" class="btn small ghost" data-hunt="centerMe">◎ ${l('centerMe')}</button>` : ''}
+        <button type="button" class="btn small ghost" data-hunt="fitAll">${l('fitAll')}</button>
+        <button type="button" class="btn small ghost" data-hunt="tracks" aria-pressed="${showTracks}">${showTracks ? l('hideTracks') : l('showTracks')}</button>
+        <button type="button" class="btn small ghost" data-hunt="gpx">${l('exportGpx')}</button>
+      </div></div>
+    <div class="hm-slot"></div>`;
 }
 
 function renderHunt(): string {
@@ -426,15 +812,19 @@ function renderHunt(): string {
       <dl class="kv">
         <dt>${l('when')}</dt><dd>${esc(fmtDate(h.date))}<br>${esc(h.start)}–${esc(h.end)}</dd>
         ${h.place ? `<dt>${l('where')}</dt><dd>${esc(h.place)}</dd>` : ''}
+        ${h.district ? `<dt>${l('district')}</dt><dd><a href="#/obwod/${esc(h.district.slug)}" data-nav="district" data-slug="${esc(h.district.slug)}">${esc(h.district.label)}</a></dd>` : ''}
         <dt>${l('leader')}</dt><dd>${roleIcon('leader', 16)} ${esc(h.leaderName)}</dd>
       </dl>
       ${h.notes ? `<p class="h-notes">${esc(h.notes).replace(/\n/g, '<br>')}</p>` : ''}
     </article>`;
   if (editing && isLeader) return `${back}${renderHuntForm('edit')}`;
   if (!membersLoaded) return `${back}${info}<p class="muted">${l('loading')}</p>`;
-  if (!me) return `${back}${info}${renderJoin(h)}`;
-  return `${back}${info}${renderMe(me, isLeader)}${isLeader ? renderInvite(h) : ''}${renderMembers(uid, isLeader)}${isLeader ? renderManage(h) : ''}
-    <p class="muted small">${l('mapSoon')}</p>`;
+  if (!me) {
+    syncLive();
+    return `${back}${info}${renderJoin(h)}`;
+  }
+  syncLive();
+  return `${back}${info}${renderMe(me, isLeader)}${renderLive(h, me)}${isLeader ? renderInvite(h) : ''}${renderMembers(uid, isLeader)}${isLeader ? renderManage(h) : ''}`;
 }
 
 function renderJoin(h: Hunt): string {
@@ -567,6 +957,10 @@ export function handleHuntClick(el: HTMLElement): boolean {
       break;
     case 'withdraw':
       confirming = null;
+      if (sharer?.huntId === id) {
+        forgetSharing();
+        sharer.stop(false);
+      }
       if (id) run((be) => be.withdraw(id));
       return true;
     case 'delete':
@@ -595,6 +989,58 @@ export function handleHuntClick(el: HTMLElement): boolean {
       if (id && hunt)
         navigator.share?.({ title: hunt.name, text: `${hunt.name} – ${fmtDate(hunt.date)} ${hunt.start}`, url: inviteUrl(id) }).catch(() => {});
       return true;
+    case 'pickDistrict':
+      draft.set(`${el.dataset.form}.district`, el.dataset.district ?? 'null');
+      draft.delete(`${el.dataset.form}.districtQ`);
+      break;
+    case 'clearDistrict':
+      draft.set(`${el.dataset.form}.district`, 'null');
+      break;
+    case 'districtHere': {
+      const form = el.dataset.form!;
+      if (!('geolocation' in navigator)) break;
+      locatingDistrict = true;
+      formError = '';
+      navigator.geolocation.getCurrentPosition(
+        async (p) => {
+          try {
+            const res = await fetchDistrictsAtPoint(p.coords.latitude, p.coords.longitude);
+            if (res[0]) draft.set(`${form}.district`, JSON.stringify(districtToHunt(res[0].attributes)));
+            else formError = l('districtHereNone');
+          } catch {
+            formError = l('districtHereError');
+          }
+          locatingDistrict = false;
+          rerender();
+        },
+        () => {
+          locatingDistrict = false;
+          formError = l('districtHereError');
+          rerender();
+        },
+        { enableHighAccuracy: false, timeout: 20_000, maximumAge: 60_000 },
+      );
+      break;
+    }
+    case 'shareStart':
+      startSharing();
+      break;
+    case 'shareStop':
+      forgetSharing(); // first: stop() re-renders, and a remembered flag would resume sharing
+      sharer?.stop();
+      break;
+    case 'tracks':
+      toggleTracks();
+      break;
+    case 'fitAll':
+      hmap?.fitAll();
+      return true;
+    case 'gpx':
+      exportGpx();
+      return true;
+    case 'centerMe':
+      hmap?.centerOn(myUid());
+      return true;
     case 'copy':
       if (id)
         navigator.clipboard?.writeText(inviteUrl(id)).then(() => {
@@ -620,6 +1066,7 @@ export function handleHuntInput(el: HTMLElement): boolean {
   if (!form) return false;
   const input = el as HTMLInputElement;
   draft.set(`${form}.${input.name}`, input.value);
+  if (input.name === 'districtQ') rerender();
   return true;
 }
 
@@ -630,7 +1077,15 @@ export function handleHuntSubmit(form: HTMLFormElement): boolean {
   formError = '';
   badFields = new Set();
   if (kind === 'create' || kind === 'edit') {
-    const input: HuntInput = { name: v('name'), date: v('date'), start: v('start'), end: v('end'), place: v('place'), notes: v('notes') };
+    const input: HuntInput = {
+      name: v('name'),
+      date: v('date'),
+      start: v('start'),
+      end: v('end'),
+      place: v('place'),
+      notes: v('notes'),
+      district: pickedDistrict(kind, kind === 'edit' && hunt ? hunt.district : null),
+    };
     validateHunt(input).forEach((f) => badFields.add(f));
     if (kind === 'create') {
       if (!validPersonName(v('leaderName'))) badFields.add('leaderName');

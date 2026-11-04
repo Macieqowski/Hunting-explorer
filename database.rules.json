@@ -48,6 +48,24 @@
         "createdAt": {
           ".validate": "newData.isNumber() && (data.exists() ? newData.val() === data.val() : newData.val() === now)"
         },
+        "district": {
+          ".validate": "newData.hasChildren(['id', 'slug', 'label'])",
+          "id": {
+            ".validate": "newData.isNumber()"
+          },
+          "slug": {
+            ".validate": "newData.isString() && newData.val().length <= 40"
+          },
+          "label": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
+        "endedAt": {
+          ".validate": "newData.isNumber() && newData.val() === now && newData.parent().child('status').val() === 'ended'"
+        },
         "$other": {
           ".validate": false
         }
@@ -74,6 +92,59 @@
           },
           "$other": {
             ".validate": false
+          }
+        }
+      }
+    },
+    "positions": {
+      "$h": {
+        ".read": "auth != null && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed'",
+        ".write": "auth != null && !newData.exists() && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid",
+        "$uid": {
+          ".write": "auth != null && ((auth.uid === $uid && (!newData.exists() || (root.child('hunts/' + $h + '/status').val() === 'live' && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed'))) || (!newData.exists() && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid))",
+          ".validate": "newData.hasChildren(['lat', 'lng', 'ts', 'role'])",
+          "lat": {
+            ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
+          },
+          "lng": {
+            ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180"
+          },
+          "acc": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+          "ts": {
+            ".validate": "newData.val() === now"
+          },
+          "role": {
+            ".validate": "newData.val() === root.child('participants/' + $h + '/' + auth.uid + '/role').val()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "tracks": {
+      "$h": {
+        ".read": "auth != null && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed'",
+        ".write": "auth != null && !newData.exists() && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid",
+        "$uid": {
+          ".write": "auth != null && !newData.exists() && (auth.uid === $uid || root.child('hunts/' + $h + '/leaderUid').val() === auth.uid)",
+          "$p": {
+            ".write": "auth != null && auth.uid === $uid && !data.exists() && root.child('hunts/' + $h + '/status').val() === 'live' && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed'",
+            ".validate": "newData.hasChildren(['lat', 'lng', 'ts'])",
+            "lat": {
+              ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
+            },
+            "lng": {
+              ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180"
+            },
+            "ts": {
+              ".validate": "newData.val() === now"
+            },
+            "$other": {
+              ".validate": false
+            }
           }
         }
       }

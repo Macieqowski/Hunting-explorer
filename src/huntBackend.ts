@@ -2,7 +2,7 @@
 // lives in huntFirebase.ts and is loaded on demand, so people who never open the
 // group hunt section never download the Firebase SDK.
 
-import type { Hunt, HuntInput, HuntStatus, Participant, Role } from './hunt';
+import type { Hunt, HuntInput, HuntStatus, Participant, Position, Role, TrackPoint } from './hunt';
 
 export type Unsubscribe = () => void;
 
@@ -21,8 +21,18 @@ export interface HuntBackend {
   /** Leader only. */
   setParticipant(id: string, uid: string, patch: { role?: Exclude<Role, 'leader'>; status?: 'confirmed' | 'registered' }): Promise<void>;
   removeParticipant(id: string, uid: string): Promise<void>;
-  /** Hunts this browser created or joined. */
+  /** Hunts this browser created or joined. Also deletes old positions of hunts this browser leads. */
   myHunts(): Promise<Hunt[]>;
+  /** Server clock estimate (ms), for judging how old a position is. */
+  serverNow(): number;
+  /** Send my position; `track` also appends it to my track. */
+  publishPosition(id: string, fix: { lat: number; lng: number; acc: number | null }, role: Role, track: boolean): Promise<void>;
+  clearPosition(id: string): Promise<void>;
+  /** Readable by confirmed participants; onDenied for anyone else. */
+  watchPositions(id: string, cb: (ps: Position[]) => void, onDenied: () => void): Unsubscribe;
+  watchTracks(id: string, cb: (tracks: Map<string, TrackPoint[]>) => void, onDenied: () => void): Unsubscribe;
+  /** Leader only: delete all positions and tracks of a hunt. */
+  purgeLocations(id: string): Promise<void>;
 }
 
 /** Errors the UI explains in words. */
