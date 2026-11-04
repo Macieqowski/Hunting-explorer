@@ -16,6 +16,7 @@ import { createMap, type MapApi } from './map';
 import { t, tt, getLang, setLang, fmtHa, fmtKm2, fmtNum, type Key } from './i18n';
 import { SEASONS, isOpen, effective, formatRanges, yearFrac, type Season } from './seasons';
 import { renderExams, handleExamClick, handleExamChange } from './examUi';
+import { renderWeather, handleWeatherClick, handleWeatherInput, handleWeatherSubmit, showWeatherAt } from './weatherUi';
 
 // ---------------------------------------------------------------- helpers
 
@@ -25,7 +26,7 @@ const $ = <T extends HTMLElement = HTMLElement>(sel: string, root: ParentNode = 
 const typeKey = (h: HolderType) => `type_${h}` as Key;
 const cap = (s: string | null) => (s ? s.charAt(0).toLocaleUpperCase('pl') + s.slice(1) : '—');
 
-type Tab = 'clubs' | 'districts' | 'stats' | 'seasons' | 'exams' | 'about';
+type Tab = 'clubs' | 'districts' | 'stats' | 'seasons' | 'exams' | 'weather' | 'about';
 type View = { kind: 'tab'; tab: Tab } | { kind: 'district'; slug: string } | { kind: 'club'; key: string } | { kind: 'point'; lat: number; lng: number };
 
 const state = {
@@ -77,12 +78,13 @@ const mapApi: MapApi = createMap($('#map'), (lat, lng) => navigate({ kind: 'poin
 
 // Top-level sections. The map section holds the panel tabs; every other section is a
 // full-width page without the map (add new features here).
-type Section = 'map' | 'exams';
+type Section = 'map' | 'exams' | 'weather';
 const SECTIONS: [Section, Key][] = [
   ['map', 'sectionMap'],
   ['exams', 'tabExams'],
+  ['weather', 'tabWeather'],
 ];
-const sectionOf = (v: View): Section => (v.kind === 'tab' && v.tab === 'exams' ? 'exams' : 'map');
+const sectionOf = (v: View): Section => (v.kind === 'tab' && (v.tab === 'exams' || v.tab === 'weather') ? v.tab : 'map');
 let lastSection: Section = 'map';
 let lastMapView: View = { kind: 'tab', tab: 'clubs' };
 
@@ -109,7 +111,7 @@ function hashToView(h: string): View {
     const [lat, lng] = arg.split(',').map(Number);
     if (isFinite(lat) && isFinite(lng)) return { kind: 'point', lat, lng };
   }
-  if (['districts', 'stats', 'seasons', 'exams', 'about'].includes(kind)) return { kind: 'tab', tab: kind as Tab };
+  if (['districts', 'stats', 'seasons', 'exams', 'weather', 'about'].includes(kind)) return { kind: 'tab', tab: kind as Tab };
   return { kind: 'tab', tab: 'clubs' };
 }
 
@@ -203,6 +205,7 @@ function render() {
   const v = state.view;
   if (v.kind === 'point') return void (content.innerHTML = renderPoint());
   if (v.kind === 'tab' && v.tab === 'exams') return void (content.innerHTML = renderExams(render));
+  if (v.kind === 'tab' && v.tab === 'weather') return void (content.innerHTML = renderWeather(render));
   if (v.kind === 'tab' && (v.tab === 'seasons' || v.tab === 'about')) {
     content.innerHTML = v.tab === 'seasons' ? renderSeasons() : renderAbout();
     return;
@@ -372,7 +375,7 @@ function renderDistrict(d: District) {
 }
 
 function renderPoint() {
-  const head = backButton();
+  const head = `${backButton()}<button type="button" class="btn ghost w-point-btn" data-action="weatherHere">☁ ${t('weatherHere')}</button>`;
   if (pointResult.status === 'loading') return `${head}<p class="muted">${t('identifying')}</p>`;
   if (pointResult.status === 'error') return `${head}<div class="notice error">${esc(pointResult.message)}</div>`;
   if (!pointResult.items.length) return `${head}<p class="muted">${t('outside')}</p>`;
@@ -572,7 +575,8 @@ $('#lang').addEventListener('click', () => {
 $('#sections').addEventListener('click', (e) => {
   const b = (e.target as HTMLElement).closest<HTMLElement>('[data-section]');
   if (!b || b.dataset.section === sectionOf(state.view)) return;
-  navigate(b.dataset.section === 'exams' ? { kind: 'tab', tab: 'exams' } : lastMapView);
+  const s = b.dataset.section as Section;
+  navigate(s === 'map' ? lastMapView : { kind: 'tab', tab: s });
 });
 
 $('#tabs').addEventListener('click', (e) => {
@@ -586,6 +590,8 @@ $('#tabs').addEventListener('click', (e) => {
 content.addEventListener('click', (e) => {
   const ex = (e.target as HTMLElement).closest<HTMLElement>('[data-exam]');
   if (ex && handleExamClick(ex)) return;
+  const wx = (e.target as HTMLElement).closest<HTMLElement>('[data-weather]');
+  if (wx && handleWeatherClick(wx)) return;
   const el = (e.target as HTMLElement).closest<HTMLElement>('[data-nav],[data-action]');
   if (!el) return;
   const nav = el.dataset.nav;
@@ -609,6 +615,12 @@ content.addEventListener('click', (e) => {
     case 'retry':
       load();
       break;
+    case 'weatherHere':
+      if (state.view.kind === 'point') {
+        showWeatherAt(state.view.lat, state.view.lng);
+        navigate({ kind: 'tab', tab: 'weather' });
+      }
+      break;
     case 'copy':
       navigator.clipboard?.writeText(location.href).then(() => toast(t('copied')), () => toast(location.href));
       break;
@@ -625,6 +637,7 @@ content.addEventListener('click', (e) => {
 
 content.addEventListener('input', (e) => {
   const el = e.target as HTMLInputElement;
+  if (handleWeatherInput(el)) return;
   const k = el.dataset.q as 'clubs' | 'districts' | undefined;
   if (!k) return;
   state.q[k] = el.value;
@@ -649,6 +662,10 @@ content.addEventListener('change', (e) => {
   else if (f === 'seasonVoiv') state.seasonVoiv = el.value;
   state.limit = 100;
   render();
+});
+
+content.addEventListener('submit', (e) => {
+  if (handleWeatherSubmit(e.target as HTMLFormElement)) e.preventDefault();
 });
 
 $('#locate').addEventListener('click', () => {

@@ -11,6 +11,7 @@ Interactive web map of all **hunting districts (obwody łowieckie)** in Poland a
 - **Statistics** – totals, share of land leased by clubs, largest clubs, breakdown by voivodeship and by PZŁ region.
 - **Hunting seasons** – full table of legal hunting seasons with regional exceptions, a yearly timeline, and "open today" highlighting (also shown on each district/club page for its voivodeship).
 - **Practice exams** – hunter (myśliwy) and selekcjoner tests with a random set of questions and shuffled answers on every attempt, an exam mode (timer, pass mark, score by topic, review of mistakes) and a learning mode (instant answer and explanation). Hunting-season questions are generated from the seasons table.
+- **Weather for hunters** – for your current location and any number of saved places (search by town or paste coordinates; also "Weather at this point" from the map): current conditions with wind direction and gusts, 3-hour pressure trend, visibility and dew point; practical hints (where your scent goes, fog, frost, fresh snow for tracking, rain coming, bright or dark night); sun times with astronomical/nautical/civil twilight and a 24-hour light bar; moon phase, illumination, moonrise/moonset, hours the moon is up tonight, next full and new moon; 24-hour and 7-day forecasts. Saved places stay in the browser (localStorage).
 - **Extra map layers** – forest district boundaries, current forest entry bans, current fire danger; OSM, topographic and satellite base maps.
 - Polish / English UI, deep links to clubs and districts, mobile layout, light/dark theme.
 
@@ -20,6 +21,7 @@ Interactive web map of all **hunting districts (obwody łowieckie)** in Poland a
 | --- | --- |
 | District boundaries, leaseholders, PZŁ boards, forest districts | [Bank Danych o Lasach – obwody łowieckie](https://www.bdl.lasy.gov.pl/portal/obwody-lowieckie) (ArcGIS REST `WMS_Obwody_lowieckie/MapServer/6`, WMS `WMS_Obwody_lowieckie`). Boundaries come from voivodeship marshal offices, holders from PZŁ / State Forests; refreshed yearly. |
 | Forest districts, entry bans, fire danger | BDL WMS services `WMS_BDL`, `WMS_zakazy_wstepu_do_lasu`, `WMS_zagrozenie_pozarowe_w_lasach` ([list](https://bdl.lasy.gov.pl/portal/uslugi-mapowe-ogc-en)) |
+| Weather forecast, place search | [Open-Meteo](https://open-meteo.com/) forecast and geocoding APIs (free, no key, CC BY 4.0). Sun and moon times are computed in the browser (`src/astro.ts`). |
 | Hunting seasons | Rozporządzenie MŚ w sprawie określenia okresów polowań na zwierzęta łowne, consolidated text [Dz.U. 2023 poz. 99](https://api.sejm.gov.pl/eli/acts/DU/2023/99/text.html) |
 
 All BDL data is loaded **live in the browser** (JSONP against the public ArcGIS REST endpoint), so there is no backend and nothing to refresh – the app always shows the current BDL data.
