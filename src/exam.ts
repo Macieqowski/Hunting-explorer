@@ -3,11 +3,16 @@
  * Pure logic, no DOM, so it can be unit-tested.
  */
 
+/** An answer is plain text, or text and/or an image (path relative to the exams folder, or a URL). */
+export type Answer = string | { text?: string; image?: string };
+
 export interface Question {
   id: string;
   topic: string;
   q: string;
-  answers: string[];
+  /** Optional illustration for the question (path relative to public/exams/, or a URL). */
+  image?: string;
+  answers: Answer[];
   /** Index (or indices) of the correct answer(s) in `answers`. */
   correct: number | number[];
   explanation?: string;
@@ -31,7 +36,7 @@ export interface Bank {
 /** A question as presented in one attempt: answers shuffled, correct indices remapped. */
 export interface DrawnQuestion {
   question: Question;
-  answers: string[];
+  answers: Answer[];
   correct: number[];
 }
 
@@ -151,11 +156,16 @@ export function validateBank(b: Bank): string[] {
   for (const q of b.questions) {
     if (ids.has(q.id)) errors.push(`duplicate id ${q.id}`);
     ids.add(q.id);
-    if (!q.q.trim()) errors.push(`${q.id}: empty question`);
+    if (!q.q.trim() && !q.image) errors.push(`${q.id}: empty question`);
+    if (q.answers.some((a) => !answerText(a) && !answerImage(a))) errors.push(`${q.id}: empty answer`);
     if (q.answers.length < 2) errors.push(`${q.id}: fewer than 2 answers`);
     const c = correctList(q);
     if (!c.length || c.some((i) => i < 0 || i >= q.answers.length)) errors.push(`${q.id}: bad correct index`);
-    if (new Set(q.answers.map((a) => a.trim().toLowerCase())).size !== q.answers.length) errors.push(`${q.id}: duplicate answers`);
+    if (new Set(q.answers.map((a) => `${answerText(a).toLowerCase()}|${answerImage(a) ?? ''}`)).size !== q.answers.length)
+      errors.push(`${q.id}: duplicate answers`);
   }
   return errors;
 }
+
+export const answerText = (a: Answer): string => (typeof a === 'string' ? a : a.text ?? '').trim();
+export const answerImage = (a: Answer): string | undefined => (typeof a === 'string' ? undefined : a.image || undefined);

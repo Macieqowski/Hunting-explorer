@@ -266,3 +266,9 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; text-transform: uppercase; le
   :root:not([data-theme='light']) .ok-text { color: #4ade80; }
   :root:not([data-theme='light']) .bad-text { color: #f87171; }
 }
+.q-img { display: block; max-width: 100%; max-height: 260px; margin: 0 auto 12px; border-radius: 8px; background: #fff; }
+.q-img.small-img { max-height: 140px; margin: 6px 0; }
+.ans-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ans-img { display: block; max-width: 100%; max-height: 140px; border-radius: 6px; background: #fff; object-fit: contain; }
+.ans-inline { display: inline-flex; flex-direction: column; vertical-align: top; gap: 2px; }
+.ans-inline .ans-img { max-height: 70px; }

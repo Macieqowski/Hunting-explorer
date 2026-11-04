@@ -37,6 +37,16 @@ describe('exam engine', () => {
     }
   });
 
+  it('supports image questions and image answers', () => {
+    const q: Question = {
+      id: 'img', topic: 't', q: 'Jaki to gatunek?', image: 'img/x.png',
+      answers: [{ image: 'img/a.png' }, { text: 'Sarna', image: 'img/b.png' }, 'Dzik'], correct: 1,
+    };
+    expect(validateBank({ id: 'b', title: { pl: '', en: '' }, count: 1, passPct: 1, minutes: 1, questions: [q] })).toEqual([]);
+    const d = shuffleAnswers(q, seededRng(7));
+    expect(d.answers[d.correct[0]]).toEqual({ text: 'Sarna', image: 'img/b.png' });
+  });
+
   it('scores and reports per-topic results', () => {
     const d = drawExam(bank, 10, seededRng(4));
     const answers = d.map((x, i) => (i < 8 ? x.correct : [(x.correct[0] + 1) % 4]));

@@ -1,4 +1,4 @@
-import { drawExam, isCorrect, scoreExam, type Bank, type DrawnQuestion, type ExamResult } from './exam';
+import { drawExam, isCorrect, scoreExam, answerText, answerImage, type Answer, type Bank, type DrawnQuestion, type ExamResult } from './exam';
 import { seasonQuestions, SEASON_TOPIC } from './seasonQuestions';
 import { getLang, tt, fmtNum } from './i18n';
 
@@ -80,6 +80,16 @@ interface Attempt {
 }
 
 const banks = new Map<BankId, Bank>();
+
+/** Image paths in banks are relative to the exams folder unless they are absolute URLs. */
+const imgUrl = (src: string) => (/^(https?:)?\/\//.test(src) || src.startsWith('data:') ? src : `./exams/${src.replace(/^\.?\//, '')}`);
+const img = (src: string | undefined, cls: string, alt = '') =>
+  src ? `<img class="${cls}" src="${esc(imgUrl(src))}" alt="${esc(alt)}" loading="lazy" />` : '';
+/** Answer as HTML: optional image plus text. */
+const answerHtml = (a: Answer) => `${img(answerImage(a), 'ans-img', answerText(a))}${answerText(a) ? `<span>${esc(answerText(a))}</span>` : ''}`;
+/** Answer list for summaries (text, or "[obraz]" for image-only answers). */
+const answersInline = (d: DrawnQuestion, idx: number[]) =>
+  idx.map((c) => `<span class="ans-inline">${answerHtml(d.answers[c])}</span>`).join(', ');
 let loadState: 'idle' | 'loading' | 'done' | 'error' = 'idle';
 let attempt: Attempt | null = null;
 let setup = { bank: 'mysliwy' as BankId, mode: 'exam' as Mode, count: 0, topic: '' };
@@ -251,17 +261,18 @@ function renderQuestion(a: Attempt) {
     <div class="progress"><span style="width:${((a.mode === 'exam' ? answered : a.index + (reveal ? 1 : 0)) / a.drawn.length) * 100}%"></span></div>
     <p class="eyebrow exam-topic">${esc(d.question.topic)}</p>
     <h2 class="exam-q">${esc(d.question.q)}</h2>
+    ${img(d.question.image, 'q-img')}
     <div class="answers" role="${multi ? 'group' : 'radiogroup'}">${d.answers
       .map((ans, i) => {
         const sel = chosen?.includes(i);
         const cls = reveal ? (d.correct.includes(i) ? ' right' : sel ? ' wrong' : '') : sel ? ' selected' : '';
         return `<button type="button" class="answer${cls}" data-exam="answer" data-i="${i}" ${reveal ? 'disabled' : ''} aria-pressed="${!!sel}">
-          <span class="letter">${String.fromCharCode(65 + i)}</span><span>${esc(ans)}</span></button>`;
+          <span class="letter">${String.fromCharCode(65 + i)}</span><span class="ans-body">${answerHtml(ans)}</span></button>`;
       })
       .join('')}</div>
     ${
       reveal
-        ? `<div class="feedback ${isCorrect(d, chosen) ? 'ok' : 'bad'}"><strong>${isCorrect(d, chosen) ? l('correctAns') : `${l('wrongAns')} ${esc(d.correct.map((c) => d.answers[c]).join(', '))}`}</strong>
+        ? `<div class="feedback ${isCorrect(d, chosen) ? 'ok' : 'bad'}"><strong>${isCorrect(d, chosen) ? l('correctAns') : `${l('wrongAns')} ${answersInline(d, d.correct)}`}</strong>
           ${d.question.explanation ? `<p>${esc(d.question.explanation)}</p>` : ''}${sourceLink(d)}</div>`
         : ''
     }
@@ -304,9 +315,9 @@ function renderResult(a: Attempt) {
       : wrong
           .map(
             ({ d, i }) => `<article class="card review">
-      <p class="eyebrow">${i + 1}. ${esc(d.question.topic)}</p><p><strong>${esc(d.question.q)}</strong></p>
-      <p class="small bad-text">${l('yourAnswer')}: ${a.answers[i]?.length ? esc(a.answers[i]!.map((c) => d.answers[c]).join(', ')) : l('none')}</p>
-      <p class="small ok-text">✓ ${esc(d.correct.map((c) => d.answers[c]).join(', '))}</p>
+      <p class="eyebrow">${i + 1}. ${esc(d.question.topic)}</p><p><strong>${esc(d.question.q)}</strong></p>${img(d.question.image, 'q-img small-img')}
+      <p class="small bad-text">${l('yourAnswer')}: ${a.answers[i]?.length ? answersInline(d, a.answers[i]!) : l('none')}</p>
+      <p class="small ok-text">✓ ${answersInline(d, d.correct)}</p>
       ${d.question.explanation ? `<p class="small">${esc(d.question.explanation)}</p>` : ''}${sourceLink(d)}</article>`,
           )
           .join('')

@@ -50,7 +50,7 @@ Banks live in `public/exams/mysliwy.json` and `public/exams/selekcjoner.json` (c
 node scripts/import-questions.mjs questions.csv public/exams/mysliwy.json [--replace]
 ```
 
-Columns: `temat; pytanie; a; b; c; d; poprawna; wyjasnienie; zrodlo` (`poprawna` is a letter or 1-based number; several correct answers as `A,C`). Questions from the PZŁ “Sprawdź wiedzę” quiz are used with PZŁ's permission.
+Columns: `temat; pytanie; a; b; c; d; poprawna; wyjasnienie; zrodlo` (`poprawna` is a letter or 1-based number; several correct answers as `A,C`). Images: optional `obraz` (question) and `obraz_a`, `obraz_b`, … (answers) columns hold paths relative to `public/exams/` (e.g. `img/mysliwy/123.png`) or URLs. In JSON, a question has an optional `image`, and an answer is either a string or `{ "text"?, "image"? }`. Questions from the PZŁ “Sprawdź wiedzę” quiz are used with PZŁ's permission.
 
 ## Deployment
 
