@@ -15,6 +15,7 @@ import {
 import { createMap, type MapApi } from './map';
 import { t, tt, getLang, setLang, fmtHa, fmtKm2, fmtNum, type Key } from './i18n';
 import { SEASONS, isOpen, effective, formatRanges, yearFrac, type Season } from './seasons';
+import { renderExams, handleExamClick, handleExamChange } from './examUi';
 
 // ---------------------------------------------------------------- helpers
 
@@ -24,7 +25,7 @@ const $ = <T extends HTMLElement = HTMLElement>(sel: string, root: ParentNode = 
 const typeKey = (h: HolderType) => `type_${h}` as Key;
 const cap = (s: string | null) => (s ? s.charAt(0).toLocaleUpperCase('pl') + s.slice(1) : '—');
 
-type Tab = 'clubs' | 'districts' | 'stats' | 'seasons' | 'about';
+type Tab = 'clubs' | 'districts' | 'stats' | 'seasons' | 'exams' | 'about';
 type View = { kind: 'tab'; tab: Tab } | { kind: 'district'; slug: string } | { kind: 'club'; key: string } | { kind: 'point'; lat: number; lng: number };
 
 const state = {
@@ -96,7 +97,7 @@ function hashToView(h: string): View {
     const [lat, lng] = arg.split(',').map(Number);
     if (isFinite(lat) && isFinite(lng)) return { kind: 'point', lat, lng };
   }
-  if (['districts', 'stats', 'seasons', 'about'].includes(kind)) return { kind: 'tab', tab: kind as Tab };
+  if (['districts', 'stats', 'seasons', 'exams', 'about'].includes(kind)) return { kind: 'tab', tab: kind as Tab };
   return { kind: 'tab', tab: 'clubs' };
 }
 
@@ -163,6 +164,7 @@ function renderStatic() {
     ['districts', 'tabDistricts'],
     ['stats', 'tabStats'],
     ['seasons', 'tabSeasons'],
+    ['exams', 'tabExams'],
     ['about', 'tabAbout'],
   ];
   $('#tabs').innerHTML = tabs
@@ -177,6 +179,7 @@ function render() {
   renderStatic();
   const v = state.view;
   if (v.kind === 'point') return void (content.innerHTML = renderPoint());
+  if (v.kind === 'tab' && v.tab === 'exams') return void (content.innerHTML = renderExams(render));
   if (v.kind === 'tab' && (v.tab === 'seasons' || v.tab === 'about')) {
     content.innerHTML = v.tab === 'seasons' ? renderSeasons() : renderAbout();
     return;
@@ -552,6 +555,8 @@ $('#tabs').addEventListener('click', (e) => {
 });
 
 content.addEventListener('click', (e) => {
+  const ex = (e.target as HTMLElement).closest<HTMLElement>('[data-exam]');
+  if (ex && handleExamClick(ex)) return;
   const el = (e.target as HTMLElement).closest<HTMLElement>('[data-nav],[data-action]');
   if (!el) return;
   const nav = el.dataset.nav;
@@ -604,6 +609,7 @@ content.addEventListener('input', (e) => {
 
 content.addEventListener('change', (e) => {
   const el = e.target as HTMLSelectElement;
+  if (handleExamChange(el)) return;
   const f = el.dataset.filter;
   if (!f) return;
   if (f === 'voiv') {

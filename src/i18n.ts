@@ -7,6 +7,7 @@ const dict = {
   tabDistricts: { pl: 'Obwody', en: 'Districts' },
   tabStats: { pl: 'Statystyki', en: 'Statistics' },
   tabSeasons: { pl: 'Okresy polowań', en: 'Seasons' },
+  tabExams: { pl: 'Egzaminy', en: 'Exams' },
   tabAbout: { pl: 'O danych', en: 'About' },
   searchClubs: { pl: 'Szukaj koła, np. „Leśnik” lub „Darz Bór”', en: 'Search clubs, e.g. “Leśnik” or “Darz Bór”' },
   searchDistricts: { pl: 'Nr obwodu, nadleśnictwo, powiat, dzierżawca…', en: 'District no., forest district, county, holder…' },
