@@ -532,7 +532,7 @@ function renderSeasons() {
       <div class="chips">${openNow.map((s) => `<span class="chip">${esc(tt(s.name))}</span>`).join('')}</div>
       ${voiv ? '' : `<p class="muted small">${t('pickVoivHint')}</p>`}
     </section>
-    <table class="tbl seasons"><thead><tr><th>${t('species')}</th><th>${t('period')}<div class="months">${months.map((m) => `<span>${m}</span>`).join('')}</div></th></tr></thead>
+    <table class="tbl seasons"><thead><tr><th>${t('species')}</th><th>${t('period')}<div class="months">${months.map((m) => `<span>${m}</span>`).join('')}<span class="now-label" style="left:${yearFrac([now.getMonth() + 1, now.getDate()]) * 100}%">${t('inSeason')}</span></div></th></tr></thead>
     <tbody>${rows}</tbody></table>
     <p class="muted small">${t('seasonsRule')}</p>
     <p class="muted small"><a href="https://api.sejm.gov.pl/eli/acts/DU/2023/99/text.html" target="_blank" rel="noopener">Dz.U. 2023 poz. 99 ↗</a></p>`;
