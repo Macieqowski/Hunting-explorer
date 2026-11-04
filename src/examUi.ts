@@ -1,4 +1,4 @@
-import { drawSectionedExam, isCorrect, scoreExam, answerText, answerImage, type Answer, type Bank, type DrawnQuestion, type ExamResult } from './exam';
+import { drawExam, isCorrect, scoreExam, answerText, answerImage, type Answer, type Bank, type DrawnQuestion, type ExamResult } from './exam';
 import { seasonQuestions, SEASON_TOPIC } from './seasonQuestions';
 import { getLang, tt, fmtNum } from './i18n';
 
@@ -133,7 +133,7 @@ const topicsOf = (b: Bank) => [...new Set(b.questions.map((q) => q.topic))].sort
 function startAttempt() {
   const b = banks.get(setup.bank)!;
   const count = setup.count || b.count;
-  const drawn = drawSectionedExam(b, count, Math.random, setup.topic ? [setup.topic] : undefined);
+  const drawn = drawExam(b.questions, count, Math.random, setup.topic ? [setup.topic] : undefined);
   attempt = {
     bank: b,
     mode: setup.mode,
@@ -173,7 +173,7 @@ const fmtTime = (ms: number) => {
 function finish() {
   if (!attempt || attempt.result) return;
   clearInterval(timer);
-  attempt.result = scoreExam(attempt.drawn, attempt.answers, attempt.bank.passPct, attempt.bank.sections);
+  attempt.result = scoreExam(attempt.drawn, attempt.answers, attempt.bank.passPct);
   if (attempt.mode === 'exam')
     pushHistory({
       bank: attempt.bank.id as BankId,
@@ -231,9 +231,7 @@ function renderSetup() {
       .map((t) => `<option${t === setup.topic ? ' selected' : ''}>${esc(t)}</option>`)
       .join('')}</select>
   </div>
-  <p class="muted small">${setup.mode === 'exam' ? `${b.minutes} ${l('min')} / ${b.count} ${l('questions')} · ` : ''}${l('pass')}: ${b.passPct}%${(b.sections ?? [])
-    .map((x) => ` · ${esc(x.name[getLang()])}: ${x.count} ${l('questions')}${x.minPct != null ? `, min. ${x.minPct}%` : ''}`)
-    .join('')}</p>
+  <p class="muted small">${setup.mode === 'exam' ? `${b.minutes} ${l('min')} / ${b.count} ${l('questions')} · ` : ''}${l('pass')}: ${b.passPct}%</p>
   <button type="button" class="btn" data-exam="start">${l('start')}</button>`
   }
   ${b.origin?.url ? `<p><a href="${esc(b.origin.url)}" target="_blank" rel="noopener">${l('official')}</a></p>` : ''}
@@ -261,7 +259,7 @@ function renderQuestion(a: Attempt) {
       ${a.deadline ? `<span id="exam-timer" class="timer">${fmtTime(a.deadline - Date.now())}</span>` : ''}
     </div>
     <div class="progress"><span style="width:${((a.mode === 'exam' ? answered : a.index + (reveal ? 1 : 0)) / a.drawn.length) * 100}%"></span></div>
-    <p class="eyebrow exam-topic">${esc(sectionName(a.bank, d.question.section) ?? d.question.topic)}${sectionName(a.bank, d.question.section) && d.question.topic !== sectionName(a.bank, d.question.section) ? ` · ${esc(d.question.topic)}` : ''}</p>
+    <p class="eyebrow exam-topic">${esc(d.question.topic)}</p>
     <h2 class="exam-q">${esc(d.question.q)}</h2>
     ${img(d.question.image, 'q-img')}
     <div class="answers" role="${multi ? 'group' : 'radiogroup'}">${d.answers
@@ -287,8 +285,6 @@ function renderQuestion(a: Attempt) {
     ${a.mode === 'exam' ? `<div class="dots">${a.drawn.map((_, i) => `<button type="button" data-exam="goto" data-i="${i}" class="${i === a.index ? 'cur' : ''}${a.answers[i]?.length ? ' done' : ''}" aria-label="${i + 1}">${i + 1}</button>`).join('')}</div>` : ''}`;
 }
 
-const sectionName = (b: Bank, id: string | undefined) => (id ? b.sections?.find((x) => x.id === id) : undefined)?.name[getLang()];
-
 function sourceLink(d: DrawnQuestion) {
   const s = d.question.source;
   if (!s) return '';
@@ -305,16 +301,6 @@ function renderResult(a: Attempt) {
     <b>${fmtNum(r.pct)}%</b>
     <span>${r.correct} / ${r.total} · ${r.passed ? l('passed') : l('failed')} (${l('pass')} ${a.bank.passPct}%)</span>
   </div>
-  ${
-    r.bySection.length
-      ? `<table class="tbl sections"><tbody>${r.bySection
-          .map(
-            (x) => `<tr class="${x.passed ? '' : 'sec-fail'}"><td><strong>${esc(sectionName(a.bank, x.id) ?? x.id)}</strong>${x.minPct != null ? ` <span class="muted small">(${l('min')}. ${x.minPct}%)</span>` : ''}<span class="bar"><span style="width:${x.pct}%"></span></span></td>
-            <td class="num">${x.correct}/${x.total} · ${fmtNum(x.pct)}%${x.minPct != null ? (x.passed ? ' ✓' : ' ✗') : ''}</td></tr>`,
-          )
-          .join('')}</tbody></table>`
-      : ''
-  }
   <table class="tbl"><tbody>${r.byTopic
     .map(
       (t) => `<tr><td>${esc(t.topic)}<span class="bar"><span style="width:${(t.correct / t.total) * 100}%"></span></span></td><td class="num">${t.correct}/${t.total}</td></tr>`,

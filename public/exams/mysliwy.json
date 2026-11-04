@@ -1,38 +1,13 @@
 {
   "id": "mysliwy",
-  "title": {
-    "pl": "Egzamin na myśliwego",
-    "en": "Hunter exam"
-  },
+  "title": { "pl": "Egzamin na myśliwego", "en": "Hunter exam" },
   "description": {
     "pl": "Egzamin na podstawowe uprawnienia do wykonywania polowania – część testowa.",
     "en": "Basic hunting licence exam – written test part."
   },
-  "count": 100,
+  "count": 20,
   "passPct": 80,
-  "minutes": 60,
-  "origin": {
-    "name": "Polski Związek Łowiecki – Sprawdź wiedzę",
-    "url": "https://pzlow.pl/palio/html.run?_Instance=www&_PageID=251&_Lang=&typ=N&newser=no&_C=C_DZIALY.SZKOLENIA.SPRAWDZWIEDZE"
-  },
-  "sections": [
-    {
-      "id": "bezpieczenstwo",
-      "name": {
-        "pl": "Bezpieczeństwo",
-        "en": "Safety"
-      },
-      "count": 30,
-      "minPct": 80
-    },
-    {
-      "id": "ogolne",
-      "name": {
-        "pl": "Wiedza ogólna",
-        "en": "General knowledge"
-      },
-      "count": 70
-    }
-  ],
+  "minutes": 30,
+  "origin": { "name": "Polski Związek Łowiecki – Sprawdź wiedzę", "url": "https://pzlow.pl/palio/html.run?_Instance=www&_PageID=251&_Lang=&typ=N&newser=no&_C=C_DZIALY.SZKOLENIA.SPRAWDZWIEDZE" },
   "questions": []
 }

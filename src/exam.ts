@@ -10,8 +10,6 @@ export interface Question {
   id: string;
   topic: string;
   q: string;
-  /** Section of the exam this question belongs to (see Bank.sections), e.g. "bezpieczenstwo". */
-  section?: string;
   /** Optional illustration for the question (path relative to public/exams/, or a URL). */
   image?: string;
   answers: Answer[];
@@ -30,23 +28,9 @@ export interface Bank {
   count: number;
   passPct: number;
   minutes: number;
-  /**
-   * Optional exam sections drawn separately, e.g. the hunter exam's 30 safety + 70 general questions.
-   * Each section gets its own quota and may have its own minimum score.
-   */
-  sections?: Section[];
   /** Where the questions come from (shown in the UI). */
   origin?: { name: string; url?: string };
   questions: Question[];
-}
-
-export interface Section {
-  id: string;
-  name: { pl: string; en: string };
-  /** Number of questions from this section in a full-length exam. */
-  count: number;
-  /** Minimum score (%) required in this section, on top of the overall pass mark. */
-  minPct?: number;
 }
 
 /** A question as presented in one attempt: answers shuffled, correct indices remapped. */
@@ -141,31 +125,15 @@ export interface TopicScore {
   total: number;
 }
 
-export interface SectionScore {
-  id: string;
-  correct: number;
-  total: number;
-  pct: number;
-  minPct: number | undefined;
-  passed: boolean;
-}
-
 export interface ExamResult {
   correct: number;
   total: number;
   pct: number;
-  /** Overall pass mark met and every section minimum met. */
   passed: boolean;
   byTopic: TopicScore[];
-  bySection: SectionScore[];
 }
 
-export function scoreExam(
-  drawn: DrawnQuestion[],
-  answers: (number[] | undefined)[],
-  passPct: number,
-  sections: Section[] = [],
-): ExamResult {
+export function scoreExam(drawn: DrawnQuestion[], answers: (number[] | undefined)[], passPct: number): ExamResult {
   const topics = new Map<string, TopicScore>();
   let correct = 0;
   drawn.forEach((d, i) => {
@@ -178,56 +146,7 @@ export function scoreExam(
   });
   const total = drawn.length;
   const pct = total ? (correct / total) * 100 : 0;
-  const bySection: SectionScore[] = sections
-    .map((sec) => {
-      const idx = drawn.map((d, i) => (d.question.section === sec.id ? i : -1)).filter((i) => i >= 0);
-      const ok = idx.filter((i) => isCorrect(drawn[i], answers[i])).length;
-      const p = idx.length ? (ok / idx.length) * 100 : 0;
-      return { id: sec.id, correct: ok, total: idx.length, pct: p, minPct: sec.minPct, passed: sec.minPct == null || p >= sec.minPct };
-    })
-    .filter((x) => x.total > 0);
-  return {
-    correct,
-    total,
-    pct,
-    passed: total > 0 && pct >= passPct && bySection.every((x) => x.passed),
-    byTopic: [...topics.values()].sort((a, b) => a.topic.localeCompare(b.topic, 'pl')),
-    bySection,
-  };
-}
-
-/**
- * Draws an exam that respects the bank's sections: each section contributes its quota, scaled
- * when the user picks a shorter or longer test. Questions without a section are drawn as one extra pool.
- */
-export function drawSectionedExam(bank: Bank, count: number, rng: Rng = Math.random, topics?: string[]): DrawnQuestion[] {
-  const pool = topics?.length ? bank.questions.filter((q) => topics.includes(q.topic)) : bank.questions;
-  const secs = (bank.sections ?? []).filter((s) => pool.some((q) => q.section === s.id));
-  if (!secs.length) return drawExam(pool, count, rng);
-  const known = new Set(secs.map((s) => s.id));
-  const groups = secs.map((s) => ({ qs: pool.filter((q) => q.section === s.id), weight: s.count }));
-  const rest = pool.filter((q) => !q.section || !known.has(q.section));
-  if (rest.length) groups.push({ qs: rest, weight: 0 });
-  const totalWeight = secs.reduce((s, x) => s + x.count, 0);
-  const n = Math.min(count, pool.length);
-  // Quotas follow the section weights; leftover slots (rounding, small sections) go to whatever has questions left.
-  const take = groups.map((g) => Math.min(g.qs.length, Math.round((g.weight / totalWeight) * n)));
-  let left = n - take.reduce((s, x) => s + x, 0);
-  while (left < 0) {
-    const i = take.indexOf(Math.max(...take));
-    take[i]--;
-    left++;
-  }
-  for (let i = 0; left > 0 && i < groups.length * n; i++) {
-    const g = i % groups.length;
-    if (take[g] < groups[g].qs.length) {
-      take[g]++;
-      left--;
-    }
-  }
-  const picked = groups.flatMap((g, i) => drawExam(g.qs, take[i], rng));
-  // Keep sections in their bank order (the PZŁ test starts with the safety block), shuffled within.
-  return picked;
+  return { correct, total, pct, passed: pct >= passPct, byTopic: [...topics.values()].sort((a, b) => a.topic.localeCompare(b.topic, 'pl')) };
 }
 
 /** Basic sanity checks for a question bank (used by tests and the import script). */
@@ -242,7 +161,6 @@ export function validateBank(b: Bank): string[] {
     if (q.answers.length < 2) errors.push(`${q.id}: fewer than 2 answers`);
     const c = correctList(q);
     if (!c.length || c.some((i) => i < 0 || i >= q.answers.length)) errors.push(`${q.id}: bad correct index`);
-    if (q.section && b.sections && !b.sections.some((x) => x.id === q.section)) errors.push(`${q.id}: unknown section ${q.section}`);
     if (new Set(q.answers.map((a) => `${answerText(a).toLowerCase()}|${answerImage(a) ?? ''}`)).size !== q.answers.length)
       errors.push(`${q.id}: duplicate answers`);
   }
