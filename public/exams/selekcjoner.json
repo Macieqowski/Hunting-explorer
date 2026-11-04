@@ -1,0 +1,13 @@
+{
+  "id": "selekcjoner",
+  "title": { "pl": "Egzamin selekcjonerski", "en": "Selective hunting exam" },
+  "description": {
+    "pl": "Egzamin na uprawnienia selekcjonerskie (odstrzał selekcyjny zwierzyny grubej).",
+    "en": "Selective-culling licence exam (big game)."
+  },
+  "count": 20,
+  "passPct": 80,
+  "minutes": 30,
+  "origin": { "name": "Polski Związek Łowiecki – Sprawdź wiedzę", "url": "https://pzlow.pl/palio/html.run?_Instance=www&_PageID=251&_Lang=&typ=N&newser=no&_C=C_DZIALY.SZKOLENIA.SPRAWDZWIEDZE" },
+  "questions": []
+}

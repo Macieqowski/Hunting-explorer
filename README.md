@@ -10,6 +10,7 @@ Interactive web map of all **hunting districts (obwody łowieckie)** in Poland a
 - **District details** – number, area (total, forest, after exclusions), county, forest district (nadleśnictwo) and RDLP with addresses, PZŁ regional board with address, data year.
 - **Statistics** – totals, share of land leased by clubs, largest clubs, breakdown by voivodeship and by PZŁ region.
 - **Hunting seasons** – full table of legal hunting seasons with regional exceptions, a yearly timeline, and "open today" highlighting (also shown on each district/club page for its voivodeship).
+- **Practice exams** – hunter (myśliwy) and selekcjoner tests with a random set of questions and shuffled answers on every attempt, an exam mode (timer, pass mark, score by topic, review of mistakes) and a learning mode (instant answer and explanation). Hunting-season questions are generated from the seasons table.
 - **Extra map layers** – forest district boundaries, current forest entry bans, current fire danger; OSM, topographic and satellite base maps.
 - Polish / English UI, deep links to clubs and districts, mobile layout, light/dark theme.
 
@@ -40,6 +41,16 @@ Stack: Vite + TypeScript + Leaflet, no framework. Code layout:
 - `src/map.ts` – Leaflet map and layers
 - `src/main.ts` – UI, routing, rendering
 - `src/i18n.ts` – Polish/English strings
+
+## Exam question banks
+
+Banks live in `public/exams/mysliwy.json` and `public/exams/selekcjoner.json` (count, pass mark, time limit and questions). Import questions from a CSV/TSV file with:
+
+```bash
+node scripts/import-questions.mjs questions.csv public/exams/mysliwy.json [--replace]
+```
+
+Columns: `temat; pytanie; a; b; c; d; poprawna; wyjasnienie; zrodlo` (`poprawna` is a letter or 1-based number; several correct answers as `A,C`). Images: optional `obraz` (question) and `obraz_a`, `obraz_b`, … (answers) columns hold paths relative to `public/exams/` (e.g. `img/mysliwy/123.png`) or URLs. In JSON, a question has an optional `image`, and an answer is either a string or `{ "text"?, "image"? }`. Questions from the PZŁ “Sprawdź wiedzę” quiz are used with PZŁ's permission.
 
 ## Deployment
 
