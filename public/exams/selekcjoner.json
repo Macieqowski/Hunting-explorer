@@ -1,13 +1,3421 @@
 {
-  "id": "selekcjoner",
-  "title": { "pl": "Egzamin selekcjonerski", "en": "Selective hunting exam" },
-  "description": {
-    "pl": "Egzamin na uprawnienia selekcjonerskie (odstrzał selekcyjny zwierzyny grubej).",
-    "en": "Selective-culling licence exam (big game)."
+ "id": "selekcjoner",
+ "title": {
+  "pl": "Egzamin selekcjonerski",
+  "en": "Selective hunting exam"
+ },
+ "description": {
+  "pl": "Egzamin na uprawnienia selekcjonerskie (odstrzał selekcyjny zwierzyny grubej).",
+  "en": "Selective-culling licence exam (big game)."
+ },
+ "count": 50,
+ "passPct": 80,
+ "minutes": 120,
+ "origin": {
+  "name": "Polski Związek Łowiecki – Sprawdź wiedzę",
+  "url": "https://pzlow.pl/palio/html.run?_Instance=www&_PageID=251&_Lang=&typ=S&newser=no&_C=C_DZIALY.SZKOLENIA.SPRAWDZWIEDZE"
+ },
+ "questions": [
+  {
+   "id": "pzl-selekcjoner-1",
+   "topic": "Selekcja",
+   "q": "Prawidłowa struktura płci, tj. proporcja liczby byków do liczby łań, w populacjach jelenia szlachetnego o optymalnym zagęszczeniu powinna zawierać się w przedziale:",
+   "answers": [
+    "od 1 : 1,2 do 1 : 2,0",
+    "od 1 : 1,8 do 1 : 2,5",
+    "od 1 : 0,5 do 1 : 0,7",
+    "od 1 : 0,8 do 1 : 1,2"
+   ],
+   "correct": 3
   },
-  "count": 20,
-  "passPct": 80,
-  "minutes": 30,
-  "origin": { "name": "Polski Związek Łowiecki – Sprawdź wiedzę", "url": "https://pzlow.pl/palio/html.run?_Instance=www&_PageID=251&_Lang=&typ=N&newser=no&_C=C_DZIALY.SZKOLENIA.SPRAWDZWIEDZE" },
-  "questions": []
+  {
+   "id": "pzl-selekcjoner-2",
+   "topic": "Selekcja",
+   "q": "W przypadku dokonywania pomiarów liniowych ślimów muflona podczas oceny prawidłowości odstrzału dopuszcza się tolerancję w ocenie pomiarów:",
+   "answers": [
+    "do 10% ich wartości",
+    "do 15% ich wartości",
+    "do 5% ich wartości",
+    "do 20% ich wartości"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-3",
+   "topic": "Selekcja",
+   "q": "Prawidłowa struktura płci, czyli proporcja liczby byków do liczby łań, w populacjach daniela o optymalnym zagęszczeniu powinna zawierać się w przedziale:",
+   "answers": [
+    "od 1 : 1,5 do 1 :2,5",
+    "od 1 : 0,8 do 1 : 1,2",
+    "od 1 : 0,5 do 1 : 0,7",
+    "od 1 : 1,2 do 1 : 2,0"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-4",
+   "topic": "Selekcja",
+   "q": "Prawidłowa struktura płci, czyli proporcja liczby byków do liczby klęp, w populacjach łosia o optymalnym zagęszczeniu wynosi około:",
+   "answers": [
+    "1 : 1,0",
+    "1 : 2,5",
+    "1 : 0,5",
+    "1 : 1,5"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-5",
+   "topic": "Selekcja",
+   "q": "Prawidłowa struktura płci, tj. proporcja liczby rogaczy do liczby kóz, w populacjach saren o optymalnym zagęszczeniu wynosi:",
+   "answers": [
+    "od 1 : 0,8 do 1 : 1,2",
+    "od 1 : 2,0 do 1 : 3,0",
+    "od 1 : 0,5 do 1 : 0,7",
+    "od 1 : 1,2 do 1 : 2,0"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-6",
+   "topic": "Selekcja",
+   "q": "Prawidłowa struktura płci w populacjach muflona, czyli proporcja liczby tryków do liczby owiec, wynosi około:",
+   "answers": [
+    "1 : 1,0",
+    "1 : 1,5",
+    "1 : 2,5",
+    "1 : 0,7"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-7",
+   "topic": "Selekcja",
+   "q": "Przyjmuje się, że przyrost zrealizowany u jelenia szlachetnego wynosi:",
+   "answers": [
+    "do 70 % stanu wiosennego łań",
+    "do 60 % stanu wiosennego łań",
+    "do 50 % stanu wiosennego łań",
+    "do 30% stanu wiosennego populacji"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-9",
+   "topic": "Selekcja",
+   "q": "W ustabilizowanej populacji daniela przyrost zrealizowany powinien kształtować się na poziomie:",
+   "answers": [
+    "do 30% wiosennego stanu liczebnego łań",
+    "do 20% wiosennego stanu liczebnego populacji",
+    "do 70% wiosennego stanu liczebnego łań",
+    "40% - 50% wiosennego stanu liczebnego łań"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-10",
+   "topic": "Selekcja",
+   "q": "W ustabilizowanej populacji sarny przyrost zrealizowany zawiera się w granicach:",
+   "answers": [
+    "do 70% wiosennego stanu populacji",
+    "do 70% wiosennego stanu kóz",
+    "do 50% wiosennego stanu populacji",
+    "do 30% wiosennego stanu kóz"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-11",
+   "topic": "Selekcja",
+   "q": "W optymalnych warunkach przyrost zrealizowany u muflona zawiera się w granicach:",
+   "answers": [
+    "do 60% stanu wiosennego owiec",
+    "do 60% stanu wiosennego populacji",
+    "do 30% stanu wiosennego owiec",
+    "do 25% stanu wiosennego populacji"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-13",
+   "topic": "Selekcja",
+   "q": "Minimalne zagęszczenie populacji daniela pozwalające na łowiecką eksploatację populacji powinno wynosić:",
+   "answers": [
+    "powyżej 5 osobników na 1000 ha powierzchni obwodu",
+    "powyżej 30 osobników na 1000 ha powierzchni obwodu",
+    "powyżej 3 osobników na 1000 ha powierzchni obwodu",
+    "powyżej 15 osobników na 1000 ha powierzchni obwodu"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-15",
+   "topic": "Selekcja",
+   "q": "Minimalne zagęszczenie populacji saren pozwalające na łowiecką eksploatację powinno wynosić:",
+   "answers": [
+    "powyżej 3 osobników na 1000 ha powierzchni obwodu łowieckiego",
+    "powyżej 3 osobników na 100 ha powierzchni obwodu łowieckiego",
+    "powyżej 1,5 osobnika na 100 ha powierzchni obwodu łowieckiego",
+    "powyżej 1,5 osobnika na 1000 ha powierzchni obwodu łowieckiego"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-18",
+   "topic": "Selekcja",
+   "q": "Za odnogę w porożu łosia przyjmuje się:",
+   "answers": [
+    "odrostek o długości 5 cm",
+    "odrostek o długości 2 cm",
+    "odrostek o długości 3 cm",
+    "odrostek o długości 2 cm przy formie łopatacza i 3 cm przy formie badylarza"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-23",
+   "topic": "Selekcja",
+   "q": "Pozyskanie saren rogaczy powinno kształtować się na poziomie:",
+   "answers": [
+    "do 50% ogólnej puli pozyskania samców powinny stanowić rogacze selekcyjne, a dalsze 50% łowne",
+    "do 70% ogólnej puli pozyskania samców powinny stanowić rogacze selekcyjne, a dalsze 30% łowne",
+    "do 60% ogólnej puli pozyskania samców powinny stanowić rogacze selekcyjne, a dalsze 40% łowne",
+    "do 40% ogólnej puli pozyskania samców powinny stanowić rogacze selekcyjne, a dalsze 60% łowne"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-25",
+   "topic": "Selekcja",
+   "q": "Jako odnogę w porożu sarny podczas oceny prawidłowości odstrzału przyjmuje się odrost o długości:",
+   "answers": [
+    "2 cm w pierwszym porożu i 5 cm w kolejnych porożach",
+    "1 cm w pierwszym porożu i 3 cm w kolejnych porożach",
+    "2 cm w pierwszym porożu i 3 cm w kolejnych porożach",
+    "3 cm w pierwszym porożu i 5 cm w kolejnych porożach"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-26",
+   "topic": "Selekcja",
+   "q": "W ustabilizowanej populacji daniela pozyskanie byków powinno kształtować się na poziomie:",
+   "answers": [
+    "do 90% byki selekcyjne i min 10% byki łowne",
+    "do 75% byki selekcyjne i min 25% byki łowne",
+    "do 85% byki selekcyjne i min 15% byki łowne",
+    "u danieli pozyskuje się wyłącznie byki selekcyjne"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-27",
+   "topic": "Selekcja",
+   "q": "W ustabilizowanej populacji muflona pozyskanie tryków powinno wynosić:",
+   "answers": [
+    "do 40% tryków łownych i do 60% tryków selekcyjnych",
+    "do 30% tryków łownych i do 70% tryków selekcyjnych",
+    "do 50% tryków łownych i do 50% tryków selekcyjnych",
+    "do 60% tryków łownych i do 40% tryków selekcyjnych"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-29",
+   "topic": "Selekcja",
+   "q": "W którym miesiącu jeleń szlachetny wykształca pełne uzębienie stałe?",
+   "answers": [
+    "między 12 a 14 miesiącem życia",
+    "między 27 a 30 miesiącem życia",
+    "między 18 a 24 miesiącem życia",
+    "w 36 miesiącu życia"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-32",
+   "topic": "Selekcja",
+   "q": "W jakim wieku sarna wykształca pełne uzębienie stałe?",
+   "answers": [
+    "w 17 miesiącu życia",
+    "między 11 a 13 miesiącem życia",
+    "między 14 a 16 miesiącem życia",
+    "między 16 a 18 miesiącem życia"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-34",
+   "topic": "Selekcja",
+   "q": "W którym roku życia daniel wykształca pełne uzębienie stałe?",
+   "answers": [
+    "w 4 roku życia",
+    "w 3 roku życia",
+    "w 2 roku życia",
+    "w 1 roku życia"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-35",
+   "topic": "Selekcja",
+   "q": "Stałe uzębienie jelenia szlachetnego składa się:",
+   "answers": [
+    "z 32 (34) zębów",
+    "z 22 zębów",
+    "z 30 zębów",
+    "z 36 zębów"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-36",
+   "topic": "Selekcja",
+   "q": "Stałe uzębienie sarny składa się:",
+   "answers": [
+    "z 30 zębów",
+    "z 22 zębów",
+    "z 32 zębów",
+    "z 36 zębów"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-38",
+   "topic": "Selekcja",
+   "q": "Stałe uzębienie daniela składa się:",
+   "answers": [
+    "z 34 zębów",
+    "z 22 zębów",
+    "z 32 zębów",
+    "z 36 zębów"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-39",
+   "topic": "Selekcja",
+   "q": "Wiek byka jelenia szlachetnego, w którym uznaje się go za łownego:",
+   "answers": [
+    "w 6 roku życia i starszego",
+    "w 7 roku życia i starszego",
+    "w 11 roku życia i starszego",
+    "w 20 roku życia i starszego"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-40",
+   "topic": "Selekcja",
+   "q": "Uwzględniając kryterium wiekowe byka jelenia sika uznaje się za łownego:",
+   "answers": [
+    "w 6 roku życia i starszego",
+    "nie przewiduje się zasad selekcji, a tym samym podziału na osobniki selekcyjne i łowne, gdyż należy dążyć do eliminacji tego gatunku",
+    "w 11 roku życia i starszego",
+    "nie przewiduje się zasad selekcji dla tego gatunku, a należy tylko dążyć do intensyfikacji odstrzału osobników młodych"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-41",
+   "topic": "Selekcja",
+   "q": "Wiek, w którym byka daniela uznaje się za łownego to:",
+   "answers": [
+    "w 6 roku życia i starszego",
+    "w 8 roku życia i starszego",
+    "w 10 roku życia i starszego",
+    "w 15 roku życia i starszego"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-42",
+   "topic": "Selekcja",
+   "q": "Za tryka łownego uznaje się tryka:",
+   "answers": [
+    "w 5 roku życia i starszego",
+    "w 6 roku życia i starszego",
+    "w 10 roku życia i starszego",
+    "w 8 roku życia i starszego"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-43",
+   "topic": "Selekcja",
+   "q": "Za rogacza łownego uznaje się:",
+   "answers": [
+    "rogacza w wieku 4 lat i starszym, o porożu, którego masa brutto jest wyższa niż 430 gram",
+    "rogacza w wieku 5 lat i powyżej",
+    "rogacza w wieku 6 lat i powyżej",
+    "regularnego szóstaka lub powyżej tej formy od 6 roku wzwyż"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-44",
+   "topic": "Selekcja",
+   "q": "Poroże jelenia szlachetnego (wieniec) składa się z dwóch tyk, na których wyróżnia się odnogi. Ich nazwy (w kolejności od najniższej do najwyższej) to:",
+   "answers": [
+    "opierak, oczniak, nadoczniak, korona, (widlica lub grot)",
+    "opierak, nadoczniak, oczniak, korona, (widlica lub grot)",
+    "oczniak, nadoczniak, opierak, (grot, widlica lub korona)",
+    "korona, widlica lub grot, nadoczniak, opierak, oczniak"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-45",
+   "topic": "Selekcja",
+   "q": "Badylarz to:",
+   "answers": [
+    "sarna rogacz",
+    "jeleń byk z porożem bez koron",
+    "samiec każdego gatunku zwierzyny płowej, który w drugim roku życia wykształca poroże w postaci tzw. badyli, bez żadnych odnóg",
+    "łoś byk, z porożem posiadającym odnogi bez wyraźnego spłaszczenia"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-46",
+   "topic": "Selekcja",
+   "q": "W pełni dojrzały, prawidłowo rozwinięty byk daniela powinien być:",
+   "answers": [
+    "badylarzem",
+    "ósmakiem",
+    "łopataczem",
+    "łyżkarzem"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-48",
+   "topic": "Selekcja",
+   "q": "Szpicakiem nazywamy rogacza w:",
+   "answers": [
+    "IV porożu (piątym roku życia)",
+    "I porożu (drugim roku życia)",
+    "II porożu (trzecim roku życia)",
+    "III porożu (czwartym roku życia)"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-49",
+   "topic": "Selekcja",
+   "q": "U jelenia byka termin ,,trzecie poroże\" oznacza:",
+   "answers": [
+    "4 rok życia",
+    "3 rok życia",
+    "2 rok życia",
+    "żadna z odpowiedzi nie jest prawidłowa"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-51",
+   "topic": "Selekcja",
+   "q": "Łyżkarz to forma poroża u:",
+   "answers": [
+    "muflona",
+    "jelenia",
+    "daniela",
+    "sarny"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-53",
+   "topic": "Selekcja",
+   "q": "Jeżeli istnieje konieczność odstrzału łani i jej cielaka to jako bezwzględną zasadę należy przyjąć, że:",
+   "answers": [
+    "w pierwszej kolejności strzelamy łanię, a ewentualnie potem cielę - nigdy odwrotnie",
+    "w pierwszej kolejności strzelamy cielę, a ewentualnie potem łanię - nigdy odwrotnie",
+    "w pierwszej kolejności strzelamy stojącą bliżej nas sztukę niezależnie czy jest to łania czy cielę",
+    "nie ma znaczenia czy w pierwszej kolejności dokonamy odstrzału łani czy cielaka"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-56",
+   "topic": "Selekcja",
+   "q": "Komisja oceny prawidłowości odstrzału jest zobowiązana do trwałego oznakowania trofeum poprzez:",
+   "answers": [
+    "oznakowanie farbą koloru czerwonego puszki mózgowej",
+    "oznakowanie farbą koloru czerwonego przegrody nosowej",
+    "nawiercenie w prawym możdżeniu otworu o średnicy 3 - 6 mm",
+    "oznakowanie farbą koloru czerwonego prawego możdżenia"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-57",
+   "topic": "Selekcja",
+   "q": "Za selekcyjne uznaje się wszystkie myłkusy i szydlarze i nie przyznaje się za ich odstrzał punktów:",
+   "answers": [
+    "żółtego",
+    "dwóch żółtych",
+    "zielonego",
+    "czerwonego"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-58",
+   "topic": "Selekcja",
+   "q": "U jelenia szlachetnego podstawowym sposobem określenia wieku pozyskanych osobników jest:",
+   "answers": [
+    "kolejność wymiany i stopień starcia zębów (charakterystyczne zmiany rejestrów)",
+    "ilość odnóg na każdej z tyk wieńca",
+    "kolor i rozkład plamek na głowie",
+    "określenie wieku jest praktycznie niemożliwe"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-59",
+   "topic": "Selekcja",
+   "q": "Rozłogę wieńca jelenia szlachetnego mierzymy:",
+   "answers": [
+    "w miejscu największej wewnętrznej rozpiętości tyk pomiędzy oczniakiem a opierakami",
+    "w miejscu najmniejszej wewnętrznej rozpiętości wieńca między tykami",
+    "w miejscu największej wewnętrznej rozpiętości między tykami poniżej koron",
+    "w miejscu największej rozpiętości wewnętrznej tyk pomiędzy nadoczniakiem a opierakiem"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-60",
+   "topic": "Selekcja",
+   "q": "Które z trofeów wymaga przy wycenie medalowej dokonania pomiaru objętości w naczyniu z wodą:",
+   "answers": [
+    "wieniec jelenia",
+    "parostki rogacza",
+    "łopaty daniela",
+    "rosochy łosia"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-61",
+   "topic": "Selekcja",
+   "q": "Kto uchwala zasady selekcji osobniczej i populacyjnej zwierząt łownych:",
+   "answers": [
+    "Zarząd Okręgowy PZŁ",
+    "Okręgowa Rada Łowiecka",
+    "Regionalna Dyrekcja Lasów Państwowych",
+    "Naczelna Rada Łowiecka"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-62",
+   "topic": "Selekcja",
+   "q": "Dokonując oceny prawidłowości odstrzału samców jeleni szlachetnych, w wieńcu za odnogę uznajemy:",
+   "answers": [
+    "każdy odrostek o długości powyżej 2 cm w pierwszym porożu oraz powyżej 5 cm w drugim porożu i starszych",
+    "każdy odrostek o długości powyżej 1 cm w pierwszym porożu oraz powyżej 3 cm w drugim porożu i starszych",
+    "każdy odrostek o długości powyżej 1 cm w pierwszym porożu oraz powyżej 5 cm w drugim porożu i starszych",
+    "każdy odrostek o długości powyżej 3 cm w pierwszym porożu oraz powyżej 5 cm w drugim porożu i starszych"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-63",
+   "topic": "Selekcja",
+   "q": "Czy podawana przy ocenie prawidłowości odstrzału masa poroża jelenia jest:",
+   "answers": [
+    "masą netto (wieniec bez czaszki i żuchwy)",
+    "masą brutto (wieniec z czaszką bez żuchwy)",
+    "masą brutto (wieniec z czaszką i z żuchwą)",
+    "przy ocenie prawidłowości odstrzału nie bierzemy pod uwagę masy poroża"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-64",
+   "topic": "Selekcja",
+   "q": "Wyceny medalowej trofeów dokonuje się w oparciu o kryteria ustalone przez:",
+   "answers": [
+    "Okręgową Radę Łowiecką",
+    "Naczelną Radę Łowicką",
+    "Zarząd Główny PZŁ",
+    "Międzynarodową Radę Łowiectwa i Ochrony Zwierzyny (CIC)"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-66",
+   "topic": "Selekcja",
+   "q": "Czy perukarz to?",
+   "answers": [
+    "kozioł, który nie zrzuca poroża ze względu na mechaniczne uszkodzenie jąder i zaburzenia hormonalne",
+    "daniel, który nie wykształcił łopat",
+    "jeleń byk po zrzuceniu wieńca",
+    "łoś byk po zrzuceniu poroża"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-67",
+   "topic": "Selekcja",
+   "q": "Mnichem nazywamy:",
+   "answers": [
+    "samca zwierzyny płowej, który w ogóle nie nakłada poroża",
+    "samca zwierzyny płowej, który zrzucił poroże",
+    "samca zwierzyny płowej o zniekształconym porożu",
+    "samca zwierzyny płowej o odmrożonym porożu"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-68",
+   "topic": "Selekcja",
+   "q": "Dokonując wyceny medalowej, długość parostków mierzymy w:",
+   "answers": [
+    "milimetrach",
+    "centymetrach z dokładnością do 0,1",
+    "długości parostków nie mierzymy tylko ważymy i dokonujemy pomiaru objętości w naczyniu z wodą",
+    "nie mierzymy długości parostków tylko obwód tyki prawej i lewej"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-70",
+   "topic": "Selekcja",
+   "q": "Dokonując określenia wieku sarny po dokonanym odstrzale nie bierzemy pod uwagę:",
+   "answers": [
+    "rozwoju i stopnia starcia zębów",
+    "wyglądu szwów kości czaszki",
+    "wyglądu możdżeni",
+    "masy poroża"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-71",
+   "topic": "Selekcja",
+   "q": "Czy parostki rogaczy pozyskane na polowaniu tzw. dewizowym przez obcokrajowców podlegają ocenie prawidłowości odstrzału:",
+   "answers": [
+    "nie",
+    "podlegają tylko wycenie medalowej",
+    "tak",
+    "podlegają ocenie prawidłowości odstrzału w kraju, z którego pochodzi myśliwy"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-72",
+   "topic": "Selekcja",
+   "q": "Czy przyząbek to:",
+   "answers": [
+    "dodatkowo wyrastający ząb w szczęce górnej jelenia byka",
+    "trofeum z jelenia byka nazywane w języku łowieckim grandlami",
+    "ostatni człon szóstego zęba bocznego żuchwy przydatny do określenia wieku jeleni",
+    "linia brzegu siekaczy"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-73",
+   "topic": "Selekcja",
+   "q": "Czy przedstawione na rysunku parostki to:",
+   "image": "img/selekcjoner/21.jpg",
+   "answers": [
+    "parostki odmłodzone",
+    "parostki myłkusowate",
+    "parostki rogacza opanowanego przez motylicę",
+    "parostki perukarza"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-75",
+   "topic": "Selekcja",
+   "q": "U jelenia szlachetnego maksimum rozwoju poroża przypada zazwyczaj w wieku około:",
+   "answers": [
+    "10 - 12 lat",
+    "6 - 7 lat",
+    "7 - 8 lat",
+    "16- 17 lat"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-76",
+   "topic": "Selekcja",
+   "q": "Według kryteriów oceny prawidłowości odstrzału byków jelenia szlachetnego, za byka łownego uznaje się byka, który jednocześnie spełnia następujące kryteria:",
+   "answers": [
+    "w 6 roku życia i starszego o prawidłowo ukształtowanym porożu obustronnie koronnego",
+    "w 7 roku życia i starszego o prawidłowo ukształtowanym porożu obustronnie koronnego o masie wieńca powyżej 6,0 kg (ustalonej dla okręgu)",
+    "w 11 roku życia bez względu na formę poroża",
+    "w 11 roku życia i starszego o prawidłowo ukształtowanym porożu, wyłącznie obustronnie koronnego"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-77",
+   "topic": "Selekcja",
+   "q": "Najniżej usytuowana odnoga tyki jelenia to:",
+   "answers": [
+    "nadoczniak",
+    "opierak",
+    "oczniak",
+    "korona"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-78",
+   "topic": "Selekcja",
+   "q": "Byk jelenia szlachetnego, szpicak o długości tyk nie przekraczającej średniej wysokości łyżek, którego tyki są rozwidlone o długości odrostów ok. 1,5 cm, to osobnik, który podczas oceny prawidłowości odstrzału otrzyma punkt:",
+   "answers": [
+    "1 pkt. czerwony (X)",
+    "zielony (O)",
+    "niebieski (N)",
+    "2 pkt. czerwone (XX)"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-79",
+   "topic": "Selekcja",
+   "q": "Rogacz w pierwszym porożu, który wykształcił parostki w formie widłaka podczas oceny prawidłowości odstrzału otrzyma punkt:",
+   "answers": [
+    "2 pkt. czerwone",
+    "1 pkt. czerwony",
+    "zielony",
+    "niebieski"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-80",
+   "topic": "Selekcja",
+   "q": "Czy komisja dokonująca oceny prawidłowości odstrzału jest zobowiązana do trwałego oznakowania żuchwy:",
+   "answers": [
+    "tak",
+    "nie",
+    "tak, ale tylko w przypadku nieprawidłowego dokonania odstrzału",
+    "tylko w przypadku gdy odstrzał został zrealizowany w klasie wieku niezgodnej z wydanym upoważnieniem"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-81",
+   "topic": "Selekcja",
+   "q": "Scypuł to:",
+   "answers": [
+    "skóra pokrywająca tworzące się poroże u jeleniowatych",
+    "zdeformowana forma poroża kozła",
+    "uszkodzony możdżeń",
+    "selekcyjna forma poroża jelenia"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-82",
+   "topic": "Selekcja",
+   "q": "Rogacze łowne to:",
+   "answers": [
+    "rogacze powyżej 6 poroża, bez względu na formę i masę",
+    "rogacze w 5 porożu i powyżej, bez względu na formę i masę",
+    "rogacze w 5 porożu i powyżej, bez względu na formę o masie poroża brutto ponad 430 gram",
+    "rogacze powyżej 5 poroża, w formie szóstaka regularnego, bez względu na masę poroża"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-83",
+   "topic": "Selekcja",
+   "q": "Przy pozyskaniu muflonów dopuszczona jest pomyłka w ocenie wieku przed odstrzalem:",
+   "answers": [
+    "do 1 roku",
+    "do 2 lat",
+    "do 1 roku powyżej drugiego roku życia",
+    "do 1 roku powyżej trzeciego roku życia"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-84",
+   "topic": "Selekcja",
+   "q": "Co oznacza określenie szpicak koronny:",
+   "answers": [
+    "niepożądana forma pierwsza poroża jelenia byka",
+    "jeleń byk w trzecim roku życia",
+    "sarna rogacz w pierwszym roku życia",
+    "pierwsze poroże wybitnie przyszłościowego jelenia byka, posiadające trzy krótkie odnogi na zakończeniu przynajmniej jednej tyki"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-85",
+   "topic": "Selekcja",
+   "q": "Jak długo jeleń byk nosi swoje pierwsze poroże?",
+   "answers": [
+    "do końca stycznia, a nawet do połowy lutego",
+    "do końca lutego, a nawet do połowy marca",
+    "do końca kwietnia, a nawet do połowy maja",
+    "do końca czerwca, a nawet do połowy lipca"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-86",
+   "topic": "Selekcja",
+   "q": "Zaleca się oszczędzanie szpicaków jelenia szlachetnego:",
+   "answers": [
+    "rozwidlonych i koronnych",
+    "o długości tyk poniżej długości łyżek",
+    "o średniej długości tyk poniżej 20 cm",
+    "o średniej długości tyk poniżej 15 cm"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-88",
+   "topic": "Selekcja",
+   "q": "Określ wiek rogaczy na przedstawionym rysunku:",
+   "image": "img/selekcjoner/q88-combo.jpg",
+   "answers": [
+    "A - jednoroczny, B - 2-3 letni, C - 4-5 letni, D - stary",
+    "A - 2-3 letni, B - 4-5 letni, C - stary, D - jednoroczny",
+    "A - jednoroczny, B - 4-5 letni, C - 2-3 letni, D - stary",
+    "A - jednoroczny, B - 2-3 letni, C - stary, D - 4-5 letni"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-89",
+   "topic": "Selekcja",
+   "q": "Jak nazywamy jelenia byka, który na każdej tyce ma 12 odnóg:",
+   "answers": [
+    "dwudwunastak nieregularny",
+    "czterodwunastak regularny",
+    "dwudwudziestak nieregularny",
+    "czterodwudziestak regularny"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-91",
+   "topic": "Selekcja",
+   "q": "Obecny status prawny łosia to:",
+   "answers": [
+    "gatunek objęty ochroną ścisłą",
+    "gatunek objęty ochroną częściową",
+    "gatunek łowny z całorocznym okresem ochronnym",
+    "gatunek łowny z okresem polowań"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-92",
+   "topic": "Selekcja",
+   "q": "Podczas rui u saren występuje charakterystyczne zachowanie, tj.:",
+   "answers": [
+    "szczekanie i wycieranie poroża przez samce",
+    "wydawanie specyficznych głosów przez kozły (mikot) w celu zwabienia kóz",
+    "wydawanie specyficznych głosów przez kozy (mikot) w celu wabienia kozłów",
+    "wykopywanie dołków rujowych"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-93",
+   "topic": "Selekcja",
+   "q": "Spałowanie to:",
+   "answers": [
+    "ogryzanie kory drzew i krzewów, między innymi przez jelenie",
+    "uderzanie porożem o drzewa i gałęzie",
+    "dźwięk podczas walki porożem pomiędzy samcami jeleniowatych",
+    "wycieranie poroża ze scypułu"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-98",
+   "topic": "Selekcja",
+   "q": "Wieczny ósmak:",
+   "answers": [
+    "jeleń byk, który w czasie rykowiska odzywa się regularnie około godziny 20:00",
+    "jeleń byk, który w drugiej głowie nakłada poroże formie ósmaka",
+    "jeleń byk, który co roku ma choć na jednej tyce co najmniej osiem odnóg",
+    "jeleń byk powyżej 4 roku, który co roku nakłada poroże posiadające po cztery odnogi na każdej z tyk"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-105",
+   "topic": "Selekcja",
+   "q": "Jeleń byk o 12 odnogach na jednej tyce i 10 na drugiej, to:",
+   "answers": [
+    "dwunastak regularny",
+    "dwunastak nieregularny",
+    "dwudwudziestak nieregularny",
+    "czterodwudziestak nieregularny"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-108",
+   "topic": "Selekcja",
+   "q": "W którym zestawie wymienione są tylko takie gatunki, na które można polować w nocy z bronią o lufach gładkich bez przyrządów optycznych i lornetki:",
+   "answers": [
+    "kaczki, gęsi",
+    "lisy, jelenie sika",
+    "kuny, muflony",
+    "borsuki, sarny"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-109",
+   "topic": "Selekcja",
+   "q": "W przypadku łosia osobnik wykształca najczęściej pełne (stałe) uzębienie w wieku:",
+   "answers": [
+    "około 15 miesięcy",
+    "około 20 miesięcy",
+    "około 25 miesięcy",
+    "około 30 miesięcy"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-111",
+   "topic": "Selekcja",
+   "q": "Które z samców jeleniowatych zrzucają poroże przed okresem zimowym?",
+   "answers": [
+    "kozły",
+    "byki jelenia",
+    "byki daniela",
+    "żaden samiec jeleniowatych nie zrzuca poroża przed okresem zimowym"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-112",
+   "topic": "Selekcja",
+   "q": "Młode jakiego gatunku jeleniowatych nie posiadają po urodzeniu cętek na sukni?",
+   "answers": [
+    "sarny",
+    "jelenia",
+    "łosia",
+    "wszystkie młode jeleniowate posiadają cętki"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-115",
+   "topic": "Selekcja",
+   "q": "Do zwierzyny płowej należą między innymi:",
+   "answers": [
+    "wilk, ryś, lis",
+    "jeleń sika, jeleń szlachetny, dzik",
+    "łoś, jeleń szlachetny, daniel",
+    "łoś, jeleń szlachetny, muflon"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-116",
+   "topic": "Selekcja",
+   "q": "Zabronione jest strzelanie do zwierzyny w pobliżu miejsc zebrań publicznych w czasie ich trwania, tj. w odległości mniejszej niż:",
+   "answers": [
+    "500 m",
+    "300 m",
+    "200 m",
+    "100 m"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-117",
+   "topic": "Selekcja",
+   "q": "Wyceniając oręż dzika wg. metody CIC nie bierzemy pod uwagę:",
+   "answers": [
+    "długości szabel",
+    "szerokości szabel",
+    "obwodu fajek",
+    "długości fajek"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-124",
+   "topic": "Selekcja",
+   "q": "Koza jest zazwyczaj grzejna (rujna) przez okres:",
+   "answers": [
+    "2 - 4 dni",
+    "8 - 10 dni",
+    "około 2 tygodni",
+    "około miesiąca"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-129",
+   "topic": "Selekcja",
+   "q": "Wyceniając poroże byka jelenia szlachetnego, wystarczająca liczba punktów, aby uzyskało ono medal srebrny to:",
+   "answers": [
+    "170 punktów CIC",
+    "180 punktów CIC",
+    "190 punktów CIC",
+    "200 punktów CIC"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-132",
+   "topic": "Selekcja",
+   "q": "Który z poniższych gatunków jest w Polsce najliczniejszy:",
+   "answers": [
+    "jeleń szlachetny",
+    "sarna",
+    "dzik",
+    "daniel"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-136",
+   "topic": "Selekcja",
+   "q": "Podczas wyceny medalowej trofeów, poroże daniela otrzyma złoty medal uzyskując minimum:",
+   "answers": [
+    "160 punktów CIC",
+    "170 punktów CIC",
+    "180 punktów CIC",
+    "190 punktów CIC"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-251",
+   "topic": "Selekcja",
+   "q": "Pieczęcią jest:",
+   "answers": [
+    "biała plama na zadzie jeleniowatych",
+    "spodnia (czołowa) część tyki zrzuconej przez samce jeleniowatych, stykająca się przedtem z możdżeniem, otoczona różą",
+    "gruczoł czołowy u rogacza",
+    "wyrostek kostny na czaszce samców zwierzyny płowej i pustorożców, na którym nasadza się poroże lub rogi"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-492",
+   "topic": "Selekcja",
+   "q": "Do zwierzyny płowej zaliczamy:",
+   "answers": [
+    "wszystkie gatunki z rodziny jeleniowatych",
+    "dziki",
+    "wilki i rysie",
+    "zające"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-495",
+   "topic": "Selekcja",
+   "q": "Największym z żyjących w Polsce jeleniowatych jest:",
+   "answers": [
+    "łoś",
+    "jeleń europejski",
+    "daniel",
+    "jeleń sika"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-503",
+   "topic": "Selekcja",
+   "q": "Przeciętna masa tuszy łani jelenia wynosi około:",
+   "answers": [
+    "30 kg",
+    "50 kg",
+    "75 kg",
+    "140 kg"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-515",
+   "topic": "Selekcja",
+   "q": "Daniel jest w Polsce gatunkiem:",
+   "answers": [
+    "rodzimym",
+    "introdukowanym, sprowadzonym ze wschodniej Azji",
+    "introdukowanym, pochodzącym z Azji Mniejszej i Basenu Morza Śródziemnego",
+    "introdukowanym, sprowadzonym z Ameryki Południowej"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-523",
+   "topic": "Selekcja",
+   "q": "Nazwij gatunek zwierzęcia widoczny na rysunku oraz formę poroża:",
+   "image": "img/selekcjoner/28.jpg",
+   "answers": [
+    "jeleń szlachetny – szpicak",
+    "łoś – widłak",
+    "jeleń sika – szpicak",
+    "łoś – łopatacz"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-526",
+   "topic": "Selekcja",
+   "q": "Nazwij gatunek zwierzęcia widoczny na rysunku oraz formę poroża:",
+   "image": "img/selekcjoner/29.jpg",
+   "answers": [
+    "jeleń szlachetny – szpicak",
+    "łoś – badylarz",
+    "jeleń sika – szpicak",
+    "łoś – łopatacz"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-527",
+   "topic": "Selekcja",
+   "q": "Wskazane na rysunku zakończenia poroża łosia w języku łowieckim nazywane są:",
+   "image": "img/selekcjoner/30.jpg",
+   "answers": [
+    "ostrogami",
+    "pasynkami",
+    "grotami",
+    "rosochami"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-529",
+   "topic": "Selekcja",
+   "q": "Łoś jest obecnie w Polsce gatunkiem:",
+   "answers": [
+    "chronionym",
+    "łownym, ze wskazanym okresem polowań",
+    "łownym, z całorocznym okresem ochronnym",
+    "łownym, ale pozyskiwanym wyłącznie na wschód od Wisły"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-531",
+   "topic": "Selekcja",
+   "q": "Łosie w okresie letnim preferują:",
+   "answers": [
+    "duże, suche kompleksy leśne",
+    "tereny bagienne i podmokłe",
+    "tereny polne z niewielkimi śródpolnymi remizami",
+    "gęstwiny leśne, stroniąc jednak od terenów bagiennych, w których ze względu na swoją masę mają problem z poruszaniem się"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-537",
+   "topic": "Selekcja",
+   "q": "Łosie w okresie letnim żyją:",
+   "answers": [
+    "w dużych grupach różnopłciowych",
+    "w dużych grupach jednopłciowych",
+    "samotnie lub w małych grupach",
+    "w parach wychowujących potomstwo"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-543",
+   "topic": "Selekcja",
+   "q": "Broda – charakterystyczny dla łosi wał skórny znajdujący się pod szyją:",
+   "answers": [
+    "największa jest u samców w średnim wieku, natomiast później maleje",
+    "występuje wyłącznie u samców w okresie bukowiska",
+    "rośnie wraz z wiekiem osobnika i najdłuższa jest u bardzo starych samców",
+    "występuje u młodych samców zaraz po przyjściu na świat i z wiekiem ulega redukcji"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-547",
+   "topic": "Selekcja",
+   "q": "Łosie aktywne są:",
+   "answers": [
+    "całą dobę, jednak szczyt aktywności przypada na wczesne godziny poranne i późne godziny wieczorne",
+    "wyłącznie w ciągu dnia, natomiast nocą odpoczywają w ostojach",
+    "wyłącznie nocą, natomiast w ciągu dnia przebywają w ostojach",
+    "wyłącznie w ciągu dnia, ze szczytem aktywności w godzinach popołudniowych"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-551",
+   "topic": "Selekcja",
+   "q": "Ruja łosi z reguły trwa:",
+   "answers": [
+    "od września do połowy października",
+    "od lipca do połowy września",
+    "od października do początku grudnia",
+    "od początku grudnia do końca stycznia"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-553",
+   "topic": "Selekcja",
+   "q": "W czasie trwania rui, łosie:",
+   "answers": [
+    "łączą się w różnopłciowe grupy",
+    "łączą się w pary na cały okres bukowiska",
+    "łączą się okresowo w pary, jednak po kopulacji byk odłącza się i poszukuje innej klępy",
+    "łączą się w grupy składające się z samic i jednego stadnego byka"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-555",
+   "topic": "Selekcja",
+   "q": "Ustaw sylwetki byków jeleni szlachetnych od najmłodszego do najstarszego:",
+   "image": "img/selekcjoner/q555-combo.jpg",
+   "answers": [
+    "A,B,C,D",
+    "A,D,B,C",
+    "D,A,B,C",
+    "A,B,D,C"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-557",
+   "topic": "Selekcja",
+   "q": "Na rysunku przedstawione są dwa rodzaje tropów i widok racicy. Należą one do:",
+   "image": "img/selekcjoner/41.jpg",
+   "answers": [
+    "dzika - warchlaka",
+    "dzika - przelatka",
+    "jelenia szlachetnego",
+    "dzika - odyńca, lochy"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-565",
+   "topic": "Selekcja",
+   "q": "Zaznacz kolejność liter, w której łanie jelenia szlachetnego ustawione są od najmłodszej do najstarszej:",
+   "image": "img/selekcjoner/q565-combo.jpg",
+   "answers": [
+    "A,B,C",
+    "B,A,C",
+    "C,B,A",
+    "B,C,A"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-567",
+   "topic": "Selekcja",
+   "q": "Dłuższa sierść na szyi jelenia szlachetnego zwana grzywą, występuje:",
+   "answers": [
+    "u dojrzałych byków i z wiekiem staje się coraz większa",
+    "u wszystkich byków i łań",
+    "u byków, ale jedynie w okresie zimowym",
+    "wyłącznie u starych łań"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-571",
+   "topic": "Selekcja",
+   "q": "Wiek jeleni byków można ocenić po ich wyglądzie i zachowaniu. Wskaż prawidłowe stwierdzenie:",
+   "answers": [
+    "młode byki są smukłe, mają krótką cienką szyję i ze względu na brak pewności siebie nisko noszą głowę",
+    "wraz z wiekiem sylwetka potężnieje, szyja grubieje, a głowa noszona jest coraz wyżej",
+    "wraz z wiekiem sylwetka potężnieje, szyja grubieje, a głowa noszona jest coraz niżej",
+    "najstarsze byki tracą kondycję, więc noszą wysoko głowę, żeby wystarczająco szybko zauważyć niebezpieczeństwo"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-575",
+   "topic": "Selekcja",
+   "q": "W czasie rykowiska jelenie szlachetne:",
+   "answers": [
+    "łączą się w osobne grupy byków i łań, które spotykają się w godzinach nocnych dla odbycia kopulacji",
+    "łączą się w pary, jednak po kopulacji samiec odchodzi w poszukiwaniu kolejnej łani",
+    "łączą się w różnopłciowe grupy, w których wiele samców kopuluje z tymi samymi samicami",
+    "tworzą grupy łań, którym towarzyszy byk stadny, co jakiś czas toczący walki o władzę nad haremem"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-577",
+   "topic": "Selekcja",
+   "q": "„Marsz równoległy” to:",
+   "answers": [
+    "forma konfrontacji – pokazu sił, pomiędzy bykami danieli w czasie bekowiska, jak również dość często pomiędzy bykami jelenia szlachetnego podczas rykowiska",
+    "sposób okładania pola przez dwa aportery",
+    "sposób poruszania się naganki",
+    "metoda polowania zbiorowego bez naganki, gdy myśliwi samodzielnie przeczesują teren płosząc zwierzynę"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-581",
+   "topic": "Selekcja",
+   "q": "Organistą w języku łowieckim nazywamy:",
+   "answers": [
+    "byka jelenia szlachetnego rozpoczynającego w danym dniu rykowisko, pobudzającego inne uczestniczące w godach byki",
+    "byka jelenia po zrzuceniu poroża",
+    "młodego byka jelenia, kręcącego się wokół haremu łań, odpędzanego przez byka stadnego",
+    "starego byka, który ze względu na wiek i kondycję nie może wziąć udziału w rykowisku"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-583",
+   "topic": "Selekcja",
+   "q": "Gomółą w języku łowieckim nazywamy:",
+   "answers": [
+    "byka jelenia szlachetnego rozpoczynającego rykowisko, pobudzającego inne uczestniczące w godach byki",
+    "byka jelenia po zrzuceniu poroża",
+    "młodego byka jelenia, kręcącego się wokół chmary łań, odpędzanego przez byka stadnego",
+    "starego byka, który ze względu na wiek i kondycje nie może wziąć udziału w rykowisku"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-585",
+   "topic": "Selekcja",
+   "q": "Bykiem stadnym nazywamy:",
+   "answers": [
+    "byka jelenia szlachetnego, który gromadzi harem łań podczas rykowiska",
+    "byka jelenia szlachetnego wchodzącego w skład chmary składającej się z samic i samców",
+    "byka łosia, który przewodniczy stadem",
+    "nie ma takiej nazwy, ponieważ chmarą zawsze przewodzi najstarsza łania"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-589",
+   "topic": "Selekcja",
+   "q": "Po zakończeniu rykowiska:",
+   "answers": [
+    "chmara rozchodzi się, jednak byk stadny pozostaje przy licówce",
+    "byk stadny pozostaje z chmarą aż do wiosny",
+    "byk stadny po pokryciu łań odchodzi i jakiś czas przebywa w samotności, a następnie tworzy zwykle małe grupy z innymi bykami",
+    "byk stadny odchodzi od chary łań, aby zregenerować siły, lecz na początku zimy wraca i przewodzi chmarze do wiosny"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-591",
+   "topic": "Selekcja",
+   "q": "Cielęta jelenia szlachetnego przychodzą na świat:",
+   "answers": [
+    "na przełomie marca i kwietnia",
+    "w kwietniu i na początku maja",
+    "w maju i czerwcu",
+    "na przełomie lipca i sierpnia"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-593",
+   "topic": "Selekcja",
+   "q": "Młode jelenie szlachetne dojrzewają:",
+   "answers": [
+    "w wieku około 6 miesięcy, więc już pod koniec pierwszej jesieni życia przystępują do rozrodu",
+    "pod koniec pierwszego roku życia, stąd do rozrodu mogą przystąpić dopiero wczesną wiosną, podczas dodatkowej, tzw. cichej rui",
+    "zwykle w drugim roku życia, stąd łanie wydają pierwsze potomstwo w trzecim roku życiu, ale byki mają szansę na rozród dopiero w wieku kilku lat",
+    "łanie w czwartym roku życia, a byki w wieku minimum 6 lat"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-595",
+   "topic": "Selekcja",
+   "q": "Przeciętna masa tuszy dorosłej sarny wynosi około:",
+   "answers": [
+    "5 kg",
+    "12 kg",
+    "17 kg",
+    "30 kg"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-601",
+   "topic": "Selekcja",
+   "q": "Koźlęta sarny rodzą się na przełomie:",
+   "answers": [
+    "marca i kwietnia",
+    "maja i czerwca",
+    "czerwca i lipca",
+    "lipca i sierpnia"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-605",
+   "topic": "Selekcja",
+   "q": "Koza prowadzi koźlęta:",
+   "answers": [
+    "przez okres 2 tygodni od urodzenia",
+    "do końca lipca",
+    "do połowy grudnia",
+    "przez jeden rok"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-607",
+   "topic": "Selekcja",
+   "q": "Zjawisko ciąży utajonej (przedłużonej) występuje u:",
+   "answers": [
+    "sarny",
+    "dzika",
+    "zająca",
+    "jelenia sika"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-609",
+   "topic": "Selekcja",
+   "q": "\"Mnich\" to określenie byka jelenia, który:",
+   "answers": [
+    "nie posiada poroża, gdyż go zrzucił i jeszcze nie wykształcił kolejnego",
+    "posiada wyjątkowo zdeformowane poroże",
+    "rokrocznie nie nakłada poroża lub posiada poroże jedynie w postaci małych guzków",
+    "z przyczyn genetycznych rokrocznie wykształca wyjątkowo słabe poroże"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-611",
+   "topic": "Selekcja",
+   "q": "Sarny polne różnią się od leśnych niektórymi cechami. Jednak nieprawdą jest, że sarny polne:",
+   "answers": [
+    "mają trochę większą masę tuszy",
+    "spłoszone nie uciekają do lasu",
+    "tworzą w okresie zimowym większe rudle",
+    "posiadają znacznie ciemniejszą suknię"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-613",
+   "topic": "Selekcja",
+   "q": "Typową docelową formą poroża kozła jest:",
+   "answers": [
+    "widłak",
+    "szóstak",
+    "ósmak",
+    "dziesiątak"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-615",
+   "topic": "Selekcja",
+   "q": "Dziesiątak to:",
+   "answers": [
+    "forma poroża, które na co najmniej jednej tyce ma 5 odnóg",
+    "forma poroża, które na co najmniej jednej tyce ma 10 odnóg",
+    "jeleń byk, który ukończył 10 rok życia",
+    "daniel byk, który ukończył 10 rok życia"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-671",
+   "topic": "Selekcja",
+   "q": "Wskaż prawidłowe określenia wskazanych na rysunku elementów budowy poroża jelenia szlachetnego w kolejności od A do D:",
+   "image": "img/selekcjoner/46.jpg",
+   "answers": [
+    "A) nadoczniak, B) oczniak, C) opierak, D) widlica",
+    "A) nadoczniak, B) oczniak, C) opierak, D) korona",
+    "A) oczniak, B) nadoczniak, C) opierak, D) korona",
+    "A) oczniak, B) opierak, C) nadoczniak, D) widlica"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-673",
+   "topic": "Selekcja",
+   "q": "Nazwę poroża określamy w ten sposób, że:",
+   "answers": [
+    "podwaja się liczbę odnóg z tej tyki, w której jest ich więcej",
+    "podwaja się liczbę odnóg z tej tyki, w której jest ich mniej",
+    "sumuje się liczbę odnóg na obu tykach, a następnie się ją podwaja",
+    "sumuje się liczbę odnóg na obu tykach, a następnie dzieli się ją na trzy"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-675",
+   "topic": "Selekcja",
+   "q": "Jeleń szlachetny w średnim wieku:",
+   "answers": [
+    "zrzuca poroże na przełomie października i listopada, a nowe wyciera w kwietniu",
+    "zrzuca poroże w marcu, a nowe wyciera w lipcu i sierpniu",
+    "zrzuca poroże na przełomie roku, a nowe wyciera na przełomie maja i czerwca",
+    "zrzuca poroże we wrześniu, a nowe wyciera w marcu"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-677",
+   "topic": "Selekcja",
+   "q": "Starsze byki jelenia szlachetnego zazwyczaj zrzucają poroże:",
+   "answers": [
+    "wcześniej niż młodsze osobniki",
+    "później niż młodsze osobniki",
+    "dokładnie w tym samym okresie co młode byki i dzieje się to w październiku",
+    "wiek osobnika nie ma wpływu na okres zrzucania poroży"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-679",
+   "topic": "Selekcja",
+   "q": "Wraz z dojrzewaniem jelenia szlachetnego poroże zmienia się następująco:",
+   "answers": [
+    "środek ciężkości przenosi się ku dołowi, oczniaki ulegają wydłużeniu, a uperlenie zanika",
+    "środek ciężkości przenosi się ku górze, oczniaki ulegają wydłużeniu, a uperlenie zwiększa się",
+    "środek ciężkości przenosi się ku dołowi, oczniaki ulegają skróceniu, a uperlenie zwiększa się i ciemnieje",
+    "środek ciężkości przenosi się ku górze, oczniaki ulegają skróceniu, a uperlenie zanika"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-681",
+   "topic": "Selekcja",
+   "q": "Głównym kryterium oceny wieku pozyskanego jelenia szlachetnego jest ocena zmian rejestrów:",
+   "answers": [
+    "zębów trzonowych i przedtrzonowych",
+    "siekaczy",
+    "wyłącznie zębów trzonowych, przedtrzonowce nie biorą udziału w procesie przeżuwania",
+    "zębów trzonowych i zredukowanych kłów zwanych grandlami"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-686",
+   "topic": "Selekcja",
+   "q": "Jeleń sika jest w Polsce:",
+   "answers": [
+    "gatunkiem rodzimym, jednak będącym na wymarciu",
+    "inwazyjnym gatunkiem obcym, pochodzącym z Dalekiego Wschodu",
+    "gatunkiem obcym, pochodzącym z Ameryki Południowej",
+    "gatunkiem obcym, pochodzącym ze Skandynawii"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-689",
+   "topic": "Selekcja",
+   "q": "Jeleń sika w Polsce występuje:",
+   "answers": [
+    "na terenie Pomorza Zachodniego i w okolicy Puszczy Niepołomickiej",
+    "w Lasach Pszczyńskich na Śląsku i w Lasach Kadyńskich nad Zalewem Wiślanym",
+    "w Puszczy Boreckiej i Puszczy Białowieskiej",
+    "w Górach Stołowych"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-692",
+   "topic": "Selekcja",
+   "q": "Jeleń sika w porównaniu do jelenia szlachetnego:",
+   "answers": [
+    "jest znacznie mniejszy",
+    "jest zdecydowanie większy",
+    "jest zbliżony wielkością i praktycznie nie różni się wyglądem",
+    "jest zbliżony wielkością, a jedyna różnica polega na braku lustra na zadzie jeleni sika"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-694",
+   "topic": "Selekcja",
+   "q": "Łyżkarz jest formą poroża:",
+   "answers": [
+    "typową dla byków daniela w drugim porożu",
+    "typową dla byków łosia w drugim porożu",
+    "typową dla byków jelenia szlachetnego w trzecim porożu",
+    "występującą u samców saren niezależnie od wieku"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-695",
+   "topic": "Selekcja",
+   "q": "Zaznaczone literą \"A\" elementy budowy poroża daniela nazywamy:",
+   "image": "img/selekcjoner/48.jpg",
+   "answers": [
+    "sękami",
+    "pasynkami",
+    "hakami",
+    "rosochami"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-700",
+   "topic": "Selekcja",
+   "q": "Okres godowy danieli zazwyczaj trwa:",
+   "answers": [
+    "przez cały wrzesień do połowy października",
+    "od połowy lipca do końca sierpnia",
+    "od połowy października do pierwszych dni listopada",
+    "od połowy listopada do połowy grudnia"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-702",
+   "topic": "Selekcja",
+   "q": "Byki danieli w okresie rui:",
+   "answers": [
+    "odbywają zaciekłe walki, podobnie jak byki jelenia szlachetnego",
+    "odbywają walki, ale zdecydowanie mniej zaciekłe niż u byków jelenia szlachetnego",
+    "w odróżnieniu od byków jelenia szlachetnego, ze względu na swoją łagodność nie toczą walk z innymi samcami",
+    "dobierają się z łaniami w pary, w których pozostają przez cały okres rui nie spotykając innych samców"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-704",
+   "topic": "Selekcja",
+   "q": "Rujowisko (kołyska) jest to:",
+   "answers": [
+    "zaciszne miejsce gdzie odbywa się ruja np. polana śródleśna",
+    "miejsce, gdzie podczas huczki dochodzi do kopulacji, inaczej babrzysko",
+    "dołek rozkopany badylami przez byka daniela w okresie rui",
+    "wgłębienie terenu, gdzie byk jelenia szlachetnego leży i odpoczywa po rui"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-706",
+   "topic": "Selekcja",
+   "q": "Łania daniela zazwyczaj cieli się:",
+   "answers": [
+    "w maju",
+    "w czerwcu, a niekiedy na początku lipca",
+    "na przełomie kwietnia i maja",
+    "na przełomie marca i kwietnia, ze względu na występującą u tego gatunku ciążę utajoną"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-708",
+   "topic": "Selekcja",
+   "q": "Łanie daniela zazwyczaj cielą się po raz pierwszy:",
+   "answers": [
+    "w drugim roku życia",
+    "w trzecim roku życia",
+    "w czwartym roku życia",
+    "w piątym roku życia"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-714",
+   "topic": "Selekcja",
+   "q": "Sarny żerują:",
+   "answers": [
+    "wyłącznie nocą",
+    "najintensywniej w godzinach porannych i wieczornych, a w mniejszym stopniu w innych porach doby",
+    "głównie nocą, a mniej intensywnie w godzinach porannych i wieczornych",
+    "z podobną intensywnością przez całą dobę"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-716",
+   "topic": "Selekcja",
+   "q": "Średnia masa ciała dorosłej sarny na terenie Polski wynosi:",
+   "answers": [
+    "8-10 kg",
+    "12-15 kg",
+    "24-26 kg",
+    "30-35 kg"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-722",
+   "topic": "Selekcja",
+   "q": "Po przekroczeniu przez kozły wieku 7-8 lat prawidłowo ukształtowane poroża zaczynają się uwsteczniać, co przejawia się między innymi:",
+   "answers": [
+    "skróceniem długości odnóg, aż do ich zaniku",
+    "wydłużeniem długości odnóg",
+    "skróceniem tyk, prowadzącym do ich zaniku",
+    "zmianą ich formy na tak zwane baranie rogi lub korkociąg"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-723",
+   "topic": "Selekcja",
+   "q": "Okres rui saren przypada na:",
+   "answers": [
+    "drugą połowę maja i pierwszą połowę czerwca",
+    "drugą połowę lipca i pierwszą połowę sierpnia",
+    "drugą połowę września i pierwszą połowę października",
+    "drugą połowę października i pierwszą połowę listopada"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-725",
+   "topic": "Selekcja",
+   "q": "Wskaż prawidłowe stwierdzenie dotyczące zachowania saren w okresie godowym.",
+   "answers": [
+    "tworzą haremy składające się z wielu samic i jednego samca stadnego",
+    "tworzą różnopłciowe grupy złożone z kilku samic i samców",
+    "łączy się w pary, w których pozostają aż do przyjścia na świat młodych",
+    "samiec przebywa w towarzystwie grzejącej się kozy do momentu, aż przestaje być rujna, po czym szuka kolejnej samicy"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-742",
+   "topic": "Selekcja",
+   "q": "Wskaż błędną odpowiedź dotyczącą pierwiastkowego poroża u sarny.",
+   "answers": [
+    "u osobników o słabej kondycji może nie występować",
+    "nie ma wykształconych róż",
+    "wycierane jest w ciągu zimy i zrzucane po kilku tygodniach, najczęściej w lutym",
+    "może przybierać formę szpicaka lub widłaka, w wyjątkowych sytuacjach nawet szóstaka"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-743",
+   "topic": "Selekcja",
+   "q": "Zaznacz kolejność liter, w której rogacze ustawione są od najmłodszego do najstarszego:",
+   "image": "img/selekcjoner/q743-combo.jpg",
+   "answers": [
+    "C,B,A",
+    "C,A,B",
+    "B,C,A",
+    "B,A,C"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-745",
+   "topic": "Selekcja",
+   "q": "Samce saren parostki wycierają i zrzucają zazwyczaj:",
+   "answers": [
+    "wycierają w kwietniu, a zrzucają na przełomie października i listopada",
+    "wycierają w czerwcu, a zrzucają we wrześniu",
+    "wycierają w marcu, a zrzucają we wrześniu",
+    "wycierają w listopadzie, a zrzucają w lutym"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-748",
+   "topic": "Selekcja",
+   "q": "Odstrzał selekcyjny kóz powinien koncentrować się na osobnikach:",
+   "answers": [
+    "nieprowadzących",
+    "prowadzących chore młode",
+    "prowadzących więcej niż dwa młode",
+    "prowadzących młode płci żeńskiej"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-750",
+   "topic": "Selekcja",
+   "q": "Uwstecznione parostki rogaczy charakteryzują się:",
+   "answers": [
+    "skróceniem odnóg prowadzącym do ich zaniku, grubieniem dolnych części tyk, róże zazwyczaj stają się daszkowate",
+    "wydłużeniem odnóg, grubieniem dolnych części tyk, róże nie ulegają zmianie",
+    "skróceniem odnóg, grubieniem górnych części tyk, róże stają się daszkowate",
+    "wydłużeniem odnóg, grubieniem górnych części tyk, róże zanikają"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-754",
+   "topic": "Selekcja",
+   "q": "Okres polowań na byki danieli przypada:",
+   "answers": [
+    "od 21 sierpnia do końca lutego",
+    "od 1 września do końca lutego",
+    "od 1 listopada do 31 stycznia",
+    "od 1 października do 15 stycznia"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-757",
+   "topic": "Selekcja",
+   "q": "Okres polowań na rogacze przypada:",
+   "answers": [
+    "od 21 sierpnia do końca lutego",
+    "od 1 maja do 31 stycznia",
+    "od 11 maja do 30 września",
+    "od 1 października do 31 stycznia"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-759",
+   "topic": "Selekcja",
+   "q": "Okres polowań na kozy i koźlęta sarny przypada:",
+   "answers": [
+    "od 21 sierpnia do końca lutego",
+    "od 1 maja do 31 stycznia",
+    "od 11 maja do 30 września",
+    "od 1 października do 15 stycznia"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-761",
+   "topic": "Selekcja",
+   "q": "Wraz z rozwojem somatycznym rogaczy ich sylwetka zmienia się i starsze osobniki charakteryzują się:",
+   "answers": [
+    "bardziej krępą budową, grubszym karkiem, ściętym zadem i nisko noszonym łbem",
+    "chudszą i smuklejszą budową, ściętym zadem i wysoko noszoną głową",
+    "chudszą i smuklejszą budową, wydłużonym zadem i nisko noszoną głową",
+    "bardziej krępą budową, wydłużonym zadem i wysoko noszoną głową"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-763",
+   "topic": "Selekcja",
+   "q": "Istotnym elementem określania wieku saren jest ich zachowanie. Na przykład młode rogacze:",
+   "answers": [
+    "wcześnie wychodzą na żer i późno wracają do ostoi, są mało ostrożne, rzadko podnoszą głowę podczas żerowania",
+    "są bojaźliwe i czujne, często podnoszą głowę podczas żerowania, krótko pozostają poza ukryciami",
+    "wychodzą na żer bardzo późno wieczorem i wczesnym świtem wracają do ostoi, a ze względu na brak doświadczenia są bardzo ostrożne i czujne",
+    "wychodzą na żer bardzo późno wieczorem i wczesnym świtem wracają do ostoi, są mało czujne i rzadko podnoszą głowę podczas żerowania"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-769",
+   "topic": "Selekcja",
+   "q": "Przedstawioną na rysunku formę parostków rogacza nazywamy:",
+   "image": "img/selekcjoner/59.png",
+   "answers": [
+    "lokownikiem",
+    "perukarzem",
+    "stogiem",
+    "maślakiem"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-770",
+   "topic": "Selekcja",
+   "q": "Przedstawioną na rysunku formę parostków rogacza nazywamy:",
+   "image": "img/selekcjoner/60.jpg",
+   "answers": [
+    "widłak",
+    "trójnóg",
+    "wielotykowiec",
+    "szóstak"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-771",
+   "topic": "Selekcja",
+   "q": "Przedstawioną na rysunku formę parostków rogacza nazywamy:",
+   "image": "img/selekcjoner/61.jpg",
+   "answers": [
+    "szpicakiem",
+    "widłakiem",
+    "grotem",
+    "myłkusem"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-773",
+   "topic": "Selekcja",
+   "q": "Przedstawioną na rysunku formę parostków rogacza nazywamy:",
+   "image": "img/selekcjoner/62.jpg",
+   "answers": [
+    "szpicakiem",
+    "widłakiem",
+    "grotem",
+    "myłkusem"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-775",
+   "topic": "Selekcja",
+   "q": "Przedstawioną na rysunku formę parostków rogacza nazywamy:",
+   "image": "img/selekcjoner/63.jpg",
+   "answers": [
+    "guzikarz",
+    "baranimi rogami",
+    "korkociągiem",
+    "sprężyną"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-776",
+   "topic": "Selekcja",
+   "q": "Przedstawioną na rysunku formę parostków rogacza nazywamy:",
+   "image": "img/selekcjoner/64.jpg",
+   "answers": [
+    "szpicakiem",
+    "baranimi rogami",
+    "korkociągiem",
+    "sprężyną"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1067",
+   "topic": "Selekcja",
+   "q": "Myśliwy, który naruszył zasady selekcji osobniczej samców zwierzyny płowej może otrzymać jedną z poniższych kar:",
+   "answers": [
+    "skierowanie na ponowne szkolenie selekcjonerskie",
+    "podanie kary do publicznej wiadomości",
+    "zawieszenie w prawach do polowania na określony gatunek zwierzyny na okres trzech lat",
+    "zawieszenie w prawach do polowania na samce zwierzyny płowej i muflonów na okres do lat dwóch"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1118",
+   "topic": "Selekcja",
+   "q": "Które zdjęcie reprezentuje uzębienie jelenia byka ocenionego metodą Budenza (szacowanie wieku zwierzyny na podstawie przyząbka, czyli trzeciego płata szóstego zęba bocznego) na 10 rok życia:\n \r\n a) \r\n b) \r\n c) \r\n d)",
+   "image": "img/selekcjoner/q1118-combo.jpg",
+   "answers": [
+    "- a",
+    "- b",
+    "- c",
+    "- d"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1119",
+   "topic": "Selekcja",
+   "q": "Które zdjęcie reprezentuje uzębienie jelenia byka ocenionego metodą Budenza (szacowanie wieku zwierzyny na podstawie przyząbka, czyli trzeciego płata szóstego zęba bocznego) na 2 rok życia:\n \r\n a) \r\n b) \r\n c) \r\n d)",
+   "image": "img/selekcjoner/q1119-combo.jpg",
+   "answers": [
+    "- a",
+    "- b",
+    "- c",
+    "- d"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1120",
+   "topic": "Selekcja",
+   "q": "Zaprezentowane zdjęcie prezentuje żuchwę jelenia byka w:",
+   "image": "img/selekcjoner/105.jpg",
+   "answers": [
+    "11 roku życia",
+    "7 roku życia",
+    "6 roku życia",
+    "2 roku życia"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1121",
+   "topic": "Selekcja",
+   "q": "Zaprezentowane zdjęcie prezentuje żuchwę jelenia byka w:",
+   "image": "img/selekcjoner/106.jpg",
+   "answers": [
+    "14 roku życia",
+    "11 roku życia",
+    "6 roku życia",
+    "2 roku życia"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1122",
+   "topic": "Selekcja",
+   "q": "Zaprezentowane zdjęcie prezentuje żuchwę daniela byka w:",
+   "image": "img/selekcjoner/107.jpg",
+   "answers": [
+    "4 roku życia",
+    "8 roku życia",
+    "3 roku życia",
+    "2 roku życia"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1123",
+   "topic": "Selekcja",
+   "q": "Zaprezentowane zdjęcie prezentuje żuchwę daniela byka w:",
+   "image": "img/selekcjoner/108.jpg",
+   "answers": [
+    "4 roku życia",
+    "10 roku życia",
+    "6 roku życia",
+    "2 roku życia"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1124",
+   "topic": "Selekcja",
+   "q": "Zaprezentowane zdjęcie prezentuje żuchwę sarny rogacza w:",
+   "image": "img/selekcjoner/109.jpg",
+   "answers": [
+    "2 roku życia",
+    "3 roku życia",
+    "4 roku życia",
+    "6 roku życia"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1125",
+   "topic": "Selekcja",
+   "q": "Zaprezentowane zdjęcie prezentuje charakterystyczne cechy uzębienia sarny rogacza w:",
+   "image": "img/selekcjoner/110.jpg",
+   "answers": [
+    "2 roku życia",
+    "4 roku życia",
+    "5 roku życia",
+    "8 roku życia"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1126",
+   "topic": "Selekcja",
+   "q": "Zaprezentowane zdjęcie prezentuje żuchwę sarny rogacza w:",
+   "image": "img/selekcjoner/111.jpg",
+   "answers": [
+    "2 roku życia",
+    "4 roku życia",
+    "6 roku życia",
+    "8 roku życia"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1157",
+   "topic": "Selekcja",
+   "q": "Czy myśliwy ma obowiązek przedstawiać trofeum samców zwierzyny płowej i muflonów do oceny prawidłowości odstrzału:",
+   "answers": [
+    "tak, zawsze",
+    "tak, ale tylko samców starszych niż 3 letnie",
+    "tak, ale tylko wyłącznie jeleni szlachetnych i rogaczy",
+    "nie ma takiego obowiązku"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1159",
+   "topic": "Selekcja",
+   "q": "Czy wycenie medalowej podlegają trofea anormalne np: myłkusy, wielotykowce itp.:",
+   "answers": [
+    "tak, nie ma ograniczeń w tym temacie",
+    "tak, ale tylko pozyskane w okresie nie dłuższym niż rok od dnia wyceny",
+    "tak, ale tylko wyłącznie perukarze",
+    "nie"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1160",
+   "topic": "Selekcja",
+   "q": "Dokument jakiej rangi reguluje kwestie wyceny medalowej trofeów:",
+   "answers": [
+    "ustawa",
+    "rozporządzenie Ministra Środowiska",
+    "zarządzenie Zarządu Głównego PZŁ",
+    "zarządzenie zarządu koła łowieckiego, w zależności jakie trofea pozyskuje się w dzierżawionych przez nie obwodach"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1161",
+   "topic": "Selekcja",
+   "q": "Zgodnie z prawodawstwem do trofeów łowieckich zaliczamy:",
+   "answers": [
+    "poroża jeleniowatych, rogi muflonów, oręż dzika, czaszki niektórych drapieżników",
+    "poroże jelenia, poroże daniela, grandle, czaszki lisów i jenotów",
+    "czaszkę lisa, czaszkę jenota, czaszkę borsuka, czaszkę kuny",
+    "czaszkę lisa, kęsy, czaszkę borsuka, rogi muflonów"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1162",
+   "topic": "Selekcja",
+   "q": "Czy rekordowe trofea łowieckie mogą być wywożone za granicę:",
+   "answers": [
+    "tak, nie ma w tym względzie ograniczeń",
+    "tak, ale tylko wyłącznie w celu eksponowania na wystawach specjalistycznych",
+    "tak, ale tylko wyłącznie po zawarciu umowy kupna-sprzedaży z cudzoziemcą",
+    "nie"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1163",
+   "topic": "Selekcja",
+   "q": "Kto jest zobowiązany do prowadzenia rejestru trofeów:",
+   "answers": [
+    "w Polsce nie ma regulacji w tym temacie, nie ma też jednostki zobowiązanej do tworzenia rejestru trofeów łowieckich",
+    "Minister Środowiska",
+    "Polski Związek Łowiecki",
+    "Dyrekcja Generalna Lasów Państwowych"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1164",
+   "topic": "Selekcja",
+   "q": "Weryfikacja wyceny złotomedalowych trofeów łowieckich dokonywana jest przez komisję powołaną przez:",
+   "answers": [
+    "FACE",
+    "CIC",
+    "Polski Związek Łowiecki",
+    "Dyrekcję Generalna Lasów Państwowych"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1165",
+   "topic": "Selekcja",
+   "q": "Przez masę poroża brutto rozumie się:",
+   "answers": [
+    "masę samego poroża",
+    "masę poroża wraz z czaszką i żuchwą",
+    "masę poroża wraz z pełną czaszką, bez żuchwy",
+    "masę samej czaszki, bez poroża i żuchwy"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1167",
+   "topic": "Selekcja",
+   "q": "Przy dokonywaniu wyceny wstępnej poroży samców zwierzyny płowej uwzględnia się:",
+   "answers": [
+    "wyłącznie masę",
+    "wyłącznie formę",
+    "zarówno masę jak i formę",
+    "żadna odpowiedź nie jest prawidłowa"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1168",
+   "topic": "Selekcja",
+   "q": "Formuła wyceny rosoch łosia obejmuje:",
+   "answers": [
+    "wyłącznie formę łopatacza",
+    "wyłącznie formę badylarza",
+    "wyłącznie formy pośrednie",
+    "zarówno formę łopatacza, badylarza jak i formy pośrednie"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1169",
+   "topic": "Selekcja",
+   "q": "Złoty medal otrzyma trofeum łosia, które uzyska minimum:",
+   "answers": [
+    "100 pkt CIC",
+    "200 pkt CIC",
+    "300 pkt CIC",
+    "400 pkt CIC"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1170",
+   "topic": "Selekcja",
+   "q": "W przypadku łosia minimalna ilość punktów niezbędna do uzyskania brązowego medalu wynosi:",
+   "answers": [
+    "50 pkt CIC",
+    "150 pkt CIC",
+    "250 pkt CIC",
+    "350 pkt CIC"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1171",
+   "topic": "Selekcja",
+   "q": "W przypadku wyceny trofeum jelenia szlachetnego pomiaru dokonuje się z dokładnością:",
+   "answers": [
+    "pomiary liniowe z dokładnością 1 mm, natomiast pomiar masy wieńca z dokładnością do 10g",
+    "pomiary liniowe z dokładnością 3 mm, natomiast pomiar masy wieńca z dokładnością do 10g",
+    "pomiary liniowe z dokładnością 3 mm, natomiast pomiar masy wieńca z dokładnością do 30g",
+    "pomiary liniowe z dokładnością 5 mm, natomiast pomiar masy wieńca z dokładnością do 50g"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1172",
+   "topic": "Selekcja",
+   "q": "Wycenie medalowej nie podlegają wieńce jelenia szlachetnego:",
+   "answers": [
+    "wyłącznie te, które nie mają obustronnie obu oczniaków",
+    "wyłącznie te, które nie mają obustronnie obu opieraków",
+    "wyłącznie, te które nie mają jednostronnie oczniaka i opieraka",
+    "żadna odpowiedź nie jest prawidłowa"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1173",
+   "topic": "Selekcja",
+   "q": "W przypadku ślimów muflona, minimalna liczba punktów do uzyskania złotego medalu wynosi:",
+   "answers": [
+    "100 pkt CIC",
+    "165 pkt CIC",
+    "190 pkt CIC",
+    "205 pkt CIC"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1174",
+   "topic": "Selekcja",
+   "q": "W przypadku wieńca jelenia szlachetnego, minimalna liczba punktów do uzyskania brązowego medalu wynosi:",
+   "answers": [
+    "150 pkt CIC",
+    "170 pkt CIC",
+    "190 pkt CIC",
+    "200 pkt CIC"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1175",
+   "topic": "Selekcja",
+   "q": "W przypadku wieńca jelenia szlachetnego, minimalna liczba punktów do uzyskania złotego medalu wynosi:",
+   "answers": [
+    "150 pkt CIC",
+    "210 pkt CIC",
+    "250 pkt CIC",
+    "270 pkt CIC"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1176",
+   "topic": "Selekcja",
+   "q": "Wskaż prawidłowe zdanie dotyczące pomiaru długości tyki wieńca jelenia szlachetnego podczas wyceny:",
+   "answers": [
+    "pomiaru dokonuje się od górnej krawędzi róży i wzdłuż osi tyki do odnogi w koronie dającej największą długość",
+    "pomiaru dokonuje się od dolnej krawędzi róży i wzdłuż osi tyki po zewnętrznej stronie, do końca odnogi w koronie dającej największą wartość pomiaru",
+    "pomiaru dokonuje się od dolnej krawędzi róży i wzdłuż osi tyki do odnogi w koronie dającej średnią długość",
+    "pomiaru dokonuje się od górnej krawędzi róży i wzdłuż osi tyki do odnogi w koronie dającej średnią długość"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1177",
+   "topic": "Selekcja",
+   "q": "Jednym z wymiarów określanych podczas wyceny wieńca jelenia szlachetnego jest dolny obwód, który mierzymy:",
+   "answers": [
+    "w najcieńszym miejscu pomiędzy oczniakiem i opierakiem",
+    "w najszerszym miejscu pomiędzy oczniakiem i opierakiem",
+    "w najcieńszym miejscu pomiędzy różą a oczniakiem",
+    "w najszerszym miejscu pomiędzy oczniakiem i nadoczniakiem"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1178",
+   "topic": "Selekcja",
+   "q": "Podczas wyceny wieńca jelenia szlachetnego do korony kwalifikuje się:",
+   "answers": [
+    "odnogi powyżej opieraka, które mają więcej niż 5 cm",
+    "wszystkie odnogi powyżej opieraka",
+    "maksymalnie 3 odnogi powyżej opieraka",
+    "maksymalnie 4 odnogi powyżej opieraka"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1179",
+   "topic": "Selekcja",
+   "q": "Czy podczas wyceny wieńca jelenia szlachetnego przyznaje się punkty dodatkowe:",
+   "answers": [
+    "tak",
+    "tak, ale w przypadku byków powyżej 3 roku życia",
+    "tak, ale w przypadku byków powyżej 5 roku życia",
+    "nie przyznaje się"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1180",
+   "topic": "Selekcja",
+   "q": "Najbardziej pożądanymi zakończeniami odnóg w wieńcu jelenia są:",
+   "answers": [
+    "zakończenia wytarte, jasne i ostre",
+    "zakończenia ciemne i tępe",
+    "zakończenia wytarte, jasne i tępe",
+    "zakończenia ciemne i ostre"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1181",
+   "topic": "Selekcja",
+   "q": "Podczas wyceny parostków rogacza punkty ujemne przyznaje się:",
+   "answers": [
+    "za znaczącą asymetrię w długości tyk",
+    "za asymetrię w liczbie i długości odnóg",
+    "za kroczące tyki",
+    "za każdą z wymienionych cech przyznaje się punkty ujemne"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1182",
+   "topic": "Selekcja",
+   "q": "Długość poroża daniela mierzy się:",
+   "answers": [
+    "po zewnętrznej stronie tyki",
+    "po wewnętrznej stronie tyki",
+    "po brzegu łopaty od górnej strony",
+    "po brzegu łopaty od dolnej strony"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1183",
+   "topic": "Selekcja",
+   "q": "Szerokość łopaty daniela mierzy się:",
+   "answers": [
+    "w najszerszym miejscu łopaty z pominięciem odnóg. Pomiaru dokonuje się po jednej stronie łopaty",
+    "obwód w najszerszym miejscu łopaty z pominięciem odnóg, a uzyskany wynik dzieląc na pół",
+    "w najszerszym i najwęższym miejscu, a następnie oba wyniki sumuje się i dzieli na pół",
+    "od środka łopaty prawej do środka łopaty lewej"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1184",
+   "topic": "Selekcja",
+   "q": "Przy wycenie łopat danieli między innymi dokonuje się oceny występowania sęków. Za najbardziej pożądane uznaje się gdy sęki występują:",
+   "answers": [
+    "do 1/3 długości łopaty",
+    "na 1/3 krawędzi łopaty",
+    "na 2/3 krawędzi łopaty",
+    "na całej długości krawędzi łopaty"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1185",
+   "topic": "Selekcja",
+   "q": "Podczas wyceny łopat danieli ocenia się moc łopat. Jak ją określić:",
+   "answers": [
+    "głównym wskaźnikiem jest szerokość łopat w najszerszym miejscu",
+    "jest to łączna ocena grubości i ilości sęków na łopacie",
+    "jest to łączna ocena długości, szerokości i grubości łopat, określoną masa poroża netto w 3-punktowej skali",
+    "podstawowym wskaźnikiem jest długość łopat mnożona przez ich szerokość"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1186",
+   "topic": "Selekcja",
+   "q": "Podczas wyceny łopat daniela punkty ujemne przyznaje się za:",
+   "answers": [
+    "niedostateczną rozłogę",
+    "za wadliwe krawędzie łopat",
+    "za niedostateczną równomierność tzn. różnice w symetrii i morfologii łopat",
+    "za wszystkie wymienione elementy można przydzielić punkty ujemne"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1187",
+   "topic": "Selekcja",
+   "q": "Podczas wyceny łopat danieli ocenia się wadliwość łopat. Za łopaty wadliwe uznajemy:",
+   "answers": [
+    "wyłącznie łopaty szablaste",
+    "wyłącznie łopaty rozdwojone",
+    "wyłącznie łopaty trójkątne i rombowe",
+    "wszystkie wymienione wyżej kształty łopat są uznawane za wadliwe"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1188",
+   "topic": "Selekcja",
+   "q": "Długość tyki poroża rogacza mierzymy:",
+   "answers": [
+    "od dolnej krawędzi róży, wzdłuż osi tyki do końca grotu",
+    "od górnej krawędzi róży, do końca grotu",
+    "od czaszki do miejsca w którym rozdwajają się odnogi",
+    "od czaszki do końca grotu"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1189",
+   "topic": "Selekcja",
+   "q": "Masę parostków rogaczy mierzy się z dokładnością do:",
+   "answers": [
+    "1g",
+    "3 g",
+    "5 g",
+    "10 g"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1190",
+   "topic": "Selekcja",
+   "q": "Aby otrzymać masę parostków rogacza netto należy:",
+   "answers": [
+    "od ustalonej masy brutto odjąć 50 g",
+    "do ustalonej masy brutto dodać 30 g",
+    "od ustalonej masy brutto odjąć 90 g",
+    "do ustalonej masy brutto dodać 70 g"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1191",
+   "topic": "Selekcja",
+   "q": "Jeżeli czerep rogacza ma przyciętą część kości potylicznej, to w trakcie wyceny medalowej:",
+   "answers": [
+    "zawsze odejmujemy 90 g",
+    "zawsze dodajemy 50 g",
+    "odejmujemy ok. 80 g w zależności od szacunkowej wielkości odciętej części",
+    "zawsze dodajemy 40 g"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1267",
+   "topic": "Selekcja",
+   "q": "Poroże jeleniowatych jest wytworem:",
+   "answers": [
+    "skóry",
+    "naskórka",
+    "okostnej, czyli błony znajdującej pod scypułem i zawierającej komórki kościotwórcze",
+    "możdżeni"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1268",
+   "topic": "Selekcja",
+   "q": "Poroże zbudowane jest:",
+   "answers": [
+    "jedynie z tkanki kostnej zbitej",
+    "wyłącznie z tkanki kostnej gąbczastej",
+    "z tkanki kostnej zbitej i gąbczastej",
+    "z tkanki chrzęstnej"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1272",
+   "topic": "Selekcja",
+   "q": "Czy na podstawie liczby odnóg w porożu jelenia można jednoznacznie wnioskować o jego wieku?",
+   "answers": [
+    "tak, ale wyłącznie do wieku 3 lat",
+    "tak, lecz tylko u jelenia sika",
+    "tak, ale wyłącznie do wieku 10 lat, gdyż później poroże ulega uwstecznieniu",
+    "nie"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1273",
+   "topic": "Selekcja",
+   "q": "Wieniec jednostronnie koronny to wieniec, w którym:",
+   "answers": [
+    "obie tyki zakończone są widlicą",
+    "obie tyki zakończone są przynajmniej trzema odnogami",
+    "jedna tyka zakończona jest grotem a druga widlicą",
+    "zakończenie jednej tyki ma co najmniej 3 odnogi, a drugiej mniej niż trzy odnogi"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1274",
+   "topic": "Selekcja",
+   "q": "U saren wyróżnia się trzy podstawowe formy poroża:",
+   "answers": [
+    "szpicak, łyżkarz, szóstak",
+    "szpicak, szóstak, ósmak",
+    "szpicak, widłak, szóstak",
+    "szpicak, szydlarz, szóstak"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1276",
+   "topic": "Selekcja",
+   "q": "Określenie ślimy odnosi się do:",
+   "answers": [
+    "rogów kozicy",
+    "urożenia żubra",
+    "rogów muflona",
+    "nieprawidłowo wykształconego poroża kozła"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1279",
+   "topic": "Selekcja",
+   "q": "Czterodwudziestak to:",
+   "answers": [
+    "samiec sarny posiadający parostki zakończone koroną",
+    "byk daniela z porożem o 24 sękach przynajmniej na jednej łopacie",
+    "byk jelenia noszący wieniec, który ma 12 odnóg na jednej tyce i do 12 odnóg na drugiej tyce",
+    "byk jelenia z porożem o 24 odnogach na każdej z tyk"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1280",
+   "topic": "Selekcja",
+   "q": "Perukarz to rogacz, który:",
+   "answers": [
+    "ze względu na zaburzenia hormonalne nie zrzuca poroża, lecz nosi je w postaci narośli kostnej pokrytej scypułem",
+    "jest w trakcie nakładania poroża",
+    "aktualnie nie posiada poroża, gdyż go zrzucił",
+    "nie nakłada poroża przez całe życie"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1281",
+   "topic": "Selekcja",
+   "q": "Czy w porze nocnej można polować na samce zwierzyny płowej?",
+   "answers": [
+    "tak",
+    "tak, lecz broń musi posiadać optyczny przyrząd celowniczy, a myśliwy musi posiadać lornetkę i latarkę",
+    "nie",
+    "tak, ale tylko na samce saren"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1282",
+   "topic": "Selekcja",
+   "q": "Który z wymienionych gatunków zwierzyny płowej potrafi w poszukiwaniu żeru nurkować nawet na głębokość kilku metrów?",
+   "answers": [
+    "jeleń sika",
+    "łoś",
+    "jeleń szlachetny",
+    "taki gatunek w Polsce nie występuje"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1283",
+   "topic": "Selekcja",
+   "q": "Sarna polna to:",
+   "answers": [
+    "jeden z pięciu gatunków sarny występujących na kuli ziemskiej",
+    "forma ekologiczna sarny europejskiej, przystosowana do życia na rozległych obszarach polnych",
+    "osobnik sarny wychodzący z lasu na wieczorny żer i wędrujący wyjątkowo daleko w głąb pól",
+    "sarna żerująca na polanie śródleśnej"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1285",
+   "topic": "Selekcja",
+   "q": "Forma dziesiątaka nieregularnego obustronnie koronnego u jelenia szlachetnego to poroże, w którym:",
+   "answers": [
+    "na jednej tyce występuje 5 odnóg, a na drugiej mniej niż 5 odnóg, lecz obydwie tyki zakończone są co najmniej 3 odnogami",
+    "przynajmniej na jednej tyce występuje 5 odnóg i tylko jedna z nich zakończona jest co najmniej 3 odnogami",
+    "na każdej tyce występuje 5 odnóg i obie zakończone są co najmniej 3 odnogami",
+    "taka forma poroża nie występuje"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1286",
+   "topic": "Selekcja",
+   "q": "Masa ciała dorosłych byków daniela kształtuje się zwykle na poziomie:",
+   "answers": [
+    "35-45 kg",
+    "50-60 kg",
+    "65-80 kg",
+    "90-110 kg"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1287",
+   "topic": "Selekcja",
+   "q": "Osobnik posiadający poroże w formie szydlarza:",
+   "answers": [
+    "jest osobnikiem przyszłościowym",
+    "jest selekcyjny niezależnie od wieku",
+    "jest selekcyjny tylko w drugim porożu",
+    "jest selekcyjny tylko w łowiskach z mocnymi trofeami"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1290",
+   "topic": "Selekcja",
+   "q": "Który ząb w uzębieniu stałym jeleniowatych jest zębem najstarszym?",
+   "answers": [
+    "pierwszy trzonowy",
+    "pierwszy przedtrzonowy",
+    "pierwszy siekacz",
+    "kieł"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1293",
+   "topic": "Selekcja",
+   "q": "Do byków jeleni wolno strzelać z broni, dla której energia pocisku na 100 metrach od wylotu lufy wynosi:",
+   "answers": [
+    "1000 J.",
+    "1500 J",
+    "2000 J.",
+    "2500 J."
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1294",
+   "topic": "Selekcja",
+   "q": "Czy nasze prawodawstwo dopuszcza możliwość pozyskiwania byków jelenia na polowaniach zbiorowych?",
+   "answers": [
+    "tak",
+    "nie",
+    "tak, ale tylko byków młodych",
+    "tak, leczy tylko z broni wyposażonej w optyczne przyrządy celownicze"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1295",
+   "topic": "Selekcja",
+   "q": "Przedstawione na fotografii zmiany kostne żuchwy sarny mogą sugerować występowanie:",
+   "image": "img/selekcjoner/d0b9060f0adac.png",
+   "answers": [
+    "wścieklizny",
+    "włośnicy",
+    "promienicy",
+    "motylicy wątrobowej"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1296",
+   "topic": "Selekcja",
+   "q": "W przypadku parostków rogacza minimalna liczba punktów do uzyskania brązowego medalu wynosi:",
+   "answers": [
+    "100 pkt CIC",
+    "105 pkt CIC",
+    "115 pkt CIC",
+    "130 pkt CIC"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1297",
+   "topic": "Selekcja",
+   "q": "Wartość procentowa rozłogi jest to:",
+   "answers": [
+    "stosunek średniej długości tyk do masy trofeum wyrażony w procentach",
+    "stosunek wartości pomiaru rozłogi do średniej długości tyk wyrażony w procentach",
+    "stosunek wartości pomiaru rozłogi do masy trofeum wyrażony w procentach",
+    "żadna odpowiedź nie jest prawidłowa"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1298",
+   "topic": "Selekcja",
+   "q": "W przypadku parostków rogacza, minimalna liczba punktów do uzyskania złotego medalu wynosi:",
+   "answers": [
+    "105 punktów CIC",
+    "115 punktów CIC",
+    "120 punktów CIC",
+    "130 punktów CIC"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1299",
+   "topic": "Selekcja",
+   "q": "Maksymalne zagęszczenie, pozwalające na prowadzenie właściwej gospodarki jeleniem szlachetnym, uważa się zagęszczenie nie przekraczające:",
+   "answers": [
+    "15 osobników na 1000 ha powierzchni leśnej obwodu",
+    "35 osobników na 1000 ha powierzchni leśnej obwodu",
+    "50 osobników na 1000 ha powierzchni leśnej obwodu",
+    "do 100 osobników na 1000 ha powierzchni leśnej obwodu"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1300",
+   "topic": "Selekcja",
+   "q": "Odstrzał selekcyjny łosi koncentruje się na usuwaniu z łowiska osobników o niżej opisanych formach poroża:",
+   "answers": [
+    "tylko szpicaki i szydlarze oraz szóstaki nieregularne",
+    "tylko szpicaki, szydlarze i szóstaki nieregularne oraz regularne",
+    "wszystkie formy do ósmaka regularnego włącznie",
+    "wszystkie formy do ósmaka nieregularnego włącznie"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1301",
+   "topic": "Selekcja",
+   "q": "U łosi odstrzał byków łownych powinien kształtować się na poziomie:",
+   "answers": [
+    "do 10% puli byków przeznaczonej do pozyskania",
+    "max. 3% puli byków przeznaczonej do pozyskania",
+    "max. 25% puli byków przeznaczonej do pozyskania",
+    "max. 15% puli byków przeznaczonej do pozyskania"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1302",
+   "topic": "Selekcja",
+   "q": "Metoda Eidmanna wykorzystywana jest do:",
+   "answers": [
+    "oceny wieku dzików",
+    "oceny wieku jeleniowatych",
+    "oceny wieku zajęcy",
+    "oceny wieku kuropatw"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1304",
+   "topic": "Selekcja",
+   "q": "Metoda Harkego wykorzystywana jest do oceny:",
+   "answers": [
+    "wieku jeleni, na podstawie wyglądu i wymiarów możdżeni",
+    "wieku jeleni i wykorzystuje ona zjawisko tworzenia się zębiny wtórnej w kanale zębowym zębów siecznych",
+    "wieku bażantów, na podstawie ilości pierścieni na ostrodze",
+    "wieku muflonów, na podstawie liczby pierścieni na ślimach"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1305",
+   "topic": "Selekcja",
+   "q": "Jedną z cech rozpoznawczych uzębienia mlecznego od stałego u jeleniowatych jest tzw. trójdzielność jednego z zębów. O który ząb chodzi?",
+   "answers": [
+    "o pierwszy siekacz",
+    "o pierwszy ząb przedtrzonowy",
+    "o trzeci ząb przedtrzonowy",
+    "o pierwszy ząb trzonowy"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1307",
+   "topic": "Selekcja",
+   "q": "Linia demarkacyjna to:",
+   "answers": [
+    "linia podziałowa pomiędzy możdżeniem a tyką poroża, pojawiająca się w okresie przed zrzuceniem poroża",
+    "linia pomiaru długości tyk poroża przy wycenie medalowej",
+    "linia grzbietu zwierzyny płowej",
+    "potoczna nazwa granicy obwodu łowieckiego"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1309",
+   "topic": "Selekcja",
+   "q": "W stałym uzębieniu sarny siekacze występują w liczbie:",
+   "answers": [
+    "3 pary w szczęce i 3 pary w żuchwie",
+    "3 pary w szczęce, w żuchwie brak jest tych zębów",
+    "3 pary w żuchwie, w szczęce brak jest tych zębów",
+    "1 para w szczęce i 1 para w żuchwie"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1310",
+   "topic": "Selekcja",
+   "q": "W uzębieniu mlecznym sarny zęby trzonowe występują w liczbie:",
+   "answers": [
+    "3 pary w żuchwie i 3 pary w szczęce",
+    "3 pary w żuchwie, zaś w szczęce brak jest tych zębów",
+    "3 pary w szczęce, zaś w żuchwie brak jest tych zębów",
+    "zęby trzonowe w uzębieniu mlecznym sarny nie występują"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1311",
+   "topic": "Selekcja",
+   "q": "Przyszłościowe poroże jelenia byka widziane z boku powinno charakteryzować się:",
+   "answers": [
+    "obrysem trójkąta",
+    "obrysem prostokąta",
+    "obrysem kwadratu",
+    "obrysem zbliżonym do rombu"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1312",
+   "topic": "Selekcja",
+   "q": "Czy u jeleniowatych występuje czarne umaszczenie, czyli melanizm?",
+   "answers": [
+    "nigdy",
+    "jest powszechny u jelenia i sarny",
+    "występuje najczęściej u daniela",
+    "takie umaszczenie posiada większość łosi"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1313",
+   "topic": "Selekcja",
+   "q": "Czemchanie to:",
+   "answers": [
+    "wycieranie przez samce jeleniowatych scypułu o drzewa i krzewy, skutkujące zwykle ich uszkodzeniem",
+    "uszkadzanie kory drzew i krzewów przez samce jeleniowatych w okresie zimowego niedostatku żeru, poprzez zdzieranie jej całymi płatami",
+    "uszkadzanie młodych drzew przez łosie w okresie bukowiska",
+    "sposób zabezpieczenia upraw leśnych przed szkodami wyrządzanymi przez zwierzynę"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1314",
+   "topic": "Selekcja",
+   "q": "Poroża jeleniowatych zbudowane są z substancji mineralnych, w których dominują:",
+   "answers": [
+    "sole magnezu i potasu",
+    "związki wapnia i fosforu",
+    "sole wapnia i żelaza",
+    "związki sodu i węgla"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1315",
+   "topic": "Selekcja",
+   "q": "U zwierzyny płowej oznaką strzału na nerki jest:",
+   "answers": [
+    "wykonanie gwałtownego skoku w górę tzw. świecy",
+    "raptowny wyrzut tylnych cewek do tyłu",
+    "zwierzę pada w ogniu",
+    "przyjęcie charakterystycznej postawy z wygiętym do góry grzbietem i powolna ucieczka"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1321",
+   "topic": "Selekcja",
+   "q": "Ocenę liczebności saren w biotopie leśnym dokonujemy wykorzystując metodę:",
+   "answers": [
+    "taksacji pasowej",
+    "próbnych pędzeń",
+    "Eidmanna",
+    "transektów liniowych"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1322",
+   "topic": "Selekcja",
+   "q": "Roczne cykle zmiany poroży jeleniowatych uwarunkowane są:",
+   "answers": [
+    "feromonami wydzielanymi przez samice",
+    "hormonalnie",
+    "długością dnia świetlnego",
+    "temperaturą otoczenia"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1323",
+   "topic": "Selekcja",
+   "q": "Poniższa fotografia przedstawia jelenia byka w wieku:",
+   "image": "img/selekcjoner/d40fffc1a90f6.png",
+   "answers": [
+    "2 lat",
+    "3-4 lat",
+    "5-6 lat",
+    "8-9 lat"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1324",
+   "topic": "Selekcja",
+   "q": "Poniższa fotografia przedstawia jelenia byka w wieku:",
+   "image": "img/selekcjoner/d16fcf43991e4.png",
+   "answers": [
+    "2-3 lat",
+    "3-4 lat",
+    "4-5 lat",
+    "7-8 lat"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1325",
+   "topic": "Selekcja",
+   "q": "Poniższa fotografia przedstawia:",
+   "image": "img/selekcjoner/da895b927d399.png",
+   "answers": [
+    "rogacza w 1 porożu",
+    "rogacza w 2 porożu",
+    "rogacza w 4 porożu",
+    "rogacza w 5-6 porożu (łownego)"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1328",
+   "topic": "Selekcja",
+   "q": "Wycenę wstępną poroża rogacza powinno się wykonać jeżeli:",
+   "answers": [
+    "masa parostków wynosi powyżej 500 gram",
+    "w każdym przypadku",
+    "masa parostków wynosi powyżej 430 gram",
+    "tylko parostków rogaczy pozyskanych przez obcokrajowców"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1329",
+   "topic": "Selekcja",
+   "q": "Wycenę wstępną poroża jelenia szlachetnego wykonuje się:",
+   "answers": [
+    "tylko dla byków łownych, niezależnie od masy poroża",
+    "tylko dla byków obustronnie koronnych",
+    "jeżeli masa wieńca wynosi co najmniej 4,5 kg",
+    "jeżeli masa wieńca wynosi co najmniej 5,5 kg"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1335",
+   "topic": "Selekcja",
+   "q": "Ustalanie zagęszczenia populacji jelenia szlachetnego odnosi się do:",
+   "answers": [
+    "powierzchni leśnej obwodu",
+    "powierzchni obwodu łowieckiego",
+    "powierzchni polnej obwodu łowieckiego",
+    "powierzchni leśnej i bagiennej obwodu łowieckiego"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1352",
+   "topic": "Selekcja",
+   "q": "Samiec sarny posiadający przedstawione na rycinie poroże jest osobnikiem selekcyjnym:",
+   "image": "img/selekcjoner/62.jpg",
+   "answers": [
+    "tylko w pierwszym porożu, bez żadnych ograniczeń",
+    "począwszy od drugiego poroża",
+    "tylko w 5 porożu",
+    "w pierwszym porożu pod warunkiem, że średnia długość tyk nie przekracza 15 cm"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1362",
+   "topic": "Selekcja",
+   "q": "Zakładając, że przedstawiony na rycinie jeleń byk jest w wieku 9 lat, myśliwy może dokonać jego odstrzału:",
+   "image": "img/selekcjoner/d6859acc53c32.png",
+   "answers": [
+    "tak, bez żadnych ograniczeń, gdyż jest to byk selekcyjny",
+    "tak, ale wyłącznie gdy posiada upoważnienie na odstrzał byka łownego",
+    "tak, ale wyłącznie gdy posiada upoważnienie na odstrzał byka selekcyjnego",
+    "zdecydowanie nie, gdyż nie jest to byk o cechach selekcyjnych"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1363",
+   "topic": "Selekcja",
+   "q": "Przedstawiony na szkicu czerep kozła zgodnie z obwiązującymi kryteriami selekcji:",
+   "image": "img/selekcjoner/d36c6af6b7a0c.png",
+   "answers": [
+    "wykazuje cechy selekcyjne bez względu na wiek",
+    "wykazuje cechy selekcyjne, lecz począwszy od 3 roku życia",
+    "wykazuje cechy selekcyjne, lecz począwszy od 5 roku życia",
+    "wykazuje cechy selekcyjne, lecz począwszy od 6 roku życia"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1365",
+   "topic": "Selekcja",
+   "q": "Które z poniżej przedstawionych poroży nosi cechy wieńca przyszłościowego:",
+   "image": "img/selekcjoner/df7acb4cf5d3b.png",
+   "answers": [
+    "- A",
+    "- B",
+    "zarówno A jak i B",
+    "żadne nie jest porożem przyszłościowym"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1367",
+   "topic": "Selekcja",
+   "q": "Na szkicu przedstawiono cykl rozwojowy poroża:",
+   "image": "img/selekcjoner/dd6e3ddd1e316.png",
+   "answers": [
+    "jelenia szlachetnego",
+    "jelenia sika",
+    "łosia",
+    "daniela"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1370",
+   "topic": "Selekcja",
+   "q": "Przedstawione na rycinie zachowanie rogacza pozwala wnioskować o strzale:",
+   "image": "img/selekcjoner/d910632cab78f.png",
+   "answers": [
+    "na miękkie",
+    "na kręgosłup",
+    "na komorę",
+    "na przednie cewki"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1371",
+   "topic": "Selekcja",
+   "q": "Przedstawiony na rysunku rogacz posiada poroże o cechach:",
+   "image": "img/selekcjoner/51.jpg",
+   "answers": [
+    "selekcyjnych niezależnie od wieku",
+    "selekcyjnych, lecz wyłącznie w wieku 3 lat i starszym",
+    "selekcyjnych niezależnie od wieku, lecz uwarunkowane jest to masą ustaloną dla okręgu",
+    "jest to osobnik łowny pod warunkiem, że jest w wieku co najmniej 6 lat"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1377",
+   "topic": "Selekcja",
+   "q": "Weryfikacji złotomedalowych trofeów można dokonywać:",
+   "answers": [
+    "tylko jeden raz",
+    "nie więcej niż dwa razy",
+    "do trzech razy",
+    "nie ma żadnych ograniczeń w tym zakresie"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1378",
+   "topic": "Selekcja",
+   "q": "Za rekordowe trofeum uznaje się:",
+   "answers": [
+    "każde trofeum charakteryzujące się największą ilością uzyskanych punktów dla danego gatunku",
+    "każde trofeum pozyskane na terytorium Rzeczypospolitej Polskiej, charakteryzujące się największą ilością uzyskanych punktów dla danego gatunku",
+    "każde trofeum pozyskane na terytorium Rzeczypospolitej Polskiej, charakteryzujące się punktacją zawierającą się w przedziale punktowym 6 czołowych trofeów dla danego gatunku",
+    "każde trofeum pozyskane na terytorium Rzeczypospolitej Polskiej, charakteryzujące się największą ilością uzyskanych punktów dla gatunku w danym sezonie łowieckim"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1407",
+   "topic": "Selekcja",
+   "q": "W wycenie medalowej parostków rogacza najważniejszą rolę decydującą o przyznanych punktach odgrywa:",
+   "answers": [
+    "długość tyk i liczba odnóg",
+    "długość tyk i uperlenie",
+    "długość tyk i masa trofeum",
+    "masa i objętość"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1437",
+   "topic": "Selekcja",
+   "q": "Przyząbek to:",
+   "answers": [
+    "regionalne określenie grandli u jeleniowatych",
+    "nazwa części bezzębnej żuchwy pomiędzy kłami a zębami przedtrzonowymi",
+    "trzeci płat szóstego zęba bocznego (trzonowca)",
+    "charakterystycznie zbudowany trzeci ząb przedtrzonowy (mleczny)"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1439",
+   "topic": "Selekcja",
+   "q": "U którego z wymienionych gatunków najczęściej spotykane są białawe osobniki, czyli formy leucystyczne?",
+   "answers": [
+    "jeleń sika",
+    "daniel",
+    "dzik",
+    "tchórz"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1440",
+   "topic": "Selekcja",
+   "q": "U którego z gatunków jeleniowatych, również u samic występuje poroże?",
+   "answers": [
+    "u żadnego",
+    "u jelenia sika",
+    "u daniela",
+    "u renifera"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1446",
+   "topic": "Selekcja",
+   "q": "Przedstawiony na rycinie rogacz i jego żuchwa wskazują, iż:",
+   "image": "img/selekcjoner/q1446-combo.jpg",
+   "answers": [
+    "jego wiek wynosi 3 lata i jest on selekcyjny",
+    "jego wiek wynosi 4 lata i jest on selekcyjny",
+    "jego wiek wynosi 5 lat i jest on selekcyjny",
+    "jego wiek wynosi 6 lat i jest on łowny"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1447",
+   "topic": "Selekcja",
+   "q": "Przedstawiona na rycinie część sylwetki jelenia byka oraz jego żuchwy wskazuje iż:",
+   "image": "img/selekcjoner/q1447-combo.jpg",
+   "answers": [
+    "jest to byk o cechach selekcyjnych w wieku 3-4 lat",
+    "jest to byk o cechach selekcyjnych w wieku 5-6 lat",
+    "jest to byk o cechach selekcyjnych w wieku 7-8 lat",
+    "żadna odpowiedź nie jest prawidłowa"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1451",
+   "topic": "Selekcja",
+   "q": "Ustalając procentową wartość rozłogi przy wycenie wieńca jelenia szlachetnego realizujemy to:",
+   "answers": [
+    "dzieląc wartość pomiarową rozłogi przez wartość pomiarową średniej długości opieraków",
+    "dzieląc wartość pomiarową rozłogi przez wartość pomiarową średniej długości tyk",
+    "dzieląc wartość pomiarową rozłogi przez łączną ilość odnóg w koronie na tyce lewej i prawej",
+    "dzieląc wartość pomiarową rozłogi przez łączną ilość odnóg w porożu"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1452",
+   "topic": "Selekcja",
+   "q": "Za odnogi dobrze rozwinięte, w parostkach rogacza , za które podczas wyceny medalowej można przyznać 2 punkty, uznaje się:",
+   "answers": [
+    "odnogi o długości przekraczającej 2 cm",
+    "odnogi o długości przekraczającej 3 cm",
+    "odnogi o długości przekraczającej 5 cm",
+    "odnogi o długości przekraczającej 6 cm"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1453",
+   "topic": "Selekcja",
+   "q": "Przy wycenie medalowej czaszek, niektórych drapieżników bierze się pod uwagę:",
+   "answers": [
+    "długość czaszki i jej masę",
+    "szerokość czaszki i jej masę",
+    "długość oraz szerokość czaszki, jak również punkty dodatkowe za jej rozwój i ukształtowanie",
+    "długość i szerokość czaszki"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1454",
+   "topic": "Selekcja",
+   "q": "Pomiaru rozłogi w porożu łosia dokonuje się poprzez:",
+   "answers": [
+    "pomiar najszerszego miejsca po wewnętrznej stronie łopat lub tyk u badylarza",
+    "pomiar najszerszego miejsca po zewnętrznej stronie łopat lub tyk u badylarza",
+    "pomiar odległości pomiędzy czubkami odpowiadających sobie odnóg najbardziej oddalonymi od siebie",
+    "pomiar odległości pomiędzy czubkami najbardziej oddalonymi od siebie odnóg"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1472",
+   "topic": "Selekcja",
+   "q": "Przy wycenie medalowej oręża dzika decydujący wpływ na końcowy wynik odgrywa:",
+   "answers": [
+    "długość szabel",
+    "szerokość szabel",
+    "długość fajek",
+    "obwód fajek"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1473",
+   "topic": "Selekcja",
+   "q": "Przy wycenie medalowej oręża dzika punkty dodatkowe przyznaje się za:",
+   "answers": [
+    "piękno szabel i fajek",
+    "wyłącznie piękno fajek",
+    "za szlify nie mniejsze niż 5 cm",
+    "za brak dysproporcji w długości szabel"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1474",
+   "topic": "Selekcja",
+   "q": "Przy wycenie medalowej oręża dzika szerokość szabel mierzymy:",
+   "answers": [
+    "u ich nasady",
+    "w miejscu rozpoczynania się szlifu",
+    "w miejscu gwarantującym największy pomiar",
+    "żadna odpowiedź nie jest prawidłowa"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1475",
+   "topic": "Selekcja",
+   "q": "Przy wycenie medalowej czaszek, niektórych drapieżników przyznaje się punkty dodatkowe:",
+   "answers": [
+    "za proporcje szerokości do długości czaszki",
+    "za brak ubytków kości czaszki",
+    "nie przyznaje się punktów dodatkowych",
+    "żadna odpowiedź nie jest prawidłowa"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1476",
+   "topic": "Selekcja",
+   "q": "Przy wycenie medalowej wieńca jelenia przyznaje się punkty dodatkowe za nadoczniaki. Ich ilość uzależniona jest od:",
+   "answers": [
+    "długości",
+    "miejsca wyrastania na tyce",
+    "kierunku ich wyrastania i uperlenia",
+    "barwy i stopnia ich uperlenia"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1477",
+   "topic": "Selekcja",
+   "q": "Przy wycenie medalowej poroża rogacza za prawidłowe ukształtowanie parostków przyznaje się punkty dodatkowe w maksymalnej ilości:",
+   "answers": [
+    "1 punkt",
+    "2 punkty",
+    "3 punkty",
+    "5 punktów"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1513",
+   "topic": "Selekcja",
+   "q": "Nadoczniak to:",
+   "answers": [
+    "odnoga w wieńcu jelenia usytuowana najniżej",
+    "najdłuższa odnoga w rosochach łosia o formie badylarza",
+    "druga od dołu odnoga w wieńcu jelenia",
+    "najdłuższa odnoga w koronie wieńca jelenia"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1537",
+   "topic": "Selekcja",
+   "q": "Określenie uperlenie odnosi się do:",
+   "answers": [
+    "artystycznie wykonanej osady broni myśliwskiej, z wykorzystaniem grawerunków",
+    "nieregularnych zgrubień i drobnych wyrostków na porożu jeleniowatych",
+    "nietypowo wyrastających odnóg w wieńcu jelenia szlachetnego",
+    "licznie występujących krótkich odnóg na krawędziach łopat daniela"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1538",
+   "topic": "Selekcja",
+   "q": "Uwstecznianie poroża to:",
+   "answers": [
+    "brak koron w wieńcu jelenia szlachetnego",
+    "stopniowe zmniejszanie się rozmiarów i liczby odnóg poroża u starzejących się samców jeleniowatych",
+    "cecha objawiająca się brakiem nadoczniaków w wieńcu jelenia szlachetnego",
+    "cecha poroża młodego rogacza polegająca na braku odnóg"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1540",
+   "topic": "Selekcja",
+   "q": "Określenie zrogowanie odnosi się do:",
+   "answers": [
+    "okresu w którym zaczynają wyrastać rogi (ślimy) u samca muflona",
+    "okresu zrzucania poroża przez samce jeleniowatych",
+    "zabicia lub zranienia rywala podczas walk rujowych u samców jeleniowatych",
+    "okresu od zrzucenia poroża do jego ponownego nałożenia"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-1549",
+   "topic": "Selekcja",
+   "q": "Kły w żuchwie zwierzyny płowej:",
+   "answers": [
+    "występują u wszystkich osobników, ale przekształcone są do postaci siekaczy",
+    "są obecne u tylko samców i posiadają typową postać, występującą u drapieżników",
+    "spotykane są rzadko, stąd stanowią dodatkowe trofeum",
+    "nigdy nie występują"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1570",
+   "topic": "Selekcja",
+   "q": "Przedstawiona na fotografii forma poroża sprawia, iż osobnik taki jest:",
+   "image": "img/selekcjoner/d3df8c4338e24.png",
+   "answers": [
+    "selekcyjny, niezależnie od wieku",
+    "selekcyjny, lecz w wieku 4 lat i powyżej",
+    "selekcyjny, lecz wyłącznie w wieku powyżej 6 lat",
+    "osobniki takie nie są selekcyjne i nie powinno dokonywać się ich odstrzału"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1572",
+   "topic": "Selekcja",
+   "q": "Przedstawiona na fotografii forma poroża to:",
+   "image": "img/selekcjoner/d42f980513c3a.png",
+   "answers": [
+    "darniak",
+    "widłak",
+    "gomuła",
+    "perukarz"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-selekcjoner-1576",
+   "topic": "Selekcja",
+   "q": "Selekcja osobnicza samców jeleniowatych to zabieg hodowlany polegający na:",
+   "answers": [
+    "usuwaniu z populacji osobników o cechach uznawanych za selekcyjne w określonym wieku",
+    "wybieraniu do rozrodu osobników o najwyższej jakości osobniczej",
+    "usuwaniu z populacji samców w określonej klasie wieku",
+    "wybieraniu do odstrzału osobników z największym porożem, czyli łownych"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1577",
+   "topic": "Selekcja",
+   "q": "Organem właściwym do nakładania sankcji karnych za nieprzestrzeganie zasad selekcji samców zwierzyny płowej jest:",
+   "answers": [
+    "Zarząd Okręgowy Polskiego Związku Łowieckiego",
+    "Okręgowy Rzecznik Dyscyplinarny",
+    "Zarząd Główny Polskiego Związku Łowieckiego",
+    "Okręgowy Sąd Łowiecki"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1580",
+   "topic": "Selekcja",
+   "q": "Przy pomiarze poroża jelenia byka podczas oceny prawidłowości odstrzału dopuszcza się tolerancję wymiarów liniowych:",
+   "answers": [
+    "do 20% ich wartości",
+    "do 10% ich wartości",
+    "do 1 centymetra",
+    "do 0,5 centymetra"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1581",
+   "topic": "Selekcja",
+   "q": "Ocena prawidłowości odstrzału w okręgu powinna być dokonywana:",
+   "answers": [
+    "nie rzadziej niż raz do roku",
+    "zawsze po zakończeniu sezonu polowań na dany gatunek zwierzyny płowej i muflonów",
+    "przynajmniej dwa razy do roku",
+    "każdorazowo, gdy zwróci się o to myśliwy, który pozyskał samca zwierzyny płowej"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1582",
+   "topic": "Selekcja",
+   "q": "Za prawidłowe spreparowanie trofeum odpowiada:",
+   "answers": [
+    "myśliwy, który go pozyskał",
+    "łowczy koła łowieckiego",
+    "zarząd koła łowieckiego",
+    "nikt nie ponosi odpowiedzialności za nieprawidłowo spreparowane trofeum"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1585",
+   "topic": "Selekcja",
+   "q": "Za selekcyjne, niezależnie od wieku, uznaje się tryki muflona:",
+   "answers": [
+    "u których następuje wrastanie ślimów w kark lub żuchwę",
+    "tylko te, u których następuje wrastanie slimów w żuchwę uniemożliwiające przeżuwanie",
+    "u których następuje wrastanie ślimów w oczodół",
+    "wrastanie ślimów w czaszkę lub kark nie ma znaczenia na fakt zakwalifikowania osobnika jako selekcyjnego"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1586",
+   "topic": "Selekcja",
+   "q": "Ocenę prawidłowości odstrzału przeprowadza komisja:",
+   "answers": [
+    "w okręgu, w którym pozyskana została zwierzyna",
+    "w okręgu właściwym ze względu na miejsce zamieszkania myśliwego, który dokonał odstrzału",
+    "w okręgu właściwym ze względu na siedzibę koła łowieckiego, którego członek dokonał pozyskania, niezależnie od miejsca jego zamieszkania",
+    "w okręgu wybranym przez myśliwego, który dokonał pozyskania zwierzyny"
+   ],
+   "correct": 0
+  },
+  {
+   "id": "pzl-selekcjoner-1619",
+   "topic": "Selekcja",
+   "q": "W języku łowieckim, białe plamy na bokach tułowia samców muflona nazywane są:",
+   "answers": [
+    "lustrem",
+    "gwiazdką",
+    "siodłem",
+    "kwiatkiem"
+   ],
+   "correct": 2
+  }
+ ]
 }

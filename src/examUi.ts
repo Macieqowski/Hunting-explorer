@@ -45,6 +45,7 @@ const L = {
   wrongAns: { pl: 'Źle – poprawna odpowiedź:', en: 'Wrong – correct answer:' },
   passed: { pl: 'Zaliczony', en: 'Passed' },
   failed: { pl: 'Niezaliczony', en: 'Not passed' },
+  minSection: { pl: 'min.', en: 'min.' },
   timeUp: { pl: 'Koniec czasu', en: 'Time is up' },
   review: { pl: 'Przegląd błędnych odpowiedzi', en: 'Review of wrong answers' },
   allCorrect: { pl: 'Wszystkie odpowiedzi poprawne – gratulacje!', en: 'All answers correct – well done!' },
@@ -133,7 +134,7 @@ const topicsOf = (b: Bank) => [...new Set(b.questions.map((q) => q.topic))].sort
 function startAttempt() {
   const b = banks.get(setup.bank)!;
   const count = setup.count || b.count;
-  const drawn = drawExam(b.questions, count, Math.random, setup.topic ? [setup.topic] : undefined);
+  const drawn = drawExam(b.questions, count, Math.random, setup.topic ? [setup.topic] : undefined, b.sections);
   attempt = {
     bank: b,
     mode: setup.mode,
@@ -173,7 +174,7 @@ const fmtTime = (ms: number) => {
 function finish() {
   if (!attempt || attempt.result) return;
   clearInterval(timer);
-  attempt.result = scoreExam(attempt.drawn, attempt.answers, attempt.bank.passPct);
+  attempt.result = scoreExam(attempt.drawn, attempt.answers, attempt.bank.passPct, attempt.bank.sections);
   if (attempt.mode === 'exam')
     pushHistory({
       bank: attempt.bank.id as BankId,
@@ -231,7 +232,10 @@ function renderSetup() {
       .map((t) => `<option${t === setup.topic ? ' selected' : ''}>${esc(t)}</option>`)
       .join('')}</select>
   </div>
-  <p class="muted small">${setup.mode === 'exam' ? `${b.minutes} ${l('min')} / ${b.count} ${l('questions')} · ` : ''}${l('pass')}: ${b.passPct}%</p>
+  <p class="muted small">${setup.mode === 'exam' ? `${b.minutes} ${l('min')} / ${b.count} ${l('questions')} · ` : ''}${l('pass')}: ${b.passPct}%${(b.sections ?? [])
+    .filter((s) => s.minPct != null)
+    .map((s) => ` · ${esc(tt(s.name))}: ${l('minSection')} ${s.minPct}%`)
+    .join('')}</p>
   <button type="button" class="btn" data-exam="start">${l('start')}</button>`
   }
   ${b.origin?.url ? `<p><a href="${esc(b.origin.url)}" target="_blank" rel="noopener">${l('official')}</a></p>` : ''}
@@ -301,6 +305,15 @@ function renderResult(a: Attempt) {
     <b>${fmtNum(r.pct)}%</b>
     <span>${r.correct} / ${r.total} · ${r.passed ? l('passed') : l('failed')} (${l('pass')} ${a.bank.passPct}%)</span>
   </div>
+  ${
+    r.bySection.length
+      ? `<table class="tbl"><tbody>${r.bySection
+          .map(
+            (s) => `<tr><td><b>${esc(tt(s.name))}</b>${s.minPct != null ? ` <span class="muted small">(${l('minSection')} ${s.minPct}%)</span>` : ''}<span class="bar"><span style="width:${s.pct}%"></span></span></td><td class="num ${s.passed ? 'ok' : 'bad'}">${s.correct}/${s.total}</td></tr>`,
+          )
+          .join('')}</tbody></table>`
+      : ''
+  }
   <table class="tbl"><tbody>${r.byTopic
     .map(
       (t) => `<tr><td>${esc(t.topic)}<span class="bar"><span style="width:${(t.correct / t.total) * 100}%"></span></span></td><td class="num">${t.correct}/${t.total}</td></tr>`,

@@ -1,4 +1,4 @@
-import { drawExam, seededRng, shuffleAnswers, scoreExam, isCorrect, validateBank, type Question, type Bank } from './exam';
+import { drawExam, seededRng, shuffleAnswers, scoreExam, isCorrect, validateBank, type Question, type Bank, type Section } from './exam';
 import { seasonQuestions } from './seasonQuestions';
 import mysliwy from '../public/exams/mysliwy.json';
 import selekcjoner from '../public/exams/selekcjoner.json';
@@ -55,6 +55,42 @@ describe('exam engine', () => {
     expect(r.passed).toBe(true);
     expect(r.byTopic.reduce((s, t) => s + t.total, 0)).toBe(10);
     expect(scoreExam(d, [], 80).passed).toBe(false);
+  });
+});
+
+describe('exam sections (PZŁ hunter test: 30 safety + 70 general)', () => {
+  const pool = [
+    ...Array.from({ length: 60 }, (_, i) => mk(`s${i}`, 'Bezpieczeństwo')),
+    ...Array.from({ length: 100 }, (_, i) => mk(`g${i}`, 'Wiedza ogólna')),
+    ...Array.from({ length: 40 }, (_, i) => mk(`p${i}`, 'Okresy polowań')),
+  ];
+  const sections: Section[] = [
+    { name: { pl: 'Bezpieczeństwo', en: 'Safety' }, topics: ['Bezpieczeństwo'], count: 30, minPct: 80 },
+    { name: { pl: 'Wiedza ogólna', en: 'General' }, count: 70 },
+  ];
+
+  it('draws the section counts, safety first', () => {
+    const d = drawExam(pool, 100, seededRng(8), undefined, sections);
+    expect(d).toHaveLength(100);
+    expect(d.slice(0, 30).every((x) => x.question.topic === 'Bezpieczeństwo')).toBe(true);
+    expect(d.slice(30).every((x) => x.question.topic !== 'Bezpieczeństwo')).toBe(true);
+  });
+
+  it('keeps the proportions in a shorter attempt', () => {
+    const d = drawExam(pool, 20, seededRng(9), undefined, sections);
+    expect(d.filter((x) => x.question.topic === 'Bezpieczeństwo')).toHaveLength(6);
+  });
+
+  it('fails when safety is under its minimum even if the total passes', () => {
+    const d = drawExam(pool, 100, seededRng(10), undefined, sections);
+    // 7 safety mistakes (77% safety), everything else right: 93% overall
+    const answers = d.map((x, i) => (i < 7 ? [(x.correct[0] + 1) % 4] : x.correct));
+    const r = scoreExam(d, answers, 80, sections);
+    expect(r.pct).toBe(93);
+    expect(r.bySection[0]).toMatchObject({ correct: 23, total: 30, passed: false });
+    expect(r.passed).toBe(false);
+    const ok = scoreExam(d, d.map((x, i) => (i < 6 ? [(x.correct[0] + 1) % 4] : x.correct)), 80, sections);
+    expect(ok.passed).toBe(true);
   });
 });
 
