@@ -1,0 +1,91 @@
+{
+  "rules": {
+    "secret": {
+      ".read": false,
+      ".write": false
+    },
+    "joins": {
+      "$h": {
+        "$uid": {
+          ".read": false,
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.isString() && newData.val() === root.child('secret/passphrase').val()"
+        }
+      }
+    },
+    "hunts": {
+      "$h": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.child('leaderUid').val() === auth.uid && newData.parent().parent().child('joins/' + $h + '/' + auth.uid).val() === root.child('secret/passphrase').val()) || (data.exists() && data.child('leaderUid').val() === auth.uid))",
+        ".validate": "newData.hasChildren(['name', 'date', 'start', 'end', 'leaderUid', 'leaderName', 'status', 'createdAt'])",
+        "name": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
+        },
+        "date": {
+          ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
+        },
+        "start": {
+          ".validate": "newData.isString() && newData.val().matches(/^([01][0-9]|2[0-3]):[0-5][0-9]$/)"
+        },
+        "end": {
+          ".validate": "newData.isString() && newData.val().matches(/^([01][0-9]|2[0-3]):[0-5][0-9]$/)"
+        },
+        "place": {
+          ".validate": "newData.isString() && newData.val().length <= 200"
+        },
+        "notes": {
+          ".validate": "newData.isString() && newData.val().length <= 1000"
+        },
+        "leaderUid": {
+          ".validate": "newData.val() === auth.uid && (!data.exists() || newData.val() === data.val())"
+        },
+        "leaderName": {
+          ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 40"
+        },
+        "status": {
+          ".validate": "newData.isString() && newData.val().matches(/^(open|closed|live|ended)$/)"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber() && (data.exists() ? newData.val() === data.val() : newData.val() === now)"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "participants": {
+      "$h": {
+        ".read": "auth != null && data.child(auth.uid).exists()",
+        ".write": "auth != null && !newData.exists() && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid && !newData.parent().parent().child('hunts/' + $h).exists()",
+        "$uid": {
+          ".write": "auth != null && (($uid === auth.uid && !data.exists() && newData.child('role').val() !== 'leader' && newData.child('status').val() === 'registered' && root.child('hunts/' + $h + '/status').val() === 'open' && newData.parent().parent().parent().child('joins/' + $h + '/' + auth.uid).val() === root.child('secret/passphrase').val()) || ($uid === auth.uid && !data.exists() && newData.child('role').val() === 'leader' && !root.child('hunts/' + $h).exists() && newData.parent().parent().parent().child('hunts/' + $h + '/leaderUid').val() === auth.uid) || ($uid === auth.uid && data.exists() && newData.exists() && newData.child('role').val() === data.child('role').val() && newData.child('status').val() === data.child('status').val() && newData.child('joinedAt').val() === data.child('joinedAt').val()) || ($uid === auth.uid && !newData.exists() && data.child('role').val() !== 'leader') || ($uid !== auth.uid && data.exists() && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid && (!newData.exists() || (newData.child('role').val() !== 'leader' && newData.child('name').val() === data.child('name').val() && newData.child('joinedAt').val() === data.child('joinedAt').val()))))",
+          ".validate": "newData.hasChildren(['name', 'role', 'status', 'joinedAt'])",
+          "name": {
+            ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 40"
+          },
+          "role": {
+            ".validate": "newData.isString() && newData.val().matches(/^(leader|hunter|beater)$/)"
+          },
+          "status": {
+            ".validate": "newData.isString() && newData.val().matches(/^(registered|confirmed)$/)"
+          },
+          "joinedAt": {
+            ".validate": "newData.isNumber() && (data.exists() ? newData.val() === data.val() : newData.val() === now)"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "userHunts": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        "$h": {
+          ".validate": "newData.val() === true"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,61 @@
+# Group hunts: Firebase setup
+
+The **Polowanie zbiorowe** section stores hunts and sign-ups in Firebase (Authentication + Realtime Database). The free Spark plan is enough and needs no card. The rest of the site keeps working without Firebase; the section just shows a "not set up" notice.
+
+Firebase's menu was reorganised in 2025. If a menu name below does not match, use **All products** at the bottom of the left menu.
+
+## 1. Create the project
+
+1. Open <https://console.firebase.google.com> → **Create a project**. Analytics can be turned off.
+2. **Security → Authentication → Get started → Sign-in method** → enable **Anonymous**.
+   (Direct link: `https://console.firebase.google.com/project/PROJECT_ID/authentication/providers`.)
+3. **Databases & Storage → Realtime Database → Create database** (not Firestore). Location **Belgium (europe-west1)**, start in **locked mode**.
+   (Direct link: `https://console.firebase.google.com/project/PROJECT_ID/database`.)
+
+## 2. Rules and passphrase
+
+1. In the Realtime Database, open the **Rules** tab, replace everything with the contents of [`database.rules.json`](../database.rules.json) and click **Publish**. Do this again whenever that file changes.
+2. In the **Data** tab, add a child `secret` and under it `passphrase` with the club passphrase.
+   Nobody can read it through the app; the rules compare what people type against it. To change the passphrase, edit it here. People who already signed up stay signed up.
+
+## 3. Connect the site
+
+1. **Project settings → General → Your apps** → web icon `</>` → register an app (no Hosting needed). Copy the values from the `firebaseConfig` block.
+2. In GitHub: **Settings → Secrets and variables → Actions → Variables** → add:
+
+   | Variable | From `firebaseConfig` |
+   | --- | --- |
+   | `FIREBASE_API_KEY` | `apiKey` |
+   | `FIREBASE_AUTH_DOMAIN` | `authDomain` |
+   | `FIREBASE_DATABASE_URL` | `databaseURL` (if missing, copy the URL at the top of the Realtime Database page, e.g. `https://PROJECT_ID-default-rtdb.europe-west1.firebasedatabase.app`) |
+   | `FIREBASE_PROJECT_ID` | `projectId` |
+   | `FIREBASE_APP_ID` | `appId` |
+
+   These values are public by design (they end up in the site's JavaScript); access is controlled by the database rules. Use **Variables**, not Secrets.
+3. Re-run the deploy workflow (or push to `main`).
+
+## How access works
+
+- Each browser signs in anonymously and gets a random ID, so people can only change their own sign-up. Clearing the browser's site data loses that ID: the person has to sign up again, and a leader loses control of their hunt.
+- Creating a hunt or signing up needs the club passphrase. Anyone with a hunt's link can see its name, time and meeting point; only participants see who else is coming.
+- Only the leader can confirm people, change their role, remove them, close sign-up, start or end the hunt, and delete it.
+
+## Local development with emulators
+
+```bash
+npx firebase-tools@15 emulators:start --only auth,database --project demo-hunting
+curl -X PUT 'http://127.0.0.1:9000/secret/passphrase.json?ns=demo-hunting-default-rtdb' -H 'Authorization: Bearer owner' -d '"test-passphrase"'
+```
+
+`.env.local`:
+
+```
+VITE_FIREBASE_API_KEY=demo-key
+VITE_FIREBASE_AUTH_DOMAIN=demo-hunting.firebaseapp.com
+VITE_FIREBASE_DATABASE_URL=http://127.0.0.1:9000/?ns=demo-hunting-default-rtdb
+VITE_FIREBASE_PROJECT_ID=demo-hunting
+VITE_FIREBASE_APP_ID=1:1:web:1
+VITE_FIREBASE_EMULATOR=127.0.0.1
+```
+
+Then `npm run dev`. Rules tests: `npm run test:rules` (needs Java 21).

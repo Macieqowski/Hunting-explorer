@@ -304,8 +304,9 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; text-transform: uppercase; le
 @media (max-width: 760px) {
   .topbar { flex-wrap: wrap; }
   .brand p { display: none; }
-  .sections { order: 3; width: 100%; margin-left: 0; }
-  .sections button { flex: 1; }
+  .sections { order: 3; width: 100%; margin-left: 0; overflow-x: auto; scrollbar-width: none; }
+  .sections::-webkit-scrollbar { display: none; }
+  .sections button { flex: 1 0 auto; }
 }
 
 /* Weather */
@@ -377,4 +378,64 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; text-transform: uppercase; le
   .w-days { font-size: 0.8rem; }
   .w-days .w-prob, .w-days .w-gust { display: none; }
   .w-days th, .w-days td { padding: 6px 2px; }
+}
+
+/* Group hunts */
+.hunts h2 { margin: 0 0 6px; }
+.hunts h4 { display: flex; align-items: center; gap: 6px; margin: 14px 0 6px; font-size: 0.9rem; }
+.btn.small { padding: 4px 9px; font-size: 0.8rem; }
+.btn[disabled] { opacity: 0.6; cursor: progress; }
+.btn.danger { background: var(--warn); border-color: var(--warn); color: #fff; }
+.btn.danger-text { color: var(--warn); }
+.h-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.h-danger { margin-top: 18px; }
+.h-status { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.h-st-open { background: var(--accent-soft); color: var(--accent); }
+.h-st-closed { background: var(--surface-2); color: var(--muted); }
+.h-st-live { background: #ffedd5; color: #9a3412; }
+.h-st-ended { background: var(--surface-2); color: var(--muted); text-decoration: line-through; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .h-st-live { background: #431407; color: #fdba74; } }
+.h-mine { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--muted); margin-left: 6px; vertical-align: middle; }
+.h-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.h-notes { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--border); font-size: 0.92rem; }
+.h-icon { flex: none; vertical-align: middle; }
+.h-form { display: grid; gap: 12px; }
+.h-form h3 { margin: 0; }
+.h-field { display: grid; gap: 4px; font-size: 0.85rem; font-weight: 600; min-width: 0; }
+.h-field input, .h-field textarea {
+  font: inherit; font-weight: 400; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 10px; width: 100%; min-width: 0;
+}
+.h-field textarea { resize: vertical; }
+.h-field input:focus, .h-field textarea:focus, .h-invite input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.h-field [aria-invalid='true'] { border-color: var(--warn); }
+.h-field small { font-weight: 400; }
+.h-row { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 10px; }
+.h-error { margin: 0; color: var(--warn); font-weight: 600; font-size: 0.88rem; }
+.h-roles { border: 0; padding: 0; margin: 0; display: flex; gap: 8px; flex-wrap: wrap; }
+.h-roles legend { font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; padding: 0; }
+.h-role {
+  display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; cursor: pointer;
+  font-weight: 600; flex: 1; min-width: 130px;
+}
+.h-role:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.h-role input { accent-color: var(--accent); margin: 0; }
+.h-me { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.h-me > div:first-of-type { flex: 1; min-width: 180px; }
+.h-me .h-actions { margin: 0; }
+.h-invite { display: flex; gap: 6px; flex-wrap: wrap; }
+.h-invite input {
+  flex: 1 1 220px; min-width: 0; font: inherit; font-size: 0.85rem; color: var(--text); background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 7px 10px;
+}
+.h-people { list-style: none; padding: 0; margin: 0; }
+.h-person { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.h-person:last-child { border-bottom: 0; }
+.h-person.pending .h-icon { opacity: 0.55; }
+.h-pname { flex: 1; min-width: 140px; }
+.h-pname small { display: block; }
+.h-pctl { display: flex; gap: 4px; flex-wrap: wrap; }
+@media (max-width: 560px) {
+  .h-row { grid-template-columns: 1fr 1fr; }
+  .h-row .h-field:first-child { grid-column: 1 / -1; }
 }
