@@ -4203,6 +4203,18 @@
    "correct": 2
   },
   {
+   "id": "pzl-mysliwy-1989",
+   "topic": "Wiedza ogólna",
+   "q": "Najwyższą władzę w kole stanowi:",
+   "answers": [
+    "zarząd koła",
+    "komisja rewizyjna",
+    "prezes koła, jako reprezentant koła na zewnątrz",
+    "walne zgromadzenie koła"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-mysliwy-1990",
    "topic": "Wiedza ogólna",
    "q": "Członek koła może brać udział w walnym zgromadzeniu:",
