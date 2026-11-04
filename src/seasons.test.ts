@@ -1,4 +1,4 @@
-import { SEASONS, isOpen, inRange, formatRanges, effective } from './seasons';
+import { SEASONS, isOpen, inRange, formatRanges, effective, openOnlyIn } from './seasons';
 
 const find = (pl: string) => SEASONS.find((s) => s.name.pl === pl)!;
 
@@ -31,5 +31,12 @@ describe('seasons', () => {
     expect(isOpen(find('Łoś'), new Date(2026, 9, 1))).toBe(false);
     const e = effective(find('Łoś'));
     expect(formatRanges(e.ranges, e.allYear, 'pl')).toBe('ochrona');
+  });
+
+  it('lists regions where only an exception opens the season', () => {
+    const s = find('Jeleń szlachetny – byki w 2. roku życia');
+    expect(openOnlyIn(s, new Date(2026, 5, 15))).toContain('wielkopolskie');
+    expect(openOnlyIn(s, new Date(2026, 9, 1))).toEqual([]);
+    expect(openOnlyIn(find('Sarna – kozły'), new Date(2026, 0, 10))).toEqual([]);
   });
 });

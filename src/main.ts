@@ -14,7 +14,7 @@ import {
 } from './data';
 import { createMap, type MapApi } from './map';
 import { t, tt, getLang, setLang, fmtHa, fmtKm2, fmtNum, type Key } from './i18n';
-import { SEASONS, isOpen, effective, formatRanges, yearFrac, type Season } from './seasons';
+import { SEASONS, isOpen, effective, formatRanges, yearFrac, openOnlyIn, type Season } from './seasons';
 import { renderExams, handleExamClick, handleExamChange } from './examUi';
 import { renderWeather, handleWeatherClick, handleWeatherInput, handleWeatherSubmit, showWeatherAt } from './weatherUi';
 
@@ -43,8 +43,16 @@ const state = {
   board: '',
   type: '' as '' | HolderType,
   limit: 100,
-  seasonVoiv: '',
+  seasonVoiv: loadSeasonVoiv(),
 };
+
+function loadSeasonVoiv(): string {
+  try {
+    return localStorage.getItem('seasonVoiv') ?? '';
+  } catch {
+    return '';
+  }
+}
 
 // ---------------------------------------------------------------- layout
 
@@ -78,13 +86,15 @@ const mapApi: MapApi = createMap($('#map'), (lat, lng) => navigate({ kind: 'poin
 
 // Top-level sections. The map section holds the panel tabs; every other section is a
 // full-width page without the map (add new features here).
-type Section = 'map' | 'exams' | 'weather';
+type Section = 'map' | 'seasons' | 'exams' | 'weather';
 const SECTIONS: [Section, Key][] = [
   ['map', 'sectionMap'],
+  ['seasons', 'tabSeasons'],
   ['exams', 'tabExams'],
   ['weather', 'tabWeather'],
 ];
-const sectionOf = (v: View): Section => (v.kind === 'tab' && (v.tab === 'exams' || v.tab === 'weather') ? v.tab : 'map');
+const PAGE_SECTIONS: Tab[] = ['seasons', 'exams', 'weather'];
+const sectionOf = (v: View): Section => (v.kind === 'tab' && PAGE_SECTIONS.includes(v.tab) ? (v.tab as Section) : 'map');
 let lastSection: Section = 'map';
 let lastMapView: View = { kind: 'tab', tab: 'clubs' };
 
@@ -189,7 +199,6 @@ function renderStatic() {
     ['clubs', 'tabClubs'],
     ['districts', 'tabDistricts'],
     ['stats', 'tabStats'],
-    ['seasons', 'tabSeasons'],
     ['about', 'tabAbout'],
   ];
   $('#tabs').innerHTML = tabs
@@ -331,7 +340,8 @@ function addr(name: string | null, a: string | null) {
 function openSeasonsFor(voiv: string | null) {
   const now = new Date();
   const open = SEASONS.filter((s) => isOpen(s, now, voiv));
-  return `<h3>${t('openToday')}</h3><div class="chips">${open.map((s) => `<span class="chip">${esc(tt(s.name))}</span>`).join('')}</div>`;
+  return `<h3>${t('openToday')}</h3><div class="chips">${open.map((s) => `<span class="chip">${esc(tt(s.name))}</span>`).join('')}</div>
+    <p class="small"><a href="#/seasons" data-nav="tab" data-tab="seasons">${t('allSeasons')} →</a></p>`;
 }
 
 function backButton() {
@@ -486,8 +496,15 @@ function seasonRow(s: Season, voiv: string, now: Date) {
     .filter((v) => !(voiv && v.voivodeships?.includes(voiv)))
     .map((v) => `${v.voivodeships ? v.voivodeships.map(cap).join(', ') : tt(v.condition!)}: ${formatRanges(v.ranges, !!v.allYear, getLang())}`);
   const notes = [...variants, ...(s.note ? [tt(s.note)] : [])];
-  return `<tr class="${open ? 'open' : ''}${!e.ranges.length && !e.allYear ? ' closed' : ''}">
-    <td><strong>${esc(tt(s.name))}</strong>${notes.length ? `<div class="muted small">${notes.map(esc).join('<br>')}</div>` : ''}</td>
+  const regional = voiv ? [] : openOnlyIn(s, now);
+  const cls = open ? 'open' : regional.length ? 'partly' : !e.ranges.length && !e.allYear ? 'closed' : '';
+  const flag = open
+    ? ` <span class="in-season">${t('inSeason')}</span>`
+    : regional.length
+      ? ` <span class="in-season partly" title="${esc(regional.map(cap).join(', '))}">${t('inSeasonSome')}</span>`
+      : '';
+  return `<tr class="${cls}">
+    <td><strong>${esc(tt(s.name))}</strong>${flag}${notes.length ? `<div class="muted small">${notes.map(esc).join('<br>')}</div>` : ''}</td>
     <td class="period">${esc(formatRanges(e.ranges, e.allYear, getLang()))}<div class="timeline">${segs}<span class="now" style="left:${yearFrac([now.getMonth() + 1, now.getDate()]) * 100}%"></span></div></td>
   </tr>`;
 }
@@ -503,11 +520,19 @@ function renderSeasons() {
     return head + seasonRow(s, voiv, now);
   }).join('');
   const months = (getLang() === 'pl' ? 'SLMKMCLSWPLG' : 'JFMAMJJASOND').split('');
-  return `<p class="small">${t('seasonsIntro')}</p>
+  const openNow = SEASONS.filter((s) => isOpen(s, now, voiv || null));
+  const dateStr = now.toLocaleDateString(getLang() === 'pl' ? 'pl-PL' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  return `<h2>${t('tabSeasons')}</h2>
+    <p class="small">${t('seasonsIntro')}</p>
     <div class="filters"><select data-filter="seasonVoiv" aria-label="${t('voivodeship')}">
       <option value="">${t('allVoivodeships')}</option>${VOIVODESHIPS.map((v) => `<option value="${v}"${v === voiv ? ' selected' : ''}>${cap(v)}</option>`).join('')}
     </select></div>
-    <table class="tbl seasons"><thead><tr><th>${t('species')}</th><th>${t('period')}<div class="months">${months.map((m) => `<span>${m}</span>`).join('')}</div></th></tr></thead>
+    <section class="today-box">
+      <h3>${t('openToday')} <span class="muted small">· ${esc(dateStr)}${voiv ? ` · ${esc(cap(voiv))}` : ''}</span></h3>
+      <div class="chips">${openNow.map((s) => `<span class="chip">${esc(tt(s.name))}</span>`).join('')}</div>
+      ${voiv ? '' : `<p class="muted small">${t('pickVoivHint')}</p>`}
+    </section>
+    <table class="tbl seasons"><thead><tr><th>${t('species')}</th><th>${t('period')}<div class="months">${months.map((m) => `<span>${m}</span>`).join('')}<span class="now-label" style="left:${yearFrac([now.getMonth() + 1, now.getDate()]) * 100}%">${t('inSeason')}</span></div></th></tr></thead>
     <tbody>${rows}</tbody></table>
     <p class="muted small">${t('seasonsRule')}</p>
     <p class="muted small"><a href="https://api.sejm.gov.pl/eli/acts/DU/2023/99/text.html" target="_blank" rel="noopener">Dz.U. 2023 poz. 99 ↗</a></p>`;
@@ -599,6 +624,7 @@ content.addEventListener('click', (e) => {
     e.preventDefault();
     if (nav === 'club') navigate({ kind: 'club', key: el.dataset.key! });
     if (nav === 'district') navigate({ kind: 'district', slug: el.dataset.slug! });
+    if (nav === 'tab') navigate({ kind: 'tab', tab: el.dataset.tab as Tab });
     $('#panel').scrollTop = 0;
     content.scrollTop = 0;
     return;
@@ -659,7 +685,14 @@ content.addEventListener('change', (e) => {
     state.board = '';
   } else if (f === 'board') state.board = el.value;
   else if (f === 'type') state.type = el.value as HolderType | '';
-  else if (f === 'seasonVoiv') state.seasonVoiv = el.value;
+  else if (f === 'seasonVoiv') {
+    state.seasonVoiv = el.value;
+    try {
+      localStorage.setItem('seasonVoiv', el.value);
+    } catch {
+      /* storage unavailable */
+    }
+  }
   state.limit = 100;
   render();
 });
