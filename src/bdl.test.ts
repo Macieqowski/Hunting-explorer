@@ -1,4 +1,4 @@
-import { buildQueryUrl, chunkIdRanges, esriRingsToLatLngs, ringSignedArea } from './bdl';
+import { buildQueryUrl, chunkIdRanges, esriRingsToLatLngs, ringSignedArea, labelPoint, pointInRing } from './bdl';
 
 describe('bdl', () => {
   it('builds query urls against the district layer', () => {
@@ -22,5 +22,15 @@ describe('bdl', () => {
     expect(mp[0]).toHaveLength(2); // outer + hole
     expect(mp[0][0][1]).toEqual([10, 0]); // [lat, lng] swap
     expect(mp[1]).toHaveLength(1);
+  });
+});
+
+describe('labelPoint', () => {
+  it('places the label inside a concave (L-shaped) polygon', () => {
+    // L shape in [lat, lng]: the bbox centre (5,5) is outside the polygon.
+    const ring: [number, number][] = [[0, 0], [10, 0], [10, 3], [3, 3], [3, 10], [0, 10], [0, 0]];
+    const p = labelPoint([[ring]]);
+    expect(p).not.toBeNull();
+    expect(pointInRing(p!, ring)).toBe(true);
   });
 });

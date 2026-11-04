@@ -1,6 +1,14 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { BDL_WMS_DISTRICTS, BDL_WMS_ENTRY_BANS, BDL_WMS_FIRE, BDL_WMS_FORESTS, type DistrictWithGeometry } from './bdl';
+import {
+  BDL_WMS_DISTRICTS,
+  BDL_WMS_ENTRY_BANS,
+  BDL_WMS_FIRE,
+  BDL_WMS_FORESTS,
+  fetchOutlinesInBounds,
+  labelPoint,
+  type DistrictWithGeometry,
+} from './bdl';
 import { t } from './i18n';
 
 export interface MapApi {
@@ -44,18 +52,21 @@ export function createMap(el: HTMLElement, onClick: (lat: number, lng: number) =
       ...extra,
     } as L.WMSOptions);
 
-  const districts = wms(BDL_WMS_DISTRICTS, '0', 0.6).addTo(map);
+  const districts = wms(BDL_WMS_DISTRICTS, '0', 0.45).addTo(map);
+  const outlines = createOutlineLayer(map);
+  outlines.addTo(map);
   const forests = wms(BDL_WMS_FORESTS, '5', 0.8);
   const bans = wms(BDL_WMS_ENTRY_BANS, '3', 0.7);
   const fire = wms(BDL_WMS_FIRE, '0', 0.5);
 
   let control: L.Control.Layers | null = null;
   const rebuildLayerControl = () => {
+    (outlines as L.LayerGroup & { updateHint?: () => void }).updateHint?.();
     control?.remove();
     control = L.control
       .layers(
         { [t('bOsm')]: osm, [t('bTopo')]: topo, [t('bSat')]: sat },
-        { [t('lDistricts')]: districts, [t('lForest')]: forests, [t('lBans')]: bans, [t('lFire')]: fire },
+        { [t('lDistricts')]: districts, [t('lOutlines')]: outlines, [t('lForest')]: forests, [t('lBans')]: bans, [t('lFire')]: fire },
         { position: 'topright', collapsed: true },
       )
       .addTo(map);
@@ -89,4 +100,91 @@ export function createMap(el: HTMLElement, onClick: (lat: number, lng: number) =
       }
     },
   };
+}
+
+/** Zoom from which crisp vector borders are drawn; labels appear one level later. */
+const OUTLINE_MIN_ZOOM = 8;
+const LABEL_MIN_ZOOM = 9;
+const HOLDER_MIN_ZOOM = 11;
+
+const shorten = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s);
+
+/**
+ * Vector overlay with sharp district borders and district-number labels, loaded for the
+ * current viewport from the BDL REST service. The BDL WMS image underneath supplies the colour fill.
+ */
+function createOutlineLayer(map: L.Map): L.LayerGroup {
+  const group = L.layerGroup();
+  const renderer = L.canvas({ padding: 0.3 });
+  const lines = L.layerGroup().addTo(group);
+  const labels = L.layerGroup().addTo(group);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let token = 0;
+
+  const hint = L.DomUtil.create('div', 'zoom-hint', map.getContainer());
+  const updateHint = () => {
+    hint.textContent = t('zoomForBorders');
+    hint.style.display = map.hasLayer(group) && map.getZoom() < OUTLINE_MIN_ZOOM ? '' : 'none';
+  };
+  map.on('zoomend', updateHint);
+  group.on('add remove', updateHint);
+  (group as L.LayerGroup & { updateHint?: () => void }).updateHint = updateHint;
+
+  const refresh = async () => {
+    const my = ++token;
+    const z = map.getZoom();
+    updateHint();
+    if (!map.hasLayer(group) || z < OUTLINE_MIN_ZOOM) {
+      lines.clearLayers();
+      labels.clearLayers();
+      return;
+    }
+    const b = map.getBounds().pad(0.15);
+    // Simplify to roughly half a screen pixel at this zoom.
+    const simplify = (360 / (256 * 2 ** z)) * 0.5;
+    try {
+      const items = await fetchOutlinesInBounds(b.getSouth(), b.getWest(), b.getNorth(), b.getEast(), simplify);
+      if (my !== token) return;
+      lines.clearLayers();
+      labels.clearLayers();
+      for (const it of items) {
+        if (!it.geometry.length) continue;
+        const ll = it.geometry as L.LatLngExpression[][][];
+        // White halo under a dark line keeps borders readable on any base map.
+        L.polygon(ll, { renderer, interactive: false, fill: false, color: '#ffffff', weight: 4.5, opacity: 0.85 }).addTo(lines);
+        L.polygon(ll, { renderer, interactive: false, fill: false, color: '#7c2d12', weight: 1.8, opacity: 1 }).addTo(lines);
+        if (z >= LABEL_MIN_ZOOM && it.number) {
+          const pt = labelPoint(it.geometry);
+          if (!pt) continue;
+          const holder = z >= HOLDER_MIN_ZOOM && it.holder ? `<small>${escapeHtml(shorten(it.holder, 30))}</small>` : '';
+          L.marker(pt, {
+            interactive: false,
+            keyboard: false,
+            icon: L.divIcon({ className: 'dist-label', html: `<span><b>${escapeHtml(it.number)}</b>${holder}</span>`, iconSize: [0, 0] }),
+          }).addTo(labels);
+        }
+      }
+    } catch {
+      /* Borders are an enhancement; the WMS layer still shows the districts. */
+    }
+  };
+  const schedule = () => {
+    clearTimeout(timer);
+    timer = setTimeout(refresh, 250);
+  };
+  group.on('add', () => {
+    map.on('moveend', schedule);
+    refresh();
+  });
+  group.on('remove', () => {
+    map.off('moveend', schedule);
+    token++;
+    lines.clearLayers();
+    labels.clearLayers();
+  });
+  return group;
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 }

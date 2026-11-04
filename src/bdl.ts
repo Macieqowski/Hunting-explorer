@@ -280,3 +280,102 @@ export async function fetchDistrictsByIds(ids: number[], simplify = 0.0001): Pro
   }
   return out;
 }
+
+export interface DistrictOutline {
+  objectid: number;
+  number: string | null;
+  holder: string | null;
+  geometry: LatLngMultiPolygon;
+}
+
+/**
+ * Simplified outlines of all districts intersecting a lat/lng box, for drawing borders and labels.
+ * Pages through results (server cap is 1000 per request) by object id.
+ */
+export async function fetchOutlinesInBounds(
+  south: number,
+  west: number,
+  north: number,
+  east: number,
+  simplify: number,
+  maxPages = 4,
+): Promise<DistrictOutline[]> {
+  const out: DistrictOutline[] = [];
+  let last = -1;
+  for (let page = 0; page < maxPages; page++) {
+    const res = await query({
+      where: `objectid > ${last}`,
+      geometry: `${west},${south},${east},${north}`,
+      geometryType: 'esriGeometryEnvelope',
+      inSR: 4326,
+      spatialRel: 'esriSpatialRelIntersects',
+      outFields: 'objectid,hunt_dist_nr,lease_holder_name',
+      orderByFields: 'objectid ASC',
+      maxAllowableOffset: simplify,
+      returnGeometry: true,
+      outSR: 4326,
+    });
+    const feats = res.features ?? [];
+    for (const f of feats) {
+      const a = f.attributes as { objectid: number; hunt_dist_nr: string | null; lease_holder_name: string | null };
+      out.push({
+        objectid: a.objectid,
+        number: a.hunt_dist_nr?.trim() || null,
+        holder: a.lease_holder_name?.trim() || null,
+        geometry: esriRingsToLatLngs(f.geometry?.rings ?? []),
+      });
+      last = Math.max(last, a.objectid);
+    }
+    if (!res.exceededTransferLimit || !feats.length) break;
+  }
+  return out;
+}
+
+function distToSegment(p: number[], a: number[], b: number[], kx: number): number {
+  const ax = a[1] * kx, ay = a[0], bx = b[1] * kx, by = b[0], px = p[1] * kx, py = p[0];
+  const dx = bx - ax, dy = by - ay;
+  const len = dx * dx + dy * dy;
+  const tt = len ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len)) : 0;
+  const x = ax + tt * dx - px, y = ay + tt * dy - py;
+  return Math.sqrt(x * x + y * y);
+}
+
+/**
+ * A good point to place a label inside a (multi)polygon: grid-searches the largest polygon
+ * for the interior point farthest from any edge. Returns [lat, lng].
+ */
+export function labelPoint(mp: LatLngMultiPolygon, grid = 14): [number, number] | null {
+  let best: LatLngRing[] | null = null;
+  let bestArea = -1;
+  for (const poly of mp) {
+    const a = Math.abs(ringSignedArea(poly[0]));
+    if (a > bestArea) {
+      bestArea = a;
+      best = poly;
+    }
+  }
+  if (!best || best[0].length < 3) return null;
+  const outer = best[0];
+  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+  for (const [la, ln] of outer) {
+    minLat = Math.min(minLat, la); maxLat = Math.max(maxLat, la);
+    minLng = Math.min(minLng, ln); maxLng = Math.max(maxLng, ln);
+  }
+  const kx = Math.cos((((minLat + maxLat) / 2) * Math.PI) / 180);
+  let bestPt: [number, number] = [(minLat + maxLat) / 2, (minLng + maxLng) / 2];
+  let bestD = -1;
+  for (let i = 0; i <= grid; i++) {
+    for (let j = 0; j <= grid; j++) {
+      const p: [number, number] = [minLat + ((maxLat - minLat) * (i + 0.5)) / (grid + 1), minLng + ((maxLng - minLng) * (j + 0.5)) / (grid + 1)];
+      if (!pointInRing(p, outer) || best.slice(1).some((h) => pointInRing(p, h))) continue;
+      let d = Infinity;
+      for (const ring of best)
+        for (let k = 0; k < ring.length - 1 && d > bestD; k++) d = Math.min(d, distToSegment(p, ring[k], ring[k + 1], kx));
+      if (d > bestD) {
+        bestD = d;
+        bestPt = p;
+      }
+    }
+  }
+  return bestPt;
+}
