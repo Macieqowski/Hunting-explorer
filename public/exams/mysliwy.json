@@ -2451,6 +2451,18 @@
    "correct": 0
   },
   {
+   "id": "pzl-mysliwy-1829",
+   "topic": "Wiedza ogólna",
+   "q": "Celowniki refleksyjne (kolimatorowe) są:",
+   "answers": [
+    "celownikami dopuszczalnymi jedynie na broni o lufach gładkich",
+    "celownikami dopuszczalnymi jedynie na broni o lufach gwintowanych",
+    "celownikami myśliwskimi przydatnymi do strzelania do zwierzyny znajdującej się w ruchu",
+    "celownikami typowo wojskowymi, niewykorzystywanymi w łowiectwie"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-1831",
    "topic": "Wiedza ogólna",
    "q": "Do polowania na średniej wielkości ptaki, takie jak dzikie kaczki czy bażanty, zalecanym numerem śrutu jest:",
@@ -2713,6 +2725,18 @@
     "maksymalnie 1 sztuką amunicji bez względu na rodzaj broni"
    ],
    "correct": 1
+  },
+  {
+   "id": "pzl-mysliwy-1853",
+   "topic": "Wiedza ogólna",
+   "q": "Czy na strzelnicy myśliwskiej można używać śrutowej broni półautomatycznej:",
+   "answers": [
+    "tak, nie ma ograniczeń w tym zakresie",
+    "nie",
+    "tak, pod warunkiem, że załadujemy ją maksymalnie 2 sztukami amunicji",
+    "tak, ale za zgodą sędziego głównego, nie ma ograniczeń w zakresie ilości ładowanej amunicji"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-mysliwy-1854",
@@ -3111,6 +3135,18 @@
    "correct": 1
   },
   {
+   "id": "pzl-mysliwy-1896",
+   "topic": "Wiedza ogólna",
+   "q": "Jeżeli okres polowań na zające kończy się w czwartek (31 grudnia), to zgodnie z obowiązującymi przepisami w tym zakresie można go wydłużyć do:",
+   "answers": [
+    "piątku 1 stycznia",
+    "soboty 2 stycznia",
+    "niedzieli 3 stycznia",
+    "nie ma prawnych możliwości jego wydłużenia"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-1897",
    "topic": "Wiedza ogólna",
    "q": "Czy dopuszcza się poszukiwanie postrzałka z użyciem źródła sztucznego światła?",
@@ -3385,6 +3421,18 @@
     "dziki, drapieżniki"
    ],
    "correct": 0
+  },
+  {
+   "id": "pzl-mysliwy-1922",
+   "topic": "Wiedza ogólna",
+   "q": "Za szkody wyrządzone przez zwierzęta łowne objęte całoroczną ochroną odpowiada:",
+   "answers": [
+    "dzierżawca bądź zarządca obwodu łowieckiego",
+    "starosta",
+    "regionalna izba rolnicza",
+    "Skarb Państwa"
+   ],
+   "correct": 3
   },
   {
    "id": "pzl-mysliwy-1923",
@@ -3699,6 +3747,18 @@
    "correct": 3
   },
   {
+   "id": "pzl-mysliwy-1950",
+   "topic": "Wiedza ogólna",
+   "q": "O polowaniu zbiorowym mówimy wtedy, gdy:",
+   "answers": [
+    "dwóch niezależnych myśliwych wychodzi do łowiska w tym samym czasie niezależnie od siebie",
+    "myśliwy udając się na polowanie, zabiera ze sobą pomocnika",
+    "myśliwy poluje z psem",
+    "poluje przynajmniej dwóch współdziałających ze sobą myśliwych, polowanie jest zorganizowane przez dzierżawcę lub zarządcę obwodu łowieckiego i kierowane przez wyznaczonego prowadzącego"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-mysliwy-1951",
    "topic": "Wiedza ogólna",
    "q": "Polowanie zbiorowe z ambon polega na tym, że:",
@@ -3819,6 +3879,18 @@
    "correct": 0
   },
   {
+   "id": "pzl-mysliwy-1961",
+   "topic": "Wiedza ogólna",
+   "q": "Czy do polowania na zwierzynę płową mogą być używane celownicze urządzenia optyczne, w których obraz celu jest przetwarzany elektronicznie?",
+   "answers": [
+    "tak, bez ograniczeń",
+    "żadne urządzenia celownicze nie mogą posiadać takich funkcji",
+    "nie, mogą mieć jedynie podświetlony znak celowniczy",
+    "mogą, jeśli ich krotność nie jest większa niż trzy"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-1962",
    "topic": "Wiedza ogólna",
    "q": "Używanie sztucznego światła w czasie polowania jest:",
@@ -3843,6 +3915,18 @@
    "correct": 2
   },
   {
+   "id": "pzl-mysliwy-1964",
+   "topic": "Wiedza ogólna",
+   "q": "Myśliwy dochodzi postrzałka zwierzyny grubej, który przemieścił się do obwodu, w którym myśliwy nie ma upoważnienia do wykonywania polowania. Zachowanie myśliwego jest:",
+   "answers": [
+    "sprzeczne z zapisami regulaminu polowań",
+    "właściwe, bez jakichkolwiek zastrzeżeń",
+    "właściwe, pod warunkiem zawiadomienia dzierżawcy lub zarządcy tego obwodu, niezwłocznie, nie później niż 12 godzin od momentu rozpoczęcia poszukiwań",
+    "możliwe, ale dopiero po uprzedniej zgodzie dzierżawcy obwodu"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-1965",
    "topic": "Wiedza ogólna",
    "q": "Polowanie na ptactwo może odbywać się jedynie przy udziale ułożonego w tym celu psa, przy czym jeden pies może przypadać na nie więcej niż:",
@@ -3863,6 +3947,18 @@
     "sarny, piżmaki, dziki i kaczki – na zlotach i przelotach",
     "dziki, drapieżniki, piżmaki oraz kaczki i gęsi – na zlotach i przelotach",
     "tylko ptactwo na zlotach i przelotach"
+   ],
+   "correct": 2
+  },
+  {
+   "id": "pzl-mysliwy-1968",
+   "topic": "Wiedza ogólna",
+   "q": "Myśliwy polujący w nocy zobowiązany jest zachować wyjątkową ostrożność, tj. w szczególności:",
+   "answers": [
+    "przebywać w łowisku jedynie z osobą towarzyszącą",
+    "strzelać tylko z ambon",
+    "poruszać się jedynie po dobrze znanym terenie",
+    "posiadać ze sobą psa myśliwskiego"
    ],
    "correct": 2
   },
@@ -3927,6 +4023,18 @@
    "correct": 0
   },
   {
+   "id": "pzl-mysliwy-1975",
+   "topic": "Wiedza ogólna",
+   "q": "W razie utraty członkostwa w Polskim Związku Łowieckim ponowne przyjęcie jest:",
+   "answers": [
+    "możliwe bez ograniczeń",
+    "zależne wyłącznie od woli zainteresowanego",
+    "decyzją uznaniową zarządu okręgowego PZŁ",
+    "możliwe, po spełnieniu warunków określonych w Statucie PZŁ"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-mysliwy-1977",
    "topic": "Wiedza ogólna",
    "q": "Przynależność do Polskiego Związku Łowieckiego potwierdza:",
@@ -3963,6 +4071,18 @@
    "correct": 3
   },
   {
+   "id": "pzl-mysliwy-1980",
+   "topic": "Wiedza ogólna",
+   "q": "Koło łowieckie realizuje swoje podstawowe statutowe zadania m. in. poprzez:",
+   "answers": [
+    "organizowanie polowań",
+    "organizowanie szkoleń dla członków i kandydatów do Polskiego Związku Łowieckiego",
+    "prowadzenie gospodarki łowieckiej w dzierżawionych obwodach łowieckich",
+    "wszystkie powyższe odpowiedzi są prawidłowe"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-mysliwy-1981",
    "topic": "Wiedza ogólna",
    "q": "Myśliwy, członek Polskiego Związku Łowieckiego staje się członkiem koła:",
@@ -3971,6 +4091,18 @@
     "z chwilą złożenia deklaracji członkowskiej do zarządu koła",
     "z chwilą uiszczenia wpisowego",
     "po spełnieniu wymogów statutowych oraz podjęciu w tym względzie pozytywnej prawomocnej uchwały przez zarząd koła"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-mysliwy-1982",
+   "topic": "Wiedza ogólna",
+   "q": "Myśliwy może:",
+   "answers": [
+    "należeć tylko do jednego koła łowieckiego - tego, w którym odbywał staż kandydacki",
+    "być członkiem co najwyżej dwóch kół łowieckich",
+    "być członkiem co najwyżej trzech kół łowieckich",
+    "należeć do wielu kół łowieckich"
    ],
    "correct": 3
   },
@@ -4009,6 +4141,18 @@
     "obowiązek nałożony postanowieniem zarządu koła"
    ],
    "correct": 0
+  },
+  {
+   "id": "pzl-mysliwy-1986",
+   "topic": "Wiedza ogólna",
+   "q": "Brak terminowego uiszczenia składki członkowskiej lub innych opłat na rzecz koła rodzi konsekwencje statutowe:",
+   "answers": [
+    "zawsze wykluczenie z koła łowieckiego",
+    "możliwość skreślenia z listy członków koła",
+    "wykluczenie z Polskiego Związku Łowieckiego",
+    "o konsekwencjach każdorazowo decyduje zarząd koła, według swojego uznania"
+   ],
+   "correct": 1
   },
   {
    "id": "pzl-mysliwy-1987",
@@ -4203,6 +4347,18 @@
    "correct": 1
   },
   {
+   "id": "pzl-mysliwy-2007",
+   "topic": "Wiedza ogólna",
+   "q": "Kwota wpisowego do koła łowieckiego:",
+   "answers": [
+    "wynosi równowartość trzech składek członkowskich do Polskiego Związku Łowieckiego",
+    "wynosi równowartość pięciu składek członkowskich do Polskiego Związku Łowieckiego",
+    "nie może być wyższa niż dziesięciokrotność rocznej składki do Polskiego Związku Łowieckiego",
+    "nie podlega żadnym ograniczeniom"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-2008",
    "topic": "Wiedza ogólna",
    "q": "Kandydat, który zamierza wstąpić do koła łowieckiego:",
@@ -4309,6 +4465,18 @@
     "z dniem uzyskania uprawnień do wykonywania polowania"
    ],
    "correct": 2
+  },
+  {
+   "id": "pzl-mysliwy-2017",
+   "topic": "Wiedza ogólna",
+   "q": "Najwyższym odznaczeniem łowieckim jest:",
+   "answers": [
+    "Medal św. Huberta",
+    "Złoty Medal Zasługi Łowieckiej",
+    "Odznaka za Zasługi dla Łowiectwa",
+    "Złom"
+   ],
+   "correct": 3
   },
   {
    "id": "pzl-mysliwy-2018",
@@ -4419,6 +4587,18 @@
    "correct": 2
   },
   {
+   "id": "pzl-mysliwy-2027",
+   "topic": "Wiedza ogólna",
+   "q": "Utrata członkostwa w Polskim Związku Łowieckim następuje z chwilą skreślenia z rejestru członków. Czynności tej dokonuje:",
+   "answers": [
+    "okręgowy sąd łowiecki",
+    "okręgowy rzecznik dyscyplinarny",
+    "zarząd okręgowy PZŁ po zaistnieniu przesłanek statutowych",
+    "zarząd koła łowieckiego w tajnym głosowaniu"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-2028",
    "topic": "Wiedza ogólna",
    "q": "Postępowanie w przypadku naruszenia obowiązków członkowskich przez członków Polskiego Związku Łowieckiego będących osobami fizycznymi obejmuje:",
@@ -4465,6 +4645,18 @@
     "zarządy kół oraz zarządy okręgowe PZŁ"
    ],
    "correct": 3
+  },
+  {
+   "id": "pzl-mysliwy-2032",
+   "topic": "Wiedza ogólna",
+   "q": "Jedną z kar dyscyplinarnych w Polskim Związku Łowieckim jest:",
+   "answers": [
+    "zawieszenie w prawach członka Polskiego Związku Łowieckiego na okres od 3 miesięcy do 1 roku",
+    "zawieszenie w prawach członka Polskiego Związku Łowieckiego na okres od 6 miesięcy do 3 lat",
+    "zawieszenie w prawach członka Polskiego Związku Łowieckiego na okres od 6 miesięcy do 1 roku",
+    "zawieszenie w prawach członka Polskiego Związku Łowieckiego na okres od 1 roku do 3 lat"
+   ],
+   "correct": 1
   },
   {
    "id": "pzl-mysliwy-2033",
@@ -4635,6 +4827,18 @@
    "correct": 3
   },
   {
+   "id": "pzl-mysliwy-2047",
+   "topic": "Wiedza ogólna",
+   "q": "Podczas obrad walnego zgromadzenia głosowanie tajne przeprowadzane na wniosek członka koła wymaga aprobaty:",
+   "answers": [
+    "1/4 członków obecnych na walnym zgromadzeniu",
+    "zarządu koła",
+    "komisji rewizyjna koła",
+    "1/3 członków obecnych na walnym zgromadzeniu"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-mysliwy-2048",
    "topic": "Wiedza ogólna",
    "q": "Walne zgromadzenie koła podjęło uchwałę w stosunku do swojego członka, który nie zgadza się z jej treścią. Do jakiego organu winien on wnieść odwołanie:",
@@ -4741,6 +4945,18 @@
     "za pośrednictwem koła, które było jego pierwszym kołem po uzyskaniu uprawnień do wykonywania polowania"
    ],
    "correct": 0
+  },
+  {
+   "id": "pzl-mysliwy-2058",
+   "topic": "Wiedza ogólna",
+   "q": "Wysokość składki ulgowa do koła ustalana jest przez:",
+   "answers": [
+    "walne zgromadzenie, na zasadach analogicznych jak składka ulgowa do Zrzeszenia",
+    "walne zgromadzenie koła",
+    "zarząd koła, na na zasadach analogicznych jak składka ulgowa do Zrzeszenia",
+    "zarząd koła"
+   ],
+   "correct": 1
   },
   {
    "id": "pzl-mysliwy-2059",
@@ -7563,18 +7779,6 @@
    "correct": 0
   },
   {
-   "id": "pzl-mysliwy-2314",
-   "topic": "Wiedza ogólna",
-   "q": "Najwyższym odznaczeniem łowieckim jest:",
-   "answers": [
-    "Odznaka za Zasługi dla Łowiectwa",
-    "Złom",
-    "Złoty Medal Zasługi Łowieckiej",
-    "Medal św. Huberta"
-   ],
-   "correct": 1
-  },
-  {
    "id": "pzl-mysliwy-2315",
    "topic": "Wiedza ogólna",
    "q": "Wnioskodawcą o odznaczenie łowieckie może być:",
@@ -7763,6 +7967,18 @@
     "oceny wieku muflonów",
     "oceny wieku dzikich kaczek",
     "oceny wieku dzików"
+   ],
+   "correct": 3
+  },
+  {
+   "id": "pzl-mysliwy-2331",
+   "topic": "Wiedza ogólna",
+   "q": "W ostatnich latach przyrost zrealizowany u dzików uległ zwiększeniu i kształtuje się na poziomie wynoszącym:",
+   "answers": [
+    "50% wiosennej liczebności populacji",
+    "75-100% wiosennej liczebności populacji",
+    "100-150% wiosennej liczebności loch w populacji",
+    "100-250% wiosennej liczebności populacji"
    ],
    "correct": 3
   },
@@ -9484,6 +9700,19 @@
    "correct": 0
   },
   {
+   "id": "pzl-mysliwy-2483",
+   "topic": "Wiedza ogólna",
+   "q": "Jakie kombinacje układu luf broni łamanej przedstawiają ryciny:",
+   "image": "img/mysliwy/124.png",
+   "answers": [
+    "1. dubeltówka nadlufka (bok) 2. ekspres 3. kniejówka",
+    "1. dubeltówka horyzontalna 2. ekspres 3. trójlufka (dryling)",
+    "1. dubeltówka nadlufka (bok) 2. ekspres 3. trójlufka (dryling)",
+    "1. kniejówka 2. dubeltówka nadlufka (bok) 3. ekspres"
+   ],
+   "correct": 2
+  },
+  {
    "id": "pzl-mysliwy-2485",
    "topic": "Wiedza ogólna",
    "q": "Jakie kombinacje układu luf broni łamanej przedstawiają ryciny:",
@@ -9879,6 +10108,18 @@
     "20 myśliwych"
    ],
    "correct": 1
+  },
+  {
+   "id": "pzl-mysliwy-2525",
+   "topic": "Wiedza ogólna",
+   "q": "Organem koła, który kontroluje całokształt działalności koła jest:",
+   "answers": [
+    "zarząd koła jako organ wykonawczy",
+    "walne zgromadzenie koła, jako najwyższa władza w kole",
+    "komisja rewizyjna koła",
+    "zarząd okręgowy PZŁ jako organ nadzorczy nad działalnością podległych kół łowieckich"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-mysliwy-2526",

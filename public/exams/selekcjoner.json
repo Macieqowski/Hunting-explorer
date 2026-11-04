@@ -919,6 +919,18 @@
    "correct": 2
   },
   {
+   "id": "pzl-selekcjoner-114",
+   "topic": "Selekcja",
+   "q": "U którego z poniższych jeleniowatych ciąża jest najdłuższa?",
+   "answers": [
+    "łosia",
+    "jelenia",
+    "daniela",
+    "sarny"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-selekcjoner-115",
    "topic": "Selekcja",
    "q": "Do zwierzyny płowej należą między innymi:",
@@ -1097,6 +1109,18 @@
     "introdukowanym, sprowadzonym z Ameryki Południowej"
    ],
    "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-517",
+   "topic": "Selekcja",
+   "q": "Okres godowy danieli to:",
+   "answers": [
+    "huczka",
+    "bekowisko",
+    "bukowisko",
+    "rykowisko"
+   ],
+   "correct": 1
   },
   {
    "id": "pzl-selekcjoner-523",
@@ -1463,6 +1487,18 @@
     "lipca i sierpnia"
    ],
    "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-603",
+   "topic": "Selekcja",
+   "q": "Koza karmi koźlęta:",
+   "answers": [
+    "przez około 2 tygodnie od urodzenia",
+    "do końca lipca",
+    "do grudnia",
+    "cały rok"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-selekcjoner-605",
@@ -1850,6 +1886,18 @@
     "nigdy nie łączą się w grupy i przez cały rok wiodą samotny tryb życia"
    ],
    "correct": 2
+  },
+  {
+   "id": "pzl-selekcjoner-731",
+   "topic": "Selekcja",
+   "q": "Rudel saren składa się z:",
+   "answers": [
+    "samic wraz z młodymi, prowadzonych przez licówkę",
+    "samych samców",
+    "wielu samic prowadzonych przez starego samca",
+    "samców i samic w różnym wieku"
+   ],
+   "correct": 3
   },
   {
    "id": "pzl-selekcjoner-733",
@@ -2720,6 +2768,18 @@
    "correct": 2
   },
   {
+   "id": "pzl-selekcjoner-1278",
+   "topic": "Selekcja",
+   "q": "Na polowaniu zbiorowym, z wyjątkiem polowania z ambon, strzał w miot do zwierzyny płowej jest:",
+   "answers": [
+    "dozwolony, bez żadnych ograniczeń",
+    "dozwolony zawsze wtedy, gdy naganka znajduje się w odległości ponad 100 metrów od linii myśliwych",
+    "zabroniony",
+    "dozwolony, ale wyłącznie za zgodą prowadzącego polowanie i gdy naganka znajduje się ponad 100 m od linii myśliwych"
+   ],
+   "correct": 3
+  },
+  {
    "id": "pzl-selekcjoner-1279",
    "topic": "Selekcja",
    "q": "Czterodwudziestak to:",
@@ -2814,6 +2874,18 @@
     "jest selekcyjny tylko w łowiskach z mocnymi trofeami"
    ],
    "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1288",
+   "topic": "Selekcja",
+   "q": "Typowe poroże dojrzałego samca jelenia sika przyjmuje formę:",
+   "answers": [
+    "widłaka",
+    "szóstaka",
+    "ósmaka",
+    "dziesiątaka koronnego"
+   ],
+   "correct": 2
   },
   {
    "id": "pzl-selekcjoner-1289",
@@ -2981,6 +3053,18 @@
     "oceny wieku jeleniowatych",
     "oceny wieku zajęcy",
     "oceny wieku kuropatw"
+   ],
+   "correct": 1
+  },
+  {
+   "id": "pzl-selekcjoner-1303",
+   "topic": "Selekcja",
+   "q": "Uzębienie nowo narodzonego koźlęcia liczy:",
+   "answers": [
+    "12 zębów",
+    "20 zębów",
+    "22 zęby",
+    "32 zęby"
    ],
    "correct": 1
   },
