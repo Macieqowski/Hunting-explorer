@@ -274,3 +274,22 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; text-transform: uppercase; le
 .ans-inline .ans-img { max-height: 70px; }
 .tbl td.num.ok { color: #16a34a; }
 .tbl td.num.bad { color: #dc2626; }
+
+/* Top-level sections (map / exams / later features) */
+.sections { display: flex; gap: 4px; margin-left: auto; }
+.sections button {
+  border: 0; background: none; color: var(--muted); font: inherit; font-weight: 600; font-size: 0.92rem;
+  padding: 7px 12px; border-radius: 8px; cursor: pointer; white-space: nowrap;
+}
+.sections button:hover { background: var(--surface-2); color: var(--text); }
+.sections button[aria-current='page'] { background: var(--surface-2); color: var(--accent); }
+/* Page mode: no map, no map tabs, content centred at reading width */
+.page-mode .mapwrap, .page-mode .tabs { display: none; }
+.page-mode .panel { width: 100%; max-width: none; height: auto; flex: 1; border: 0; }
+.page-mode .content { padding: 20px max(16px, calc((100% - 760px) / 2)) 48px; }
+@media (max-width: 760px) {
+  .topbar { flex-wrap: wrap; }
+  .brand p { display: none; }
+  .sections { order: 3; width: 100%; margin-left: 0; }
+  .sections button { flex: 1; }
+}
