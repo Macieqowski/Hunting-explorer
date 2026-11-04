@@ -28,6 +28,7 @@ import { fetchDistrictsAtPoint } from './bdl';
 import { fold, districtSlug } from './data';
 import { createHuntMap, type HuntMap, type PersonInfo } from './huntMap';
 import { Sharer } from './huntShare';
+import { openPocket, updatePocket } from './huntPocket';
 import { roleIcon } from './huntIcons';
 import { firebaseConfig, getBackend, HuntError, type HuntBackend, type Unsubscribe } from './huntBackend';
 
@@ -202,6 +203,14 @@ const L = {
   hAgo: { pl: 'godz. temu', en: 'h ago' },
   accuracy: { pl: 'Dokładność', en: 'Accuracy' },
   distanceFromYou: { pl: 'Odległość od Ciebie', en: 'Distance from you' },
+  pocket: { pl: 'Tryb kieszeni', en: 'Pocket mode' },
+  pocketHint: {
+    pl: 'Czarny ekran, który nie reaguje na przypadkowe dotknięcia. Ekran pozostaje włączony, żeby telefon dalej wysyłał położenie.',
+    en: 'A black screen that ignores accidental touches. The screen stays on so the phone keeps sending your position.',
+  },
+  pocketUnlock: { pl: 'Przesuń, aby wrócić', en: 'Slide to go back' },
+  pocketStopped: { pl: 'Udostępnianie zatrzymane', en: 'Sharing has stopped' },
+  pocketStoppedDetail: { pl: 'Odblokuj ekran, żeby sprawdzić.', en: 'Unlock the screen to check.' },
   exportGpx: { pl: '⤓ Pobierz ślady (GPX)', en: '⤓ Download tracks (GPX)' },
   exportEmpty: { pl: 'Brak śladów do pobrania.', en: 'No tracks to download.' },
   lOsm: { pl: 'Mapa (OSM)', en: 'Map (OSM)' },
@@ -453,6 +462,15 @@ function updateLiveText() {
   if (el) el.innerHTML = liveCounts();
   const sent = document.querySelector('.h-share-sent');
   if (sent && sharer?.lastSentAt) sent.textContent = `${l('lastSent')} ${ago(Date.now() - sharer.lastSentAt)}`;
+  updatePocket();
+}
+
+function pocketStatus() {
+  const on = !!sharer?.active;
+  const sentAgo = sharer?.lastSentAt ? `${l('lastSent')} ${ago(Date.now() - sharer.lastSentAt)}` : '';
+  return on
+    ? { ok: true, title: sharer!.state === 'on' ? l('shareOn') : l('shareStarting'), detail: [hunt?.name, sentAgo].filter(Boolean).join(' · ') }
+    : { ok: false, title: l('pocketStopped'), detail: l('pocketStoppedDetail') };
 }
 
 function liveCounts(): string {
@@ -497,7 +515,10 @@ function startSharing() {
         }
       },
       clear: () => be.clearPosition(id),
-      onChange: () => rerender(),
+      onChange: () => {
+        rerender();
+        updatePocket();
+      },
     });
   try {
     localStorage.setItem(SHARE_KEY, id);
@@ -776,7 +797,8 @@ function renderLive(h: Hunt, me: Participant): string {
       share = `<div class="h-share on" role="status"><span class="h-share-dot" aria-hidden="true"></span>
         <div><strong>${st === 'on' ? l('shareOn') : l('shareStarting')}</strong><br><small class="h-share-sent muted"></small>
         <small class="muted">${l('shareKeepOpen')}</small></div>
-        <button type="button" class="btn danger" data-hunt="shareStop">${l('shareStop')}</button></div>`;
+        <div class="h-share-btns"><button type="button" class="btn" data-hunt="pocket" title="${esc(l('pocketHint'))}">${l('pocket')}</button>
+        <button type="button" class="btn danger" data-hunt="shareStop">${l('shareStop')}</button></div></div>`;
     else {
       const problem =
         st === 'denied' ? l('shareDenied') : st === 'unavailable' ? l('shareUnavailable') : st === 'error' ? `${l('shareStopped')} ${sharer?.error ?? ''}` : '';
@@ -1025,6 +1047,9 @@ export function handleHuntClick(el: HTMLElement): boolean {
     case 'shareStart':
       startSharing();
       break;
+    case 'pocket':
+      openPocket(pocketStatus, { unlock: l('pocketUnlock'), hint: l('pocketHint') });
+      return true;
     case 'shareStop':
       forgetSharing(); // first: stop() re-renders, and a remembered flag would resume sharing
       sharer?.stop();
