@@ -10,6 +10,7 @@ const dict = {
   tabSeasons: { pl: 'Okresy polowań', en: 'Seasons' },
   tabExams: { pl: 'Egzaminy', en: 'Exams' },
   tabWeather: { pl: 'Pogoda', en: 'Weather' },
+  tabHunt: { pl: 'Polowanie zbiorowe', en: 'Group hunts' },
   weatherHere: { pl: 'Pogoda w tym miejscu', en: 'Weather at this point' },
   tabAbout: { pl: 'O danych', en: 'About' },
   searchClubs: { pl: 'Szukaj koła, np. „Leśnik” lub „Darz Bór”', en: 'Search clubs, e.g. “Leśnik” or “Darz Bór”' },

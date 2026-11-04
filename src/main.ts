@@ -17,6 +17,7 @@ import { t, tt, getLang, setLang, fmtHa, fmtKm2, fmtNum, type Key } from './i18n
 import { SEASONS, isOpen, effective, formatRanges, yearFrac, openOnlyIn, type Season } from './seasons';
 import { renderExams, handleExamClick, handleExamChange } from './examUi';
 import { renderWeather, handleWeatherClick, handleWeatherInput, handleWeatherSubmit, showWeatherAt } from './weatherUi';
+import { renderHunts, handleHuntClick, handleHuntInput, handleHuntSubmit, leaveHunts } from './huntUi';
 
 // ---------------------------------------------------------------- helpers
 
@@ -26,8 +27,13 @@ const $ = <T extends HTMLElement = HTMLElement>(sel: string, root: ParentNode = 
 const typeKey = (h: HolderType) => `type_${h}` as Key;
 const cap = (s: string | null) => (s ? s.charAt(0).toLocaleUpperCase('pl') + s.slice(1) : '—');
 
-type Tab = 'clubs' | 'districts' | 'stats' | 'seasons' | 'exams' | 'weather' | 'about';
-type View = { kind: 'tab'; tab: Tab } | { kind: 'district'; slug: string } | { kind: 'club'; key: string } | { kind: 'point'; lat: number; lng: number };
+type Tab = 'clubs' | 'districts' | 'stats' | 'seasons' | 'exams' | 'weather' | 'hunt' | 'about';
+type View =
+  | { kind: 'tab'; tab: Tab }
+  | { kind: 'district'; slug: string }
+  | { kind: 'club'; key: string }
+  | { kind: 'point'; lat: number; lng: number }
+  | { kind: 'hunt'; id: string };
 
 const state = {
   districts: [] as District[],
@@ -86,15 +92,17 @@ const mapApi: MapApi = createMap($('#map'), (lat, lng) => navigate({ kind: 'poin
 
 // Top-level sections. The map section holds the panel tabs; every other section is a
 // full-width page without the map (add new features here).
-type Section = 'map' | 'seasons' | 'exams' | 'weather';
+type Section = 'map' | 'seasons' | 'exams' | 'weather' | 'hunt';
 const SECTIONS: [Section, Key][] = [
   ['map', 'sectionMap'],
   ['seasons', 'tabSeasons'],
   ['exams', 'tabExams'],
   ['weather', 'tabWeather'],
+  ['hunt', 'tabHunt'],
 ];
-const PAGE_SECTIONS: Tab[] = ['seasons', 'exams', 'weather'];
-const sectionOf = (v: View): Section => (v.kind === 'tab' && PAGE_SECTIONS.includes(v.tab) ? (v.tab as Section) : 'map');
+const PAGE_SECTIONS: Tab[] = ['seasons', 'exams', 'weather', 'hunt'];
+const sectionOf = (v: View): Section =>
+  v.kind === 'hunt' ? 'hunt' : v.kind === 'tab' && PAGE_SECTIONS.includes(v.tab) ? (v.tab as Section) : 'map';
 let lastSection: Section = 'map';
 let lastMapView: View = { kind: 'tab', tab: 'clubs' };
 
@@ -103,7 +111,9 @@ let lastMapView: View = { kind: 'tab', tab: 'clubs' };
 function viewToHash(v: View): string {
   switch (v.kind) {
     case 'tab':
-      return v.tab === 'clubs' ? '' : `#/${v.tab}`;
+      return v.tab === 'clubs' ? '' : v.tab === 'hunt' ? '#/polowanie' : `#/${v.tab}`;
+    case 'hunt':
+      return `#/polowanie/${encodeURIComponent(v.id)}`;
     case 'district':
       return `#/obwod/${v.slug}`;
     case 'club':
@@ -116,6 +126,7 @@ function viewToHash(v: View): string {
 function hashToView(h: string): View {
   const [, kind, arg] = h.replace(/^#/, '').split('/');
   if (kind === 'obwod' && arg) return { kind: 'district', slug: arg };
+  if (kind === 'polowanie') return arg ? { kind: 'hunt', id: decodeURIComponent(arg) } : { kind: 'tab', tab: 'hunt' };
   if (kind === 'kolo' && arg) return { kind: 'club', key: decodeURIComponent(arg) };
   if (kind === 'punkt' && arg) {
     const [lat, lng] = arg.split(',').map(Number);
@@ -142,7 +153,7 @@ window.addEventListener('popstate', () => navigate(hashToView(location.hash), fa
 let effectToken = 0;
 async function onViewMapEffects(v: View) {
   const token = ++effectToken;
-  if (v.kind === 'tab') return;
+  if (v.kind === 'tab' || v.kind === 'hunt') return;
   try {
     if (v.kind === 'point') {
       pointResult = { status: 'loading' };
@@ -190,6 +201,14 @@ function renderStatic() {
   app.classList.toggle('page-mode', section !== 'map');
   if (section !== lastSection) {
     lastSection = section;
+    // On phones the section bar scrolls sideways; keep the current section visible.
+    const nav = $('#sections');
+    const cur = nav.querySelector<HTMLElement>('[aria-current="page"]');
+    if (cur && nav.scrollWidth > nav.clientWidth) {
+      const n = nav.getBoundingClientRect();
+      const c = cur.getBoundingClientRect();
+      if (c.right > n.right || c.left < n.left) nav.scrollLeft += c.left - n.left - 16;
+    }
     content.scrollTop = 0;
     // Leaflet needs a size refresh after its container was hidden.
     if (section === 'map') setTimeout(() => mapApi.map.invalidateSize(), 0);
@@ -215,6 +234,8 @@ function render() {
   if (v.kind === 'point') return void (content.innerHTML = renderPoint());
   if (v.kind === 'tab' && v.tab === 'exams') return void (content.innerHTML = renderExams(render));
   if (v.kind === 'tab' && v.tab === 'weather') return void (content.innerHTML = renderWeather(render));
+  if (v.kind === 'hunt' || (v.kind === 'tab' && v.tab === 'hunt')) return renderHuntSection(v.kind === 'hunt' ? v.id : null);
+  leaveHunts();
   if (v.kind === 'tab' && (v.tab === 'seasons' || v.tab === 'about')) {
     content.innerHTML = v.tab === 'seasons' ? renderSeasons() : renderAbout();
     return;
@@ -233,6 +254,26 @@ function render() {
       const c = state.clubsByKey.get(v.key);
       content.innerHTML = c ? renderClub(c) : `<p class="muted">${t('noResults')}</p>`;
       break;
+    }
+  }
+}
+
+function renderHuntSection(id: string | null) {
+  const goTo = (to: string | null) => navigate(to ? { kind: 'hunt', id: to } : { kind: 'tab', tab: 'hunt' });
+  // Keep the focused field and caret when live updates re-render the page while someone types.
+  const active = document.activeElement as HTMLInputElement | null;
+  const focusName = active && content.contains(active) && active.name ? active.name : null;
+  const caret = focusName ? [active!.selectionStart, active!.selectionEnd] : null;
+  content.innerHTML = renderHunts(id, render, goTo);
+  if (focusName) {
+    const again = content.querySelector<HTMLInputElement>(`[name="${focusName}"]`);
+    if (again && again !== document.activeElement) {
+      again.focus();
+      try {
+        if (caret && caret[0] != null) again.setSelectionRange(caret[0], caret[1]);
+      } catch {
+        /* not a text field */
+      }
     }
   }
 }
@@ -617,6 +658,11 @@ content.addEventListener('click', (e) => {
   if (ex && handleExamClick(ex)) return;
   const wx = (e.target as HTMLElement).closest<HTMLElement>('[data-weather]');
   if (wx && handleWeatherClick(wx)) return;
+  const hu = (e.target as HTMLElement).closest<HTMLElement>('[data-hunt]');
+  if (hu) {
+    e.preventDefault();
+    if (handleHuntClick(hu)) return;
+  }
   const el = (e.target as HTMLElement).closest<HTMLElement>('[data-nav],[data-action]');
   if (!el) return;
   const nav = el.dataset.nav;
@@ -664,6 +710,7 @@ content.addEventListener('click', (e) => {
 content.addEventListener('input', (e) => {
   const el = e.target as HTMLInputElement;
   if (handleWeatherInput(el)) return;
+  if (handleHuntInput(el)) return;
   const k = el.dataset.q as 'clubs' | 'districts' | undefined;
   if (!k) return;
   state.q[k] = el.value;
@@ -699,6 +746,7 @@ content.addEventListener('change', (e) => {
 
 content.addEventListener('submit', (e) => {
   if (handleWeatherSubmit(e.target as HTMLFormElement)) e.preventDefault();
+  else if (handleHuntSubmit(e.target as HTMLFormElement)) e.preventDefault();
 });
 
 $('#locate').addEventListener('click', () => {
