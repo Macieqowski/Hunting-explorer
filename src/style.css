@@ -293,3 +293,74 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; text-transform: uppercase; le
   .sections { order: 3; width: 100%; margin-left: 0; }
   .sections button { flex: 1; }
 }
+
+/* Weather */
+:root { --w-day: #fde68a; --w-civil: #f59e0b; --w-nautical: #6366f1; --w-astro: #312e81; --w-night: #111827; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) { --w-day: #ca8a04; --w-civil: #b45309; --w-nautical: #4338ca; --w-astro: #1e1b4b; --w-night: #030712; }
+}
+.w-point-btn { margin: 0 0 10px 6px; }
+.w-places { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.w-chip {
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 0.88rem; font-weight: 600;
+  padding: 6px 12px; border-radius: 999px; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.w-chip[aria-pressed='true'] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.w-chip.add { border-style: dashed; color: var(--accent); }
+.w-search { margin-bottom: 12px; }
+.w-results { list-style: none; padding: 0; margin: 4px 0 0; }
+.w-results li { padding: 0; }
+.w-results li.muted { padding: 8px 10px; }
+.w-results button {
+  display: block; width: 100%; text-align: left; border: 0; background: none; color: var(--text); font: inherit; padding: 8px 10px; border-radius: 8px; cursor: pointer;
+}
+@media (hover: hover) { .w-results button:hover { background: var(--surface-2); } }
+.w-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.w-head p { margin: 2px 0 0; }
+.w-head .actions { margin-top: 0; }
+.w-name { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.w-name input {
+  flex: 1 1 220px; font: inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 7px 12px;
+}
+.w-big { display: flex; align-items: center; gap: 12px; margin: 4px 0 6px; }
+.w-big > b { font-size: 2.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.w-big > div { display: flex; flex-direction: column; }
+.w-icon { font-size: 2.4rem; line-height: 1; }
+.w-kpis b small { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+.w-kpis > div > span { display: block; }
+.w-kv { grid-template-columns: minmax(140px, 45%) 1fr; }
+.w-kv dd { font-variant-numeric: tabular-nums; }
+.w-arrow { display: inline-block; font-weight: 700; color: var(--accent); }
+.w-tips { margin: 6px 0 0; padding-left: 1.2em; }
+.w-tips li { margin-bottom: 6px; font-size: 0.92rem; }
+.w-light { position: relative; height: 18px; border-radius: 6px; margin-top: 8px; border: 1px solid var(--border); }
+.w-now-mark { position: absolute; top: -4px; bottom: -4px; width: 3px; margin-left: -1px; background: #dc2626; border-radius: 2px; box-shadow: 0 0 0 1px #fff; }
+.w-ticks { position: relative; height: 16px; font-size: 0.68rem; color: var(--muted); }
+.w-ticks span { position: absolute; transform: translateX(-50%); top: 2px; }
+.w-ticks span:first-child { transform: none; }
+.w-ticks span:last-child { transform: translateX(-100%); }
+.w-light-now { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; }
+.w-dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--border); }
+.w-hours { display: flex; gap: 4px; overflow-x: auto; padding: 6px 0 8px; scrollbar-width: thin; }
+.w-hour {
+  flex: none; width: 58px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 10px;
+  background: var(--surface-2); text-align: center; font-variant-numeric: tabular-nums;
+}
+.w-hour.light-civil { box-shadow: inset 0 -3px 0 var(--w-civil); }
+.w-hour.light-nautical, .w-hour.light-astro, .w-hour.light-night { background: #1f2937; color: #e5e7eb; }
+.w-hour.light-nautical .muted, .w-hour.light-astro .muted, .w-hour.light-night .muted { color: #9ca3af; }
+.w-hour.light-nautical .w-arrow, .w-hour.light-astro .w-arrow, .w-hour.light-night .w-arrow { color: #86efac; }
+.w-icon-s { font-size: 1.3rem; line-height: 1.2; }
+.w-rain { color: #2563eb; min-height: 1.2em; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .w-rain { color: #60a5fa; } }
+.w-scroll { overflow-x: auto; }
+.w-days td { vertical-align: middle; }
+.w-nowrap { white-space: nowrap; }
+.w-attrib { margin-top: 16px; }
+@media (max-width: 560px) {
+  .w-days th:nth-child(6), .w-days td:nth-child(6) { display: none; }
+  .w-kv { grid-template-columns: minmax(120px, 50%) 1fr; }
+  .w-days { font-size: 0.8rem; }
+  .w-days .w-prob, .w-days .w-gust { display: none; }
+  .w-days th, .w-days td { padding: 6px 2px; }
+}
