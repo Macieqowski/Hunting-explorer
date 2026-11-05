@@ -4,12 +4,14 @@
 
 import type { Shot, ShotInput, ShotSpot } from './pokot';
 import type { Stand } from './stands';
+import type { Invite } from './invite';
 import type { Drive, DriveInput, Sighting, SightingInput, Hunt, HuntInput, HuntStatus, Participant, Position, Role, TrackPoint } from './hunt';
 
 export type Unsubscribe = () => void;
 
 export interface HuntBackend {
   readonly uid: string;
+  /** Also creates the first invitation link. */
   createHunt(input: HuntInput, leaderName: string, passphrase: string): Promise<string>;
   updateHunt(id: string, patch: Partial<HuntInput> & { status?: HuntStatus }): Promise<void>;
   deleteHunt(id: string): Promise<void>;
@@ -18,6 +20,14 @@ export interface HuntBackend {
   /** Only participants can read the list; for anyone else onDenied fires. */
   watchParticipants(id: string, cb: (ps: Participant[]) => void, onDenied: () => void): Unsubscribe;
   join(id: string, name: string, role: Exclude<Role, 'leader'>, passphrase: string): Promise<void>;
+  /** Sign up with an invitation token instead of the club passphrase (still unconfirmed). */
+  joinByInvite(id: string, name: string, role: Exclude<Role, 'leader'>, token: string): Promise<void>;
+  /** Leader only: the hunt's invitation links. */
+  watchInvites(id: string, cb: (list: Invite[]) => void, onDenied: () => void): Unsubscribe;
+  /** Leader only: replace all invitation links with a new one valid until `exp`; returns its token. */
+  newInvite(id: string, exp: number): Promise<string>;
+  /** Leader only: make every invitation link of the hunt stop working. */
+  revokeInvites(id: string): Promise<void>;
   rename(id: string, name: string): Promise<void>;
   withdraw(id: string): Promise<void>;
   /** Leader only. */
@@ -52,6 +62,8 @@ export interface HuntBackend {
   saveClubStands(ss: Stand[]): Promise<void>;
   /** Unlock the club's seats on this device (devices that joined a hunt before they existed). */
   joinClub(passphrase: string): Promise<void>;
+  /** Show the club's seats to a confirmed participant of this hunt who never gave the passphrase (e.g. an invited guest). Read-only. */
+  clubGuest(huntId: string): Promise<void>;
   /** Game sightings: reported by confirmed participants while the hunt is live, newest first. */
   watchSightings(id: string, cb: (ss: Sighting[]) => void, onDenied: () => void): Unsubscribe;
   addSighting(id: string, s: SightingInput): Promise<string>;

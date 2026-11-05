@@ -13,6 +13,33 @@
         }
       }
     },
+    "invites": {
+      "$h": {
+        ".read": "auth != null && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid",
+        ".write": "auth != null && (root.child('hunts/' + $h + '/leaderUid').val() === auth.uid || newData.parent().parent().child('hunts/' + $h + '/leaderUid').val() === auth.uid)",
+        "$t": {
+          ".validate": "$t.matches(/^[A-Za-z0-9_-]{20,40}$/) && newData.hasChildren(['exp', 'createdAt'])",
+          "exp": {
+            ".validate": "newData.isNumber() && newData.val() > now && newData.val() <= now + 8640000000"
+          },
+          "createdAt": {
+            ".validate": "newData.val() === now"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "inviteJoins": {
+      "$h": {
+        "$uid": {
+          ".read": false,
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9_-]{20,40}$/) && root.child('invites/' + $h + '/' + newData.val() + '/exp').val() > now"
+        }
+      }
+    },
     "hunts": {
       "$h": {
         ".read": "auth != null",
@@ -82,7 +109,7 @@
         ".read": "auth != null && data.child(auth.uid).exists()",
         ".write": "auth != null && !newData.exists() && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid && !newData.parent().parent().child('hunts/' + $h).exists()",
         "$uid": {
-          ".write": "auth != null && (($uid === auth.uid && !data.exists() && newData.child('role').val() !== 'leader' && newData.child('status').val() === 'registered' && root.child('hunts/' + $h + '/status').val() === 'open' && newData.parent().parent().parent().child('joins/' + $h + '/' + auth.uid).val() === root.child('secret/passphrase').val()) || ($uid === auth.uid && !data.exists() && newData.child('role').val() === 'leader' && !root.child('hunts/' + $h).exists() && newData.parent().parent().parent().child('hunts/' + $h + '/leaderUid').val() === auth.uid) || ($uid === auth.uid && data.exists() && newData.exists() && newData.child('role').val() === data.child('role').val() && newData.child('status').val() === data.child('status').val() && newData.child('joinedAt').val() === data.child('joinedAt').val()) || ($uid === auth.uid && !newData.exists() && data.child('role').val() !== 'leader') || ($uid !== auth.uid && data.exists() && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid && (!newData.exists() || (newData.child('role').val() !== 'leader' && newData.child('name').val() === data.child('name').val() && newData.child('joinedAt').val() === data.child('joinedAt').val()))))",
+          ".write": "auth != null && (($uid === auth.uid && !data.exists() && newData.child('role').val() !== 'leader' && newData.child('status').val() === 'registered' && root.child('hunts/' + $h + '/status').val() === 'open' && (newData.parent().parent().parent().child('joins/' + $h + '/' + auth.uid).val() === root.child('secret/passphrase').val() || (newData.parent().parent().parent().child('inviteJoins/' + $h + '/' + auth.uid).isString() && root.child('invites/' + $h + '/' + newData.parent().parent().parent().child('inviteJoins/' + $h + '/' + auth.uid).val() + '/exp').val() > now))) || ($uid === auth.uid && !data.exists() && newData.child('role').val() === 'leader' && !root.child('hunts/' + $h).exists() && newData.parent().parent().parent().child('hunts/' + $h + '/leaderUid').val() === auth.uid) || ($uid === auth.uid && data.exists() && newData.exists() && newData.child('role').val() === data.child('role').val() && newData.child('status').val() === data.child('status').val() && newData.child('joinedAt').val() === data.child('joinedAt').val()) || ($uid === auth.uid && !newData.exists() && data.child('role').val() !== 'leader') || ($uid !== auth.uid && data.exists() && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid && (!newData.exists() || (newData.child('role').val() !== 'leader' && newData.child('name').val() === data.child('name').val() && newData.child('joinedAt').val() === data.child('joinedAt').val()))))",
           ".validate": "newData.hasChildren(['name', 'role', 'status', 'joinedAt'])",
           "name": {
             ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 40"
@@ -222,7 +249,7 @@
         }
       },
       "stands": {
-        ".read": "auth != null && root.child('club/members/' + auth.uid).val() === root.child('secret/passphrase').val()",
+        ".read": "auth != null && root.child('club/members/' + auth.uid).val() === root.child('secret/passphrase').val() || (auth != null && root.child('club/guests/' + auth.uid).isString() && root.child('participants/' + root.child('club/guests/' + auth.uid).val() + '/' + auth.uid + '/status').val() === 'confirmed')",
         ".write": "auth != null && root.child('club/members/' + auth.uid).val() === root.child('secret/passphrase').val()",
         "$s": {
           ".validate": "$s.matches(/^s[0-9]{3}$/) && newData.hasChildren(['n', 'k', 'lat', 'lng'])",
@@ -244,6 +271,13 @@
           "$other": {
             ".validate": false
           }
+        }
+      },
+      "guests": {
+        "$uid": {
+          ".read": false,
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9_-]{1,40}$/) && root.child('participants/' + newData.val() + '/' + $uid + '/status').val() === 'confirmed'"
         }
       },
       "$other": {
