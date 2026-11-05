@@ -346,3 +346,92 @@ describe('sightings', () => {
     await assertSucceeds(update(ref(db('lead')), { 'positions/h1': null, 'tracks/h1': null, 'sightings/h1': null }));
   });
 });
+
+describe('shots (pokot)', () => {
+  const shot = (uid: string, extra: Record<string, unknown> = {}) => ({ uid, outcome: 'unknown', ts: serverTimestamp(), ...extra });
+  const fire = (who: string, id: string, extra: Record<string, unknown> = {}) =>
+    update(ref(db(who)), { [`shots/h1/${id}`]: shot(who, extra), [`shotSpots/h1/${id}`]: { lat: 52.1, lng: 21.1 } });
+  const live = () => update(ref(db('lead'), 'hunts/h1'), { status: 'live' });
+  const end = () => update(ref(db('lead'), 'hunts/h1'), { status: 'ended', endedAt: serverTimestamp() });
+  beforeEach(async () => {
+    await createHunt('lead');
+    await join('a'); // hunter
+    await join('b'); // hunter
+    await join('c', 'beater');
+    await join('d'); // hunter, not confirmed
+    for (const u of ['a', 'b', 'c']) await update(ref(db('lead'), `participants/h1/${u}`), { status: 'confirmed' });
+  });
+  it('are logged by confirmed hunters and the leader, only while the hunt is live', async () => {
+    await assertFails(fire('a', 's1'));
+    await live();
+    await assertSucceeds(fire('a', 's1', { driveId: 'd1' }));
+    await assertSucceeds(fire('lead', 's2'));
+    await assertFails(fire('c', 's3')); // beater
+    await assertFails(fire('d', 's4')); // not confirmed
+    await assertFails(update(ref(db('a')), { 'shots/h1/s5': shot('b') })); // in someone else's name
+    await assertFails(update(ref(db('a')), { 'shotSpots/h1/s6': { lat: 1, lng: 1 } })); // a spot with no shot
+  });
+  it('are checked: outcome, game, note, server time', async () => {
+    await live();
+    await assertFails(fire('a', 'x', { outcome: 'hit' }));
+    await assertFails(fire('a', 'x', { game: 'bear' }));
+    await assertFails(fire('a', 'x', { note: 'x'.repeat(121) }));
+    await assertFails(fire('a', 'x', { ts: 5 }));
+    await assertFails(fire('a', 'x', { lat: 1 }));
+    await assertSucceeds(fire('a', 'x', { outcome: 'kill', game: 'boar_sow', note: 'przy paśniku' }));
+  });
+  it('the shooter sets the outcome and can undo, but cannot move or reassign the shot', async () => {
+    await live();
+    await fire('a', 's1', { driveId: 'd1' });
+    await fire('a', 's2');
+    await assertSucceeds(update(ref(db('a'), 'shots/h1/s1'), { outcome: 'kill', game: 'fox' }));
+    await assertFails(update(ref(db('a'), 'shots/h1/s1'), { driveId: 'd2' }));
+    await assertFails(update(ref(db('a'), 'shots/h1/s1'), { uid: 'b' }));
+    await assertFails(update(ref(db('a'), 'shots/h1/s1'), { ts: 1 }));
+    await assertFails(update(ref(db('b'), 'shots/h1/s1'), { outcome: 'miss' }));
+    await assertFails(update(ref(db('b')), { 'shots/h1/s2': null, 'shotSpots/h1/s2': null }));
+    await assertSucceeds(update(ref(db('a')), { 'shots/h1/s2': null, 'shotSpots/h1/s2': null }));
+    await end();
+    await assertSucceeds(update(ref(db('a'), 'shots/h1/s1'), { outcome: 'wound' })); // still fixable after the hunt
+    await assertFails(fire('a', 's3')); // but no new shots
+  });
+  it('the leader corrects anything, adds game and assigns it to hunters or to nobody', async () => {
+    await live();
+    await fire('a', 's1', { driveId: 'd1' });
+    await end();
+    await assertSucceeds(update(ref(db('lead'), 'shots/h1/s1'), { uid: 'b', driveId: 'd2', outcome: 'kill', game: 'fox' }));
+    await assertSucceeds(set(ref(db('lead'), 'shots/h1/n1'), { uid: '-', outcome: 'kill', game: 'hare', ts: serverTimestamp() }));
+    await assertSucceeds(set(ref(db('lead'), 'shots/h1/n2'), { uid: 'a', outcome: 'kill', game: 'fox', ts: serverTimestamp() }));
+    await assertFails(set(ref(db('lead'), 'shots/h1/n3'), { uid: 'c', outcome: 'kill', ts: serverTimestamp() })); // a beater
+    await assertFails(set(ref(db('lead'), 'shots/h1/n4'), { uid: 'zz', outcome: 'kill', ts: serverTimestamp() })); // not in the hunt
+    await assertSucceeds(update(ref(db('lead')), { 'shots/h1/n2': null, 'shotSpots/h1/n2': null })); // as the app deletes
+    await assertSucceeds(update(ref(db('b')), { 'shots/h1/s1': null, 'shotSpots/h1/s1': null })); // now b's shot
+  });
+  it('are frozen once the leader locks the pokot, until unlocked', async () => {
+    await live();
+    await fire('a', 's1');
+    await assertFails(update(ref(db('lead'), 'hunts/h1'), { pokotLockedAt: serverTimestamp() })); // only after the end
+    await end();
+    await assertFails(update(ref(db('a'), 'hunts/h1'), { pokotLockedAt: serverTimestamp() }));
+    await assertFails(update(ref(db('lead'), 'hunts/h1'), { pokotLockedAt: 5 }));
+    await assertSucceeds(update(ref(db('lead'), 'hunts/h1'), { pokotLockedAt: serverTimestamp(), pokotTitles: true }));
+    await assertFails(update(ref(db('a'), 'shots/h1/s1'), { outcome: 'miss' }));
+    await assertFails(update(ref(db('lead'), 'shots/h1/s1'), { outcome: 'miss' }));
+    await assertFails(set(ref(db('lead'), 'shots/h1/n1'), { uid: '-', outcome: 'kill', ts: serverTimestamp() }));
+    await assertSucceeds(update(ref(db('lead'), 'hunts/h1'), { pokotLockedAt: null }));
+    await assertSucceeds(update(ref(db('lead'), 'shots/h1/s1'), { outcome: 'miss' }));
+  });
+  it('are visible to confirmed participants; spots are purged by the leader, shots stay', async () => {
+    await live();
+    await fire('a', 's1');
+    await assertSucceeds(get(ref(db('c'), 'shots/h1')));
+    await assertSucceeds(get(ref(db('c'), 'shotSpots/h1')));
+    await assertFails(get(ref(db('d'), 'shots/h1')));
+    await assertFails(get(ref(db('d'), 'shotSpots/h1')));
+    await end();
+    await update(ref(db('lead'), 'hunts/h1'), { pokotLockedAt: serverTimestamp() });
+    await assertFails(set(ref(db('a'), 'shotSpots/h1'), null));
+    await assertSucceeds(update(ref(db('lead')), { 'positions/h1': null, 'tracks/h1': null, 'sightings/h1': null, 'shotSpots/h1': null }));
+    await assertSucceeds(update(ref(db('lead')), { 'hunts/h1': null, 'participants/h1': null, 'shots/h1': null }));
+  });
+});
