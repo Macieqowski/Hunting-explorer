@@ -44,7 +44,8 @@ import { fold, districtSlug } from './data';
 import { createHuntMap, type HuntMap, type PersonInfo, type DriveView, type SightView, type ShotView } from './huntMap';
 import { Sharer } from './huntShare';
 import { openPocket, updatePocket } from './huntPocket';
-import { roleIcon, speciesIcon } from './huntIcons';
+import { roleIcon, speciesIcon, standIcon } from './huntIcons';
+import { standsFromFile, sortStands, STAND_LIMITS, type Stand } from './stands';
 import { openReport, closeReport } from './huntSighting';
 import { openShotSheet, closeShotSheet } from './huntShot';
 import { renderPokot, renderPokotPrint, gameName, outcomeName, groupName, pl, type PokotCtx } from './huntPokot';
@@ -240,6 +241,25 @@ const L = {
   lDistricts: { pl: 'Obwody łowieckie', en: 'Hunting districts' },
   lCompartments: { pl: 'Oddziały leśne', en: 'Forest compartments' },
   lWindArrows: { pl: 'Strzałki wiatru', en: 'Wind arrows' },
+  stands: { pl: 'Zwyżki i ambony', en: 'High seats' },
+  stZwyzka: { pl: 'Zwyżka', en: 'Open high seat (zwyżka)' },
+  stAmbona: { pl: 'Ambona', en: 'Closed high seat (ambona)' },
+  stBroken: { pl: 'powalona / uszkodzona', en: 'fallen / damaged' },
+  stNone: { pl: 'Prowadzący nie wczytał zwyżek.', en: 'The leader has not loaded any high seats.' },
+  stNoneLeader: {
+    pl: 'Wczytaj plik KMZ lub KML z zwyżkami i ambonami koła (np. z Google Earth lub Moich Map). Zobaczą je tylko potwierdzeni uczestnicy tego polowania.',
+    en: "Load a KMZ or KML file with the club's high seats (e.g. from Google Earth or My Maps). Only confirmed participants of this hunt will see them.",
+  },
+  stLoad: { pl: '⤒ Wczytaj z pliku KMZ/KML', en: '⤒ Load from a KMZ/KML file' },
+  stReplace: { pl: '⤒ Zastąp z pliku', en: '⤒ Replace from a file' },
+  stReuse: { pl: 'Wczytaj ponownie', en: 'Load again' },
+  stClear: { pl: 'Usuń z polowania', en: 'Remove from hunt' },
+  stClearSure: { pl: 'Na pewno usunąć wszystkie?', en: 'Remove them all?' },
+  stLoaded: { pl: 'Wczytano zwyżki i ambony:', en: 'High seats loaded:' },
+  stCut: { pl: 'Wczytano tylko pierwsze', en: 'Only the first ones were loaded:' },
+  stErrFile: { pl: 'Nie udało się odczytać pliku. Wybierz plik .kmz lub .kml.', en: 'Could not read the file. Choose a .kmz or .kml file.' },
+  stErrEmpty: { pl: 'W pliku nie ma żadnych punktów.', en: 'The file has no points.' },
+  lStands: { pl: 'Zwyżki i ambony', en: 'High seats' },
   drives: { pl: 'Mioty', en: 'Drives' },
   noDrives: { pl: 'Prowadzący nie dodał jeszcze miotów.', en: 'The leader has not added any drives yet.' },
   noDrivesLeader: {
@@ -370,6 +390,26 @@ let scrollToDriveForm = false;
 let locatingDrive = false;
 /** The drive list's open state once the user toggles it; until then open except for others during the hunt. */
 let driveListOpen: boolean | null = null;
+let stands: Stand[] = [];
+let standsUnsub: Unsubscribe | null = null;
+let standListOpen: boolean | null = null;
+const STANDS_KEY = 'huntStandsLast';
+/** The leader's last loaded file, offered again in the next hunt. */
+function lastStands(): { file: string; stands: Stand[] } | null {
+  try {
+    const v = JSON.parse(localStorage.getItem(STANDS_KEY) ?? 'null');
+    return v && typeof v.file === 'string' && Array.isArray(v.stands) && v.stands.length ? v : null;
+  } catch {
+    return null;
+  }
+}
+function rememberStands(file: string, ss: Stand[]) {
+  try {
+    localStorage.setItem(STANDS_KEY, JSON.stringify({ file, stands: ss }));
+  } catch {
+    /* storage unavailable */
+  }
+}
 let purged = new Set<string>();
 let shots: Shot[] = [];
 let shotSpots = new Map<string, ShotSpot>();
@@ -430,6 +470,10 @@ function stopLive() {
   tracksUnsub = null;
   drivesUnsub?.();
   drivesUnsub = null;
+  standsUnsub?.();
+  standsUnsub = null;
+  stands = [];
+  standListOpen = null;
   sightUnsub?.();
   sightUnsub = null;
   shotsUnsub?.();
@@ -488,6 +532,15 @@ function syncLive() {
       },
     );
     drivesUnsub = conn.be.watchDrives(id!, onDrives, () => (drivesUnsub = null));
+    standsUnsub = conn.be.watchStands(
+      id!,
+      (ss) => {
+        stands = ss;
+        hmap?.setStands(ss);
+        rerender();
+      },
+      () => (standsUnsub = null),
+    );
     sightUnsub = conn.be.watchSightings(id!, onSightings, () => (sightUnsub = null));
     shotsUnsub = conn.be.watchShots(id!, onShots, () => (shotsUnsub = null));
     spotsUnsub = conn.be.watchShotSpots(
@@ -855,7 +908,9 @@ function ensureMap(): HuntMap {
       ago,
       accuracy: l('accuracy'),
       distance: l('distanceFromYou'),
-      layers: { osm: l('lOsm'), topo: l('lTopo'), geotopo: l('lGeoTopo'), sat: l('lSat'), districts: l('lDistricts'), compartments: l('lCompartments'), wind: l('lWindArrows') },
+      layers: { osm: l('lOsm'), topo: l('lTopo'), geotopo: l('lGeoTopo'), sat: l('lSat'), districts: l('lDistricts'), compartments: l('lCompartments'), wind: l('lWindArrows'), stands: l('lStands') },
+      standKind: (k) => l(k === 'ambona' ? 'stAmbona' : 'stZwyzka'),
+      standBroken: l('stBroken'),
     });
   }
   return hmap;
@@ -870,6 +925,7 @@ export function mountHuntMap() {
   m.invalidate();
   m.setDistrict(hunt?.district?.id ?? null);
   m.setDrives(driveViews());
+  m.setStands(stands);
   // Wind for when it matters: the next planned drive, or now while one runs.
   m.setWindTime(hunt && hunt.status !== 'ended' ? windFocusTime(hunt, drives, now()) : null);
   if (driveEdit) m.startDraw(driveEdit.area, onAreaChange, driveEdit.id);
@@ -1307,7 +1363,7 @@ function renderLive(h: Hunt, me: Participant): string {
           canShoot ? `<button type="button" class="btn hs-report hp-fire" data-hunt="shotFire" aria-label="${esc(l('shotHint'))}"><span class="hp-fire-icon" aria-hidden="true">✛</span> ${l('shot')}</button>` : ''
         }</div>`
       : '';
-  return `<h3>${l('mapTitle')}</h3>${t}${report}${share}${renderDrives(h, h.leaderUid === myUid())}
+  return `<h3>${l('mapTitle')}</h3>${t}${report}${share}${renderDrives(h, h.leaderUid === myUid())}${drawing ? '' : renderStands(h.leaderUid === myUid())}
     <div class="hm-bar"${drawing ? ' hidden' : ''}><div class="hm-counts">${liveCounts()}</div>
       <div class="hm-tools">
         ${iShare ? `<button type="button" class="btn small ghost" data-hunt="centerMe">◎ ${l('centerMe')}</button>` : ''}
@@ -1367,6 +1423,74 @@ function renderDrives(h: Hunt, isLeader: boolean): string {
   const open = driveListOpen ?? (isLeader || h.status !== 'live' || !drives.length);
   return `${strip}<details class="hd-box"${open ? ' open' : ''}><summary data-hunt="driveList" data-open="${open}"><strong>${l('drives')}</strong> <span class="muted">(${drives.length})</span></summary>
     ${list}${add}${isLeader ? errorBox() : ''}</details>`;
+}
+
+function renderStands(isLeader: boolean): string {
+  if (!isLeader && !stands.length) return '';
+  const kindName = (s: Stand) => `${l(s.kind === 'ambona' ? 'stAmbona' : 'stZwyzka')}${s.broken ? `, ${l('stBroken')}` : ''}`;
+  const list = stands.length
+    ? `<ul class="hst-names">${sortStands(stands)
+        .map(
+          (s) =>
+            `<li><button type="button" data-hunt="standShow" data-lat="${s.lat}" data-lng="${s.lng}" title="${esc(kindName(s))}">${standIcon(s.kind, s.broken, 18)}<span>${esc(s.name)}</span></button></li>`,
+        )
+        .join('')}</ul>`
+    : `<p class="muted small">${isLeader ? l('stNoneLeader') : l('stNone')}</p>`;
+  let ctl = '';
+  if (isLeader) {
+    const last = lastStands();
+    const file = `<label class="btn small${stands.length ? ' ghost' : ''}"><input type="file" class="hst-file" accept=".kmz,.kml,application/vnd.google-earth.kmz,application/vnd.google-earth.kml+xml" data-stands-file${busy ? ' disabled' : ''}>${stands.length ? l('stReplace') : l('stLoad')}</label>`;
+    const reuse =
+      !stands.length && last
+        ? `<button type="button" class="btn small ghost" data-hunt="standsReuse"${btnBusy()}>${l('stReuse')}: ${esc(last.file)} (${last.stands.length})</button>`
+        : '';
+    const clear = !stands.length
+      ? ''
+      : confirming === 'stands'
+        ? `<button type="button" class="btn small danger" data-hunt="standsClear"${btnBusy()}>${l('stClearSure')}</button>
+           <button type="button" class="btn small ghost" data-hunt="unconfirm">${l('cancel')}</button>`
+        : `<button type="button" class="btn small ghost" data-hunt="askStandsClear">${l('stClear')}</button>`;
+    ctl = `<div class="hst-actions">${file}${reuse}${clear}</div>${errorBox()}`;
+  }
+  const open = standListOpen ?? (isLeader && !stands.length);
+  return `<details class="hd-box hst-box"${open ? ' open' : ''}><summary data-hunt="standList" data-open="${open}"><strong class="hst-summary">${standIcon('zwyzka', false, 18)} ${l('stands')}</strong> <span class="muted">(${stands.length})</span></summary>
+    ${list}${ctl}</details>`;
+}
+
+/** The leader picked a KMZ/KML file: read it and put its points into this hunt. */
+export function handleHuntChange(el: HTMLElement): boolean {
+  if (!(el instanceof HTMLInputElement) || !('standsFile' in el.dataset)) return false;
+  const f = el.files?.[0];
+  el.value = '';
+  const id = watched;
+  if (!f || !id) return true;
+  f.arrayBuffer()
+    .then(standsFromFile)
+    .then(
+      (ss) => {
+        if (!ss.length) {
+          formError = l('stErrEmpty');
+          rerender();
+          return;
+        }
+        rememberStands(f.name, ss.slice(0, STAND_LIMITS.stands));
+        saveStands(id, ss);
+      },
+      () => {
+        formError = l('stErrFile');
+        rerender();
+      },
+    );
+  return true;
+}
+
+function saveStands(id: string, ss: Stand[]) {
+  standListOpen = true;
+  run(async (be) => {
+    await be.saveStands(id, ss);
+    const cut = ss.length > STAND_LIMITS.stands;
+    showToast(cut ? `${l('stCut')} ${STAND_LIMITS.stands} / ${ss.length}` : `${l('stLoaded')} ${ss.length}`);
+  });
 }
 
 function renderDriveForm(): string {
@@ -1663,6 +1787,25 @@ export function handleHuntClick(el: HTMLElement): boolean {
     case 'driveList':
       driveListOpen = el.dataset.open !== 'true';
       break;
+    case 'standList':
+      standListOpen = el.dataset.open !== 'true';
+      break;
+    case 'standShow':
+      hmap?.centerOnPoint(+el.dataset.lat!, +el.dataset.lng!);
+      document.querySelector('.hm-map')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      return true;
+    case 'standsReuse': {
+      const last = lastStands();
+      if (id && last) saveStands(id, last.stands);
+      return true;
+    }
+    case 'askStandsClear':
+      confirming = 'stands';
+      break;
+    case 'standsClear':
+      confirming = null;
+      if (id) run((be) => be.saveStands(id, []));
+      return true;
     case 'driveUndo':
       hmap?.undoCorner();
       return true;

@@ -291,6 +291,44 @@ describe('drives', () => {
   });
 });
 
+describe('stands', () => {
+  const stands = { s000: { n: '1', k: 'zwyzka', lat: 52.1, lng: 21.1 }, s001: { n: 'Ambona', k: 'ambona', lat: 52.2, lng: 21.2, b: true } };
+  beforeEach(async () => {
+    await createHunt('lead');
+    await join('a', 'beater');
+    await join('c');
+    await update(ref(db('lead'), 'participants/h1/a'), { status: 'confirmed' });
+  });
+  it('are loaded and replaced by the leader only', async () => {
+    await assertSucceeds(set(ref(db('lead'), 'stands/h1'), stands));
+    await assertFails(set(ref(db('a'), 'stands/h1'), stands));
+    await assertFails(set(ref(db('a'), 'stands/h1/s002'), stands.s000));
+    await assertSucceeds(set(ref(db('lead'), 'stands/h1'), { s000: stands.s000 }));
+  });
+  it('need a name, a known kind and coordinates', async () => {
+    await assertFails(set(ref(db('lead'), 'stands/h1'), { s000: { ...stands.s000, n: '' } }));
+    await assertFails(set(ref(db('lead'), 'stands/h1'), { s000: { ...stands.s000, n: 'x'.repeat(41) } }));
+    await assertFails(set(ref(db('lead'), 'stands/h1'), { s000: { ...stands.s000, k: 'bunkier' } }));
+    await assertFails(set(ref(db('lead'), 'stands/h1'), { s000: { ...stands.s000, lat: 91 } }));
+    await assertFails(set(ref(db('lead'), 'stands/h1'), { s000: { n: '1', k: 'zwyzka', lat: 52 } }));
+    await assertFails(set(ref(db('lead'), 'stands/h1'), { s000: { ...stands.s000, note: 'x' } }));
+    await assertFails(set(ref(db('lead'), 'stands/h1'), { other: stands.s000 }));
+  });
+  it('are visible to confirmed participants only', async () => {
+    await set(ref(db('lead'), 'stands/h1'), stands);
+    await assertSucceeds(get(ref(db('a'), 'stands/h1')));
+    await assertFails(get(ref(db('c'), 'stands/h1')));
+    await assertFails(get(ref(db('stranger'), 'stands/h1')));
+  });
+  it('are deleted by the leader, also together with the hunt', async () => {
+    await set(ref(db('lead'), 'stands/h1'), stands);
+    await assertFails(set(ref(db('a'), 'stands/h1'), null));
+    await assertSucceeds(set(ref(db('lead'), 'stands/h1'), null));
+    await set(ref(db('lead'), 'stands/h1'), stands);
+    await assertSucceeds(update(ref(db('lead')), { 'hunts/h1': null, 'participants/h1': null, 'stands/h1': null }));
+  });
+});
+
 describe('sightings', () => {
   const sight = (uid: string, extra: Record<string, unknown> = {}) => ({
     uid,

@@ -8,7 +8,8 @@ import { baseLayers, offlineBaseSwitch, BDL_ATTR, POLAND_BOUNDS } from './map';
 import { cachedWms } from './cachedLayer';
 import { WMS } from './tiles';
 import { createWind } from './windLayer';
-import { roleIcon, ROLE_COLOR, speciesIcon, SPECIES_COLOR } from './huntIcons';
+import { roleIcon, ROLE_COLOR, speciesIcon, SPECIES_COLOR, standIcon } from './huntIcons';
+import type { Stand, StandKind } from './stands';
 import { freshness, distanceM, offsetPoint, type Area, type DriveState, type Position, type Role, type TrackPoint, type Species, type SightLook } from './hunt';
 
 export interface PersonInfo {
@@ -50,7 +51,9 @@ export interface HuntMapText {
   ago: (ms: number) => string;
   accuracy: string;
   distance: string;
-  layers: { osm: string; topo: string; geotopo: string; sat: string; districts: string; compartments: string; wind: string };
+  layers: { osm: string; topo: string; geotopo: string; sat: string; districts: string; compartments: string; wind: string; stands: string };
+  standKind: (k: StandKind) => string;
+  standBroken: string;
 }
 
 export interface HuntMap {
@@ -64,6 +67,8 @@ export interface HuntMap {
   setDrives(ds: DriveView[]): void;
   setSightings(ss: SightView[]): void;
   setShots(ss: ShotView[]): void;
+  /** The club's high seats (zwyżki, ambony), a layer the user can switch off. */
+  setStands(ss: Stand[]): void;
   centerOnPoint(lat: number, lng: number): void;
   /** Tap the map to add corners, drag corners to move them; onChange gets every change. */
   startDraw(area: Area, onChange: (a: Area) => void, hideDrive?: string | null): void;
@@ -93,10 +98,11 @@ export function createHuntMap(text: HuntMapText): HuntMap {
   // Forest compartments (oddziały) help the leader follow real lines when drawing a drive.
   const compartments = cachedWms(WMS.compartments, { opacity: 0.7, attribution: BDL_ATTR });
   const wind = createWind(map);
+  const standLayer = L.featureGroup().addTo(map);
   L.control
     .layers(
       { [text.layers.osm]: osm, [text.layers.topo]: topo, [text.layers.geotopo]: geotopo, [text.layers.sat]: sat },
-      { [text.layers.districts]: districtsWms, [text.layers.compartments]: compartments, [text.layers.wind]: wind.arrows },
+      { [text.layers.stands]: standLayer, [text.layers.districts]: districtsWms, [text.layers.compartments]: compartments, [text.layers.wind]: wind.arrows },
       { position: 'topright' },
     )
     .addTo(map);
@@ -118,6 +124,11 @@ export function createHuntMap(text: HuntMapText): HuntMap {
   let drives: DriveView[] = [];
   let hidden: string | null = null; // the drive being redrawn
   let draw: { area: Area; onChange: (a: Area) => void; compartmentsWereOn: boolean } | null = null;
+  // Stand names only from zoom 14 up; further out the labels pile on top of each other.
+  const STAND_LABEL_ZOOM = 14;
+  const syncStandLabels = () => el.classList.toggle('hm-stand-names', map.getZoom() >= STAND_LABEL_ZOOM);
+  map.on('zoomend', syncStandLabels);
+  syncStandLabels();
 
   // Programmatic fits fire zoom events too, so only pointer and wheel input count as the user looking around.
   el.addEventListener('pointerdown', () => (userMoved = true), { passive: true });
@@ -155,6 +166,7 @@ export function createHuntMap(text: HuntMapText): HuntMap {
     if (active) b.extend(areaBounds(active.area));
     else {
       if (districtLayer.getLayers().length) b.extend(districtLayer.getBounds());
+      else if (map.hasLayer(standLayer) && standLayer.getLayers().length) b.extend(standLayer.getBounds());
       for (const d of drives) if (d.area.length) b.extend(areaBounds(d.area));
     }
     return b;
@@ -387,6 +399,30 @@ export function createHuntMap(text: HuntMapText): HuntMap {
         })
           .bindPopup(s.popup)
           .addTo(shotLayer);
+    },
+
+    setStands(ss) {
+      const before = standLayer.getLayers().length;
+      standLayer.clearLayers();
+      for (const s of ss) {
+        const marker = L.marker([s.lat, s.lng], {
+          icon: L.divIcon({
+            className: 'hm-icon',
+            html: `<div class="hst-marker${s.broken ? ' hst-broken' : ''}">${standIcon(s.kind, s.broken, 22)}<span class="hm-label">${esc(s.name)}</span></div>`,
+            iconSize: [0, 0],
+          }),
+          zIndexOffset: -1000, // under people, sightings and shots
+          title: s.name,
+        });
+        marker.bindPopup(() => {
+          const rows = [`<strong>${esc(s.name)}</strong>`, esc(text.standKind(s.kind)) + (s.broken ? ` · ${esc(text.standBroken)}` : '')];
+          const mine = markers.get(myUid);
+          if (mine) rows.push(`${esc(text.distance)}: ${fmtM(distanceM(mine.pos, s))}`);
+          return rows.join('<br>');
+        });
+        marker.addTo(standLayer);
+      }
+      if (!before && ss.length && !districtLayer.getLayers().length) autoFit();
     },
 
     centerOnPoint(lat, lng) {

@@ -18,7 +18,7 @@ import { SEASONS, isOpen, effective, formatRanges, yearFrac, openOnlyIn, type Se
 import { renderExams, handleExamClick, handleExamChange, drillSpecies } from './examUi';
 import { renderWeather, handleWeatherClick, handleWeatherInput, handleWeatherSubmit, showWeatherAt } from './weatherUi';
 import { renderBallistics, handleBallisticsClick, handleBallisticsChange, handleBallisticsSubmit } from './ballisticsUi';
-import { renderHunts, handleHuntClick, handleHuntInput, handleHuntSubmit, leaveHunts, mountHuntMap } from './huntUi';
+import { renderHunts, handleHuntClick, handleHuntInput, handleHuntSubmit, handleHuntChange, leaveHunts, mountHuntMap } from './huntUi';
 import { renderAtlas, handleAtlasClick, handleAtlasInput, setAtlasVoivodeship } from './atlasUi';
 import { speciesForSeason } from './atlas';
 import { initOffline, onOfflineChange } from './offline';
@@ -815,6 +815,7 @@ content.addEventListener('change', (e) => {
   const el = e.target as HTMLSelectElement;
   if (handleExamChange(el)) return;
   if (handleBallisticsChange(el)) return;
+  if (handleHuntChange(el)) return;
   const f = el.dataset.filter;
   if (!f) return;
   if (f === 'voiv') {

@@ -3,9 +3,10 @@
 
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, connectAuthEmulator } from 'firebase/auth';
-import { getDatabase, ref, child, push, get, update, onValue, serverTimestamp, connectDatabaseEmulator } from 'firebase/database';
+import { getDatabase, ref, child, push, get, set, update, onValue, serverTimestamp, connectDatabaseEmulator } from 'firebase/database';
 import { parseHunt, parseParticipants, parsePositions, parseTracks, parseDrives, parseSightings, encodeArea, shouldPurge, cleanText, cleanNotes, LIMITS, DRIVE_LIMITS, type Hunt, type HuntInput } from './hunt';
 import { parseShots, parseShotSpots, NOTE_MAX, type ShotInput } from './pokot';
+import { parseStands, encodeStands } from './stands';
 import { HuntError, type FirebaseConfig, type HuntBackend } from './huntBackend';
 
 function wrap(e: unknown): HuntError {
@@ -97,6 +98,7 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
           [`positions/${id}`]: null,
           [`tracks/${id}`]: null,
           [`drives/${id}`]: null,
+          [`stands/${id}`]: null,
           [`sightings/${id}`]: null,
           [`shots/${id}`]: null,
           [`shotSpots/${id}`]: null,
@@ -228,6 +230,16 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
           [`drives/${id}/${driveId}/endedAt`]: null,
         }),
       ),
+
+    watchStands(id, cb, onDenied) {
+      return onValue(
+        child(root, `stands/${id}`),
+        (s) => cb(parseStands(s.val())),
+        () => onDenied(),
+      );
+    },
+
+    saveStands: (id, ss) => guard(set(child(root, `stands/${id}`), ss.length ? encodeStands(ss) : null)),
 
     watchSightings(id, cb, onDenied) {
       return onValue(

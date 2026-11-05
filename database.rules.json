@@ -186,6 +186,33 @@
         }
       }
     },
+    "stands": {
+      "$h": {
+        ".read": "auth != null && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed'",
+        ".write": "auth != null && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid",
+        "$s": {
+          ".validate": "$s.matches(/^s[0-9]{3}$/) && newData.hasChildren(['n', 'k', 'lat', 'lng'])",
+          "n": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40"
+          },
+          "k": {
+            ".validate": "newData.isString() && newData.val().matches(/^(zwyzka|ambona)$/)"
+          },
+          "lat": {
+            ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
+          },
+          "lng": {
+            ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180"
+          },
+          "b": {
+            ".validate": "newData.isBoolean()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
     "sightings": {
       "$h": {
         ".read": "auth != null && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed'",

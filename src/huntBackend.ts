@@ -3,6 +3,7 @@
 // group hunt section never download the Firebase SDK.
 
 import type { Shot, ShotInput, ShotSpot } from './pokot';
+import type { Stand } from './stands';
 import type { Drive, DriveInput, Sighting, SightingInput, Hunt, HuntInput, HuntStatus, Participant, Position, Role, TrackPoint } from './hunt';
 
 export type Unsubscribe = () => void;
@@ -42,6 +43,10 @@ export interface HuntBackend {
   /** Start a drive now, ending the ones still running. */
   startDrive(id: string, driveId: string, running: string[]): Promise<void>;
   endDrive(id: string, driveId: string): Promise<void>;
+  /** High seats (zwyżki, ambony): readable by confirmed participants, set by the leader from a KMZ/KML file. */
+  watchStands(id: string, cb: (ss: Stand[]) => void, onDenied: () => void): Unsubscribe;
+  /** Replace the hunt's stands (an empty list removes them). */
+  saveStands(id: string, ss: Stand[]): Promise<void>;
   /** Game sightings: reported by confirmed participants while the hunt is live, newest first. */
   watchSightings(id: string, cb: (ss: Sighting[]) => void, onDenied: () => void): Unsubscribe;
   addSighting(id: string, s: SightingInput): Promise<string>;
