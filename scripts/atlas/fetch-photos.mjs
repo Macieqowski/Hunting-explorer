@@ -1,4 +1,4 @@
-// Downloads the atlas photos listed in src/atlas.ts (every `file: '…'` entry) from Wikimedia
+// Downloads the atlas photos listed in the atlas data files (every `file: '…'` entry) from Wikimedia
 // Commons as 800 px thumbnails into public/atlas/img/, and writes their authors and licences,
 // as reported by the Commons API, into src/atlasPhotos.json. Run: node scripts/atlas/fetch-photos.mjs
 //
@@ -41,7 +41,8 @@ const stripHtml = (s = '') =>
     .replace(/\s+/g, ' ')
     .trim();
 
-const src = await readFile(new URL('src/atlas.ts', ROOT), 'utf8');
+const DATA_FILES = ['src/atlasBigGame.ts', 'src/atlasSmallGame.ts'];
+const src = (await Promise.all(DATA_FILES.map((f) => readFile(new URL(f, ROOT), 'utf8')))).join('\n');
 const files = [...new Set([...src.matchAll(/\bfile: '((?:[^'\\]|\\.)+)'/g)].map((m) => m[1].replace(/\\'/g, "'")))];
 const old = existsSync(CREDITS) ? JSON.parse(await readFile(CREDITS, 'utf8')) : {};
 await mkdir(OUT_DIR, { recursive: true });
