@@ -45,6 +45,14 @@ export interface ShotView {
   popup: string; // HTML
 }
 
+/** Editing the seats: markers drag, tapping the map adds one. Indexes refer to the list passed to setStands. */
+export interface StandEdit {
+  sel: number | null;
+  onSelect(i: number): void;
+  onMove(i: number, lat: number, lng: number): void;
+  onAdd(lat: number, lng: number): void;
+}
+
 export interface HuntMapText {
   you: string;
   role: (r: Role) => string;
@@ -68,7 +76,7 @@ export interface HuntMap {
   setSightings(ss: SightView[]): void;
   setShots(ss: ShotView[]): void;
   /** The club's high seats (zwyżki, ambony), a layer the user can switch off. */
-  setStands(ss: Stand[]): void;
+  setStands(ss: Stand[], edit?: StandEdit | null): void;
   centerOnPoint(lat: number, lng: number): void;
   /** Tap the map to add corners, drag corners to move them; onChange gets every change. */
   startDraw(area: Area, onChange: (a: Area) => void, hideDrive?: string | null): void;
@@ -222,7 +230,9 @@ export function createHuntMap(text: HuntMapText): HuntMap {
     });
     windDrives();
   };
+  let standEdit: StandEdit | null = null;
   map.on('click', (e: L.LeafletMouseEvent) => {
+    if (!draw && standEdit) return standEdit.onAdd(e.latlng.lat, e.latlng.lng);
     if (!draw) return;
     draw.area.push([e.latlng.lat, e.latlng.lng]);
     drawEditor();
@@ -401,28 +411,42 @@ export function createHuntMap(text: HuntMapText): HuntMap {
           .addTo(shotLayer);
     },
 
-    setStands(ss) {
+    setStands(ss, edit = null) {
       const before = standLayer.getLayers().length;
+      standEdit = edit;
+      el.classList.toggle('hm-stand-editing', !!edit);
+      if (edit && !map.hasLayer(standLayer)) standLayer.addTo(map);
       standLayer.clearLayers();
-      for (const s of ss) {
+      ss.forEach((s, i) => {
+        const sel = edit?.sel === i;
         const marker = L.marker([s.lat, s.lng], {
           icon: L.divIcon({
             className: 'hm-icon',
-            html: `<div class="hst-marker${s.broken ? ' hst-broken' : ''}">${standIcon(s.kind, s.broken, 22)}<span class="hm-label">${esc(s.name)}</span></div>`,
+            html: `<div class="hst-marker${s.broken ? ' hst-broken' : ''}${sel ? ' hst-sel' : ''}">${standIcon(s.kind, s.broken, edit ? 26 : 22)}<span class="hm-label">${esc(s.name || '?')}</span></div>`,
             iconSize: [0, 0],
           }),
-          zIndexOffset: -1000, // under people, sightings and shots
+          // Under people, sightings and shots; while editing on top, the selected one highest.
+          zIndexOffset: edit ? (sel ? 3000 : 2500) : -1000,
           title: s.name,
+          draggable: !!edit,
+          autoPan: true,
         });
-        marker.bindPopup(() => {
-          const rows = [`<strong>${esc(s.name)}</strong>`, esc(text.standKind(s.kind)) + (s.broken ? ` · ${esc(text.standBroken)}` : '')];
-          const mine = markers.get(myUid);
-          if (mine) rows.push(`${esc(text.distance)}: ${fmtM(distanceM(mine.pos, s))}`);
-          return rows.join('<br>');
-        });
+        if (edit) {
+          marker.on('click', () => edit.onSelect(i));
+          marker.on('dragend', () => {
+            const p = marker.getLatLng();
+            edit.onMove(i, p.lat, p.lng);
+          });
+        } else
+          marker.bindPopup(() => {
+            const rows = [`<strong>${esc(s.name)}</strong>`, esc(text.standKind(s.kind)) + (s.broken ? ` · ${esc(text.standBroken)}` : '')];
+            const mine = markers.get(myUid);
+            if (mine) rows.push(`${esc(text.distance)}: ${fmtM(distanceM(mine.pos, s))}`);
+            return rows.join('<br>');
+          });
         marker.addTo(standLayer);
-      }
-      if (!before && ss.length && !districtLayer.getLayers().length) autoFit();
+      });
+      if (!edit && !before && ss.length && !districtLayer.getLayers().length) autoFit();
     },
 
     centerOnPoint(lat, lng) {

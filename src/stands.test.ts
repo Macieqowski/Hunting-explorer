@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { deflateRawSync } from 'node:zlib';
-import { classifyStand, parseKml, kmlFromKmz, standsFromFile, encodeStands, parseStands, sortStands } from './stands';
+import { classifyStand, parseKml, kmlFromKmz, standsFromFile, encodeStands, parseStands, sortStands, parseLatLng, nextStandName } from './stands';
 
 // Made-up points, in the shape Google My Maps exports.
 const KML = `<?xml version="1.0" encoding="UTF-8"?>
@@ -121,5 +121,21 @@ describe('storage', () => {
   });
   it('sorts numbers naturally', () => {
     expect(sortStands([{ name: '10' }, { name: '9A' }, { name: 'Ambona' }, { name: '2' }, { name: '9' }]).map((s) => s.name)).toEqual(['2', '9', '9A', '10', 'Ambona']);
+  });
+});
+
+describe('editing helpers', () => {
+  it('reads typed coordinates', () => {
+    expect(parseLatLng('54.012345, 18.5843')).toEqual({ lat: 54.012345, lng: 18.5843 });
+    expect(parseLatLng(' 54.01 18.58 ')).toEqual({ lat: 54.01, lng: 18.58 });
+    expect(parseLatLng('54,01; 18,58')).toEqual({ lat: 54.01, lng: 18.58 });
+    expect(parseLatLng('54.01,18.58')).toEqual({ lat: 54.01, lng: 18.58 });
+    expect(parseLatLng('54.01')).toBeNull();
+    expect(parseLatLng('95, 18')).toBeNull();
+    expect(parseLatLng('abc')).toBeNull();
+  });
+  it('numbers new seats after the highest one', () => {
+    expect(nextStandName([{ name: '9A' }, { name: '24' }, { name: 'Ambona' }])).toBe('25');
+    expect(nextStandName([])).toBe('1');
   });
 });

@@ -45,7 +45,7 @@ import { createHuntMap, type HuntMap, type PersonInfo, type DriveView, type Sigh
 import { Sharer } from './huntShare';
 import { openPocket, updatePocket } from './huntPocket';
 import { roleIcon, speciesIcon, standIcon } from './huntIcons';
-import { standsFromFile, sortStands, STAND_LIMITS, type Stand } from './stands';
+import { standsFromFile, sortStands, parseLatLng, fmtLatLng, nextStandName, STAND_LIMITS, type Stand, type StandKind } from './stands';
 import { openReport, closeReport } from './huntSighting';
 import { openShotSheet, closeShotSheet } from './huntShot';
 import { renderPokot, renderPokotPrint, gameName, outcomeName, groupName, pl, type PokotCtx } from './huntPokot';
@@ -259,6 +259,24 @@ const L = {
   stClubSaved: { pl: 'Zapisano zwyżki koła:', en: "Club's seats saved:" },
   stLocked: { pl: 'Zwyżki koła są ukryte na tym urządzeniu. Wpisz hasło koła, aby je pokazać.', en: "The club's seats are hidden on this device. Enter the hunt passphrase to show them." },
   stUnlock: { pl: 'Pokaż', en: 'Show' },
+  stEdit: { pl: '✎ Edytuj', en: '✎ Edit' },
+  stEditClub: { pl: 'Edytujesz zwyżki koła (widoczne we wszystkich polowaniach).', en: "You are editing the club's seats (shown in every hunt)." },
+  stEditHunt: { pl: 'Edytujesz zwyżki tylko tego polowania.', en: "You are editing this hunt's own seats." },
+  stEditHint: {
+    pl: 'Dotknij mapy, aby dodać zwyżkę. Dotknij znacznika, aby go zmienić; przeciągnij, aby przesunąć.',
+    en: 'Tap the map to add a seat. Tap a marker to change it; drag it to move it.',
+  },
+  stName: { pl: 'Nazwa', en: 'Name' },
+  stKind: { pl: 'Rodzaj', en: 'Type' },
+  stPos: { pl: 'Położenie (szer., dł.)', en: 'Position (lat, lng)' },
+  stBrokenBox: { pl: 'Powalona / uszkodzona', en: 'Fallen / damaged' },
+  stDelete: { pl: 'Usuń tę', en: 'Delete this one' },
+  stDone: { pl: 'Gotowe', en: 'Done' },
+  stAddHere: { pl: '◎ Dodaj w mojej lokalizacji', en: '◎ Add at my location' },
+  stSave: { pl: 'Zapisz zmiany', en: 'Save changes' },
+  stSaved: { pl: 'Zapisano zwyżki.', en: 'Seats saved.' },
+  stErrName: { pl: 'Każda zwyżka musi mieć nazwę.', en: 'Every seat needs a name.' },
+  stErrLocate: { pl: 'Nie udało się ustalić lokalizacji.', en: 'Could not get your location.' },
   stLoad: { pl: '⤒ Wczytaj z pliku KMZ/KML', en: '⤒ Load from a KMZ/KML file' },
   stReplace: { pl: '⤒ Zastąp z pliku', en: '⤒ Replace from a file' },
   stReuse: { pl: 'Wczytaj ponownie', en: 'Load again' },
@@ -407,6 +425,38 @@ let clubUnsub: Unsubscribe | null = null;
 /** This device never gave the passphrase, so the club's seats are unreadable. */
 let clubDenied = false;
 const shownStands = () => (stands.length ? stands : clubStands);
+/** Seats being edited: a copy of the shown ones, saved back to the club's or this hunt's list. */
+let standEdit: { target: 'club' | 'hunt'; list: Stand[]; sel: number | null; dirty: boolean } | null = null;
+let locatingStand = false;
+/** Put the seats on the map: the edit copy while editing, else the shown ones. */
+function drawStands() {
+  if (!hmap) return;
+  const e = standEdit;
+  if (!e) return hmap.setStands(shownStands());
+  hmap.setStands(e.list, {
+    sel: e.sel,
+    onSelect: (i) => {
+      e.sel = i;
+      rerender();
+    },
+    onMove: (i, lat, lng) => {
+      Object.assign(e.list[i], { lat: +lat.toFixed(6), lng: +lng.toFixed(6) });
+      e.sel = i;
+      e.dirty = true;
+      rerender();
+    },
+    onAdd: addStandAt,
+  });
+}
+function addStandAt(lat: number, lng: number) {
+  const e = standEdit;
+  if (!e || e.list.length >= STAND_LIMITS.stands) return;
+  e.list.push({ name: nextStandName(e.list), kind: 'zwyzka', broken: false, lat: +lat.toFixed(6), lng: +lng.toFixed(6) });
+  e.sel = e.list.length - 1;
+  e.dirty = true;
+  rerender();
+  setTimeout(() => document.querySelector<HTMLInputElement>('[data-stand-field="name"]')?.select(), 0);
+}
 function watchClub() {
   if (conn.s !== 'ready') return;
   clubUnsub?.();
@@ -414,7 +464,7 @@ function watchClub() {
   clubUnsub = conn.be.watchClubStands(
     (ss) => {
       clubStands = ss;
-      hmap?.setStands(shownStands());
+      drawStands();
       rerender();
     },
     () => {
@@ -509,6 +559,7 @@ function stopLive() {
   clubUnsub = null;
   clubStands = [];
   clubDenied = false;
+  standEdit = null;
   standListOpen = null;
   sightUnsub?.();
   sightUnsub = null;
@@ -572,7 +623,7 @@ function syncLive() {
       id!,
       (ss) => {
         stands = ss;
-        hmap?.setStands(shownStands());
+        drawStands();
         rerender();
       },
       () => (standsUnsub = null),
@@ -962,7 +1013,7 @@ export function mountHuntMap() {
   m.invalidate();
   m.setDistrict(hunt?.district?.id ?? null);
   m.setDrives(driveViews());
-  m.setStands(shownStands());
+  drawStands();
   // Wind for when it matters: the next planned drive, or now while one runs.
   m.setWindTime(hunt && hunt.status !== 'ended' ? windFocusTime(hunt, drives, now()) : null);
   if (driveEdit) m.startDraw(driveEdit.area, onAreaChange, driveEdit.id);
@@ -1462,7 +1513,50 @@ function renderDrives(h: Hunt, isLeader: boolean): string {
     ${list}${add}${isLeader ? errorBox() : ''}</details>`;
 }
 
+function renderStandEditor(): string {
+  const e = standEdit!;
+  const s = e.sel != null ? e.list[e.sel] : null;
+  const opt = (k: StandKind) => `<option value="${k}"${s?.kind === k ? ' selected' : ''}>${l(k === 'ambona' ? 'stAmbona' : 'stZwyzka')}</option>`;
+  const seat = s
+    ? `<div class="hst-seat">
+        <div class="hst-row">
+          <label class="h-field"><span>${l('stName')}</span><input type="text" maxlength="${STAND_LIMITS.name}" value="${esc(s.name)}" data-stand-field="name"${s.name.trim() ? '' : ' aria-invalid="true"'}></label>
+          <label class="h-field"><span>${l('stKind')}</span><select data-stand-field="kind">${opt('zwyzka')}${opt('ambona')}</select></label>
+        </div>
+        <div class="hst-row">
+          <label class="h-field"><span>${l('stPos')}</span><input type="text" inputmode="decimal" value="${fmtLatLng(s)}" data-stand-field="pos"></label>
+          <label class="h-check"><input type="checkbox" data-stand-field="broken"${s.broken ? ' checked' : ''}> ${l('stBrokenBox')}</label>
+        </div>
+        <div class="h-actions">
+          <button type="button" class="btn small ghost" data-hunt="standDeselect">${l('stDone')}</button>
+          <button type="button" class="btn small danger" data-hunt="standDel">${l('stDelete')}</button>
+        </div>
+      </div>`
+    : '';
+  return `<div class="hst-edit card">
+      <p class="small"><strong>${l(e.target === 'club' ? 'stEditClub' : 'stEditHunt')}</strong> ${l('stEditHint')}</p>
+      ${seat}
+      ${errorBox()}
+      <div class="h-actions">
+        <button type="button" class="btn small" data-hunt="standsSave"${btnBusy()}>${l('stSave')}</button>
+        <button type="button" class="btn small ghost" data-hunt="standAddHere"${locatingStand ? ' disabled aria-busy="true"' : ''}>${l('stAddHere')}</button>
+        <button type="button" class="btn small ghost" data-hunt="standsEditCancel">${l('cancel')}</button>
+      </div>
+    </div>`;
+}
+
 function renderStands(isLeader: boolean): string {
+  if (standEdit && isLeader) {
+    const e = standEdit;
+    const list = `<ul class="hst-names">${sortStands(e.list.map((s, i) => ({ ...s, i })))
+      .map(
+        (s) =>
+          `<li><button type="button" data-hunt="standPick" data-i="${s.i}"${e.sel === s.i ? ' class="hst-on"' : ''}>${standIcon(s.kind, s.broken, 18)}<span>${esc(s.name || '?')}</span></button></li>`,
+      )
+      .join('')}</ul>`;
+    return `<details class="hd-box hst-box" open><summary data-hunt="standList" data-open="true"><strong class="hst-summary">${standIcon('zwyzka', false, 18)} ${l('stands')}</strong> <span class="muted">(${e.list.length})</span></summary>
+      ${renderStandEditor()}${list}</details>`;
+  }
   const shown = shownStands();
   const own = stands.length > 0;
   const locked = clubDenied && !own;
@@ -1507,7 +1601,8 @@ function renderStands(isLeader: boolean): string {
       : confirming === 'stands'
         ? sure('standsClear', l('stClearSure'))
         : `<button type="button" class="btn small ghost" data-hunt="askStandsClear">${l('stClear')}</button>`;
-    ctl = `<div class="hst-actions">${saveClub}${file}${reuse}${clear}</div>`;
+    const edit = `<button type="button" class="btn small${shown.length ? '' : ' ghost'}" data-hunt="standsEdit">${l('stEdit')}</button>`;
+    ctl = `<div class="hst-actions">${edit}${saveClub}${file}${reuse}${clear}</div>`;
   }
   const open = standListOpen ?? ((isLeader && !shown.length) || locked);
   return `<details class="hd-box hst-box"${open ? ' open' : ''}><summary data-hunt="standList" data-open="${open}"><strong class="hst-summary">${standIcon('zwyzka', false, 18)} ${l('stands')}</strong> <span class="muted">(${shown.length})</span></summary>
@@ -1767,6 +1862,7 @@ export function handleHuntClick(el: HTMLElement): boolean {
       return true;
     case 'driveNew':
       if (!hunt) break;
+      standEdit = null;
       clearDraft('drive');
       driveEdit = { id: null, area: [], ...nextDriveDefaults(drives, hunt) };
       scrollToDriveForm = true;
@@ -1776,6 +1872,7 @@ export function handleHuntClick(el: HTMLElement): boolean {
     case 'driveEdit': {
       const d = drives.find((x) => x.id === el.dataset.drive);
       if (!d) break;
+      standEdit = null;
       clearDraft('drive');
       driveEdit = { id: d.id, area: d.area.map(([a, b]) => [a, b] as [number, number]), name: d.name, start: d.start, end: d.end };
       scrollToDriveForm = true;
@@ -1847,6 +1944,76 @@ export function handleHuntClick(el: HTMLElement): boolean {
     case 'standList':
       standListOpen = el.dataset.open !== 'true';
       break;
+    case 'standsEdit': {
+      const own = stands.length > 0;
+      driveEdit = null;
+      confirming = null;
+      formError = '';
+      standEdit = { target: own || clubDenied ? 'hunt' : 'club', list: shownStands().map((s) => ({ ...s })), sel: null, dirty: false };
+      standListOpen = true;
+      setTimeout(() => document.querySelector('.hst-edit')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 0);
+      break;
+    }
+    case 'standsEditCancel':
+      standEdit = null;
+      formError = '';
+      break;
+    case 'standPick': {
+      if (!standEdit) break;
+      const i = +el.dataset.i!;
+      standEdit.sel = i;
+      const s = standEdit.list[i];
+      if (s) hmap?.centerOnPoint(s.lat, s.lng);
+      break;
+    }
+    case 'standDeselect':
+      if (standEdit) standEdit.sel = null;
+      break;
+    case 'standDel':
+      if (standEdit && standEdit.sel != null) {
+        standEdit.list.splice(standEdit.sel, 1);
+        standEdit.sel = null;
+        standEdit.dirty = true;
+      }
+      break;
+    case 'standAddHere':
+      if (!standEdit || !('geolocation' in navigator)) break;
+      locatingStand = true;
+      formError = '';
+      navigator.geolocation.getCurrentPosition(
+        (p) => {
+          locatingStand = false;
+          hmap?.centerOnPoint(p.coords.latitude, p.coords.longitude);
+          addStandAt(p.coords.latitude, p.coords.longitude);
+        },
+        () => {
+          locatingStand = false;
+          formError = l('stErrLocate');
+          rerender();
+        },
+        { enableHighAccuracy: true, timeout: 20000 },
+      );
+      break;
+    case 'standsSave': {
+      const e = standEdit;
+      if (!e) break;
+      for (const s of e.list) s.name = s.name.replace(/\s+/g, ' ').trim();
+      const bad = e.list.findIndex((s) => !s.name);
+      if (bad >= 0) {
+        e.sel = bad;
+        formError = l('stErrName');
+        break;
+      }
+      const target = e.target;
+      const huntId = id;
+      run(async (be) => {
+        if (target === 'club') await be.saveClubStands(e.list);
+        else if (huntId) await be.saveStands(huntId, e.list);
+        if (standEdit === e) standEdit = null;
+        showToast(l('stSaved'));
+      });
+      return true;
+    }
     case 'standShow':
       hmap?.centerOnPoint(+el.dataset.lat!, +el.dataset.lng!);
       document.querySelector('.hm-map')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -1992,6 +2159,28 @@ function clearDraft(form: string) {
 }
 
 export function handleHuntInput(el: HTMLElement): boolean {
+  const sf = el.dataset.standField;
+  if (sf) {
+    const e = standEdit;
+    const s = e && e.sel != null ? e.list[e.sel] : null;
+    if (!e || !s) return true;
+    const input = el as HTMLInputElement;
+    if (sf === 'name') {
+      s.name = input.value.slice(0, STAND_LIMITS.name);
+      input.setAttribute('aria-invalid', String(!s.name.trim()));
+    } else if (sf === 'kind') s.kind = input.value === 'ambona' ? 'ambona' : 'zwyzka';
+    else if (sf === 'broken') s.broken = input.checked;
+    else if (sf === 'pos') {
+      const p = parseLatLng(input.value);
+      input.setAttribute('aria-invalid', String(!p));
+      if (!p) return true;
+      Object.assign(s, p);
+      hmap?.centerOnPoint(p.lat, p.lng);
+    }
+    e.dirty = true;
+    drawStands(); // only the map; re-rendering would steal the focus from the field
+    return true;
+  }
   const form = el.dataset.huntField;
   if (!form) return false;
   const input = el as HTMLInputElement;
