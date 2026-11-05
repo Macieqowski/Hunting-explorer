@@ -41,7 +41,7 @@ const stripHtml = (s = '') =>
     .replace(/\s+/g, ' ')
     .trim();
 
-const DATA_FILES = ['src/atlasBigGame.ts', 'src/atlasSmallGame.ts'];
+const DATA_FILES = ['src/atlasBigGame.ts', 'src/atlasSmallGame.ts', 'src/atlasProtected.ts'];
 const src = (await Promise.all(DATA_FILES.map((f) => readFile(new URL(f, ROOT), 'utf8')))).join('\n');
 const files = [...new Set([...src.matchAll(/\bfile: '((?:[^'\\]|\\.)+)'/g)].map((m) => m[1].replace(/\\'/g, "'")))];
 const old = existsSync(CREDITS) ? JSON.parse(await readFile(CREDITS, 'utf8')) : {};
@@ -66,8 +66,9 @@ for (const file of files) {
   await sleep(1500);
   const out = new URL(name, OUT_DIR);
   await writeFile(out, await get(info.thumburl, 'buffer'));
-  // Commons thumbnails are high quality (~250 KB); recompress if ImageMagick is installed.
-  spawnSync('convert', [fileURLToPath(out), '-strip', '-quality', '72', '-interlace', 'JPEG', fileURLToPath(out)]);
+  // Commons thumbnails are high quality (~250 KB); recompress if ImageMagick is installed
+  // (this also turns a PNG original into the JPEG the file name promises).
+  spawnSync('convert', [fileURLToPath(out), '-background', 'white', '-flatten', '-strip', '-quality', '72', '-interlace', 'JPEG', fileURLToPath(out)]);
   credits[file] = {
     src: `atlas/img/${name}`,
     width: info.thumbwidth,

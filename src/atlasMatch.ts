@@ -48,6 +48,18 @@ const PATTERNS: Record<string, string[]> = {
   lyska: stems('łysk'),
   grzywacz: stems('grzywacz'),
   slonka: stems('słonk'),
+  // protected look-alikes
+  wilk: stems('wilk', 'wilcz', 'basior', 'wader'),
+  rys: words('ryś', 'rysia', 'rysie', 'rysiem', 'rysiowi', 'rysiów', 'rysiom', 'rysiami', 'rysiach', 'rysica', 'rysicy'),
+  wydra: stems('wydr'),
+  'ges-mala': stems('gęs\\p{L}*\\s+mał', 'gęś\\s+mał'),
+  cyranka: stems('cyrank'),
+  krakwa: stems('krakw'),
+  podgorzalka: stems('podgorzałk'),
+  ogorzalka: stems('ogorzałk'),
+  kszyk: stems('kszyk'),
+  siniak: words('siniak', 'siniaka', 'siniaki', 'siniaków', 'siniakiem', 'siniakom', 'siniakami'),
+  przepiorka: stems('przepiór', 'przepiork'),
 };
 
 /** Generic "kuna" (no "leśna"/"domowa") is about both martens. */

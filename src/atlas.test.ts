@@ -1,4 +1,4 @@
-import { SPECIES, seasonsFor, speciesForSeason } from './atlas';
+import { SPECIES, seasonsFor, speciesForSeason, speciesBySlug, protectedLookalikes } from './atlas';
 import { SEASONS } from './seasons';
 import { trackSvg } from './atlasTracks';
 import credits from './atlasPhotos.json';
@@ -14,8 +14,31 @@ describe('atlas', () => {
     for (const s of SEASONS) expect(speciesForSeason(s).length, s.name.pl).toBeGreaterThan(0);
   });
 
-  it('links every species to at least one season row', () => {
-    for (const sp of SPECIES) expect(seasonsFor(sp).length, sp.slug).toBeGreaterThan(0);
+  it('links every game species to at least one season row', () => {
+    for (const sp of SPECIES.filter((s) => !s.protection)) expect(seasonsFor(sp).length, sp.slug).toBeGreaterThan(0);
+  });
+
+  it('keeps protected species out of the hunting seasons', () => {
+    const prot = SPECIES.filter((s) => s.protection);
+    expect(prot.length).toBeGreaterThan(0);
+    for (const sp of prot) {
+      expect(sp.season, sp.slug).toBeUndefined();
+      expect(sp.group.id, sp.slug).toBe('protected');
+    }
+    for (const s of SEASONS) expect(speciesForSeason(s).some((sp) => sp.protection), s.name.pl).toBe(false);
+  });
+
+  it('links protected species to existing game look-alikes and back', () => {
+    for (const sp of SPECIES.filter((s) => s.protection)) {
+      expect(sp.lookalikes?.length, sp.slug).toBeGreaterThan(0);
+      for (const slug of sp.lookalikes!) {
+        const game = speciesBySlug(slug);
+        expect(game, `${sp.slug} -> ${slug}`).toBeTruthy();
+        expect(game!.protection, slug).toBeUndefined();
+        expect(protectedLookalikes(game!).map((p) => p.slug)).toContain(sp.slug);
+      }
+    }
+    expect(protectedLookalikes(speciesBySlug('lis')!).map((p) => p.slug)).toEqual(['wilk', 'rys']);
   });
 
   it('maps season rows back to the right species', () => {
