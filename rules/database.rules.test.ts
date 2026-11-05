@@ -572,11 +572,29 @@ describe('invitations', () => {
     await update(ref(db('lead'), 'hunts/h1'), { status: 'closed' });
     await assertFails(guestJoin('g'));
   });
-  it('do not let a guest create hunts or unlock club seats', async () => {
+  it('do not let a guest create hunts or become a club member', async () => {
     await createHunt('lead');
     await invite('lead');
     await assertFails(set(ref(db('g'), 'club/members/g'), TOK));
     await assertFails(update(ref(db('g')), { 'joins/h9/g': TOK, 'hunts/h9': huntData('g') }));
+  });
+  it('let a confirmed guest see, but not change, the club seats', async () => {
+    const seat = { s000: { n: '9A', k: 'zwyzka', lat: 52.1, lng: 21.1 } };
+    await createHunt('lead');
+    await env.withSecurityRulesDisabled((ctx) => set(ref(ctx.database() as unknown as Database, 'club/stands'), seat));
+    await invite('lead');
+    await guestJoin('g');
+    await assertFails(set(ref(db('g'), 'club/guests/g'), 'h1'));
+    await assertFails(get(ref(db('g'), 'club/stands')));
+    await update(ref(db('lead'), 'participants/h1/g'), { status: 'confirmed' });
+    await assertFails(set(ref(db('g'), 'club/guests/x'), 'h1'));
+    await assertSucceeds(set(ref(db('g'), 'club/guests/g'), 'h1'));
+    await assertSucceeds(get(ref(db('g'), 'club/stands')));
+    await assertFails(set(ref(db('g'), 'club/stands'), seat));
+    await assertFails(get(ref(db('g'), 'club/guests/g')));
+    // Removed from the hunt: the seats are hidden again.
+    await update(ref(db('lead')), { 'participants/h1/g': null });
+    await assertFails(get(ref(db('g'), 'club/stands')));
   });
   it('the token used cannot be read back, and goes when the guest withdraws', async () => {
     await createHunt('lead');

@@ -62,6 +62,8 @@ export interface HuntBackend {
   saveClubStands(ss: Stand[]): Promise<void>;
   /** Unlock the club's seats on this device (devices that joined a hunt before they existed). */
   joinClub(passphrase: string): Promise<void>;
+  /** Show the club's seats to a confirmed participant of this hunt who never gave the passphrase (e.g. an invited guest). Read-only. */
+  clubGuest(huntId: string): Promise<void>;
   /** Game sightings: reported by confirmed participants while the hunt is live, newest first. */
   watchSightings(id: string, cb: (ss: Sighting[]) => void, onDenied: () => void): Unsubscribe;
   addSighting(id: string, s: SightingInput): Promise<string>;

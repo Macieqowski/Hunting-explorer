@@ -284,6 +284,8 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
 
     joinClub: (passphrase) => guard(set(child(root, `club/members/${uid}`), passphrase.trim())),
 
+    clubGuest: (huntId) => guard(set(child(root, `club/guests/${uid}`), huntId)),
+
     watchSightings(id, cb, onDenied) {
       return onValue(
         child(root, `sightings/${id}`),

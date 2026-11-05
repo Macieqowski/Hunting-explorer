@@ -249,7 +249,7 @@
         }
       },
       "stands": {
-        ".read": "auth != null && root.child('club/members/' + auth.uid).val() === root.child('secret/passphrase').val()",
+        ".read": "auth != null && root.child('club/members/' + auth.uid).val() === root.child('secret/passphrase').val() || (auth != null && root.child('club/guests/' + auth.uid).isString() && root.child('participants/' + root.child('club/guests/' + auth.uid).val() + '/' + auth.uid + '/status').val() === 'confirmed')",
         ".write": "auth != null && root.child('club/members/' + auth.uid).val() === root.child('secret/passphrase').val()",
         "$s": {
           ".validate": "$s.matches(/^s[0-9]{3}$/) && newData.hasChildren(['n', 'k', 'lat', 'lng'])",
@@ -271,6 +271,13 @@
           "$other": {
             ".validate": false
           }
+        }
+      },
+      "guests": {
+        "$uid": {
+          ".read": false,
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9_-]{1,40}$/) && root.child('participants/' + newData.val() + '/' + $uid + '/status').val() === 'confirmed'"
         }
       },
       "$other": {

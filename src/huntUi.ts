@@ -500,11 +500,24 @@ function watchClub() {
     },
     () => {
       clubUnsub = null;
+      // A confirmed participant without the passphrase (an invited guest) may still see the seats of this hunt's club.
+      const id = watched;
+      const me = members?.find((p) => p.uid === myUid());
+      if (id && me?.status === 'confirmed' && clubGuestTried !== id && conn.s === 'ready') {
+        clubGuestTried = id;
+        conn.be.clubGuest(id).then(watchClub, () => {
+          clubDenied = true;
+          rerender();
+        });
+        return;
+      }
       clubDenied = true;
       rerender();
     },
   );
 }
+/** The hunt for which this device last asked to see the club's seats as a guest. */
+let clubGuestTried: string | null = null;
 let standListOpen: boolean | null = null;
 const STANDS_KEY = 'huntStandsLast';
 /** The leader's last loaded file, offered again in the next hunt. */
