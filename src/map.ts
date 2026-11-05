@@ -2,15 +2,13 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { createWind } from './windLayer';
 import {
-  BDL_WMS_DISTRICTS,
-  BDL_WMS_ENTRY_BANS,
-  BDL_WMS_FIRE,
-  BDL_WMS_FORESTS,
   fetchOutlinesInBounds,
   labelPoint,
   type DistrictWithGeometry,
 } from './bdl';
 import { t } from './i18n';
+import { cachedWms } from './cachedLayer';
+import { WMS } from './tiles';
 
 export interface MapApi {
   map: L.Map;
@@ -21,7 +19,14 @@ export interface MapApi {
 
 export const POLAND_BOUNDS = L.latLngBounds([49.0, 14.1], [54.9, 24.15]);
 
-/** Fresh instances of the base maps (a tile layer can belong to one map only). */
+const GEOPORTAL_ATTR = '&copy; <a href="https://www.geoportal.gov.pl/">GUGiK, Geoportal</a>';
+export const BDL_ATTR = '&copy; <a href="https://www.bdl.lasy.gov.pl/portal/obwody-lowieckie">Bank Danych o Lasach</a>';
+
+/**
+ * Fresh instances of the base maps (a tile layer can belong to one map only).
+ * OSM and OpenTopoMap forbid offline use, so they are plain online layers. The Geoportal
+ * maps (free Polish public data) are kept on the device and work without signal.
+ */
 export function baseLayers() {
   return {
     osm: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -32,11 +37,23 @@ export function baseLayers() {
       maxZoom: 17,
       attribution: '&copy; OpenStreetMap, SRTM | &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)',
     }),
-    sat: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 19,
-      attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics',
-    }),
+    geotopo: cachedWms(WMS.geotopo, { maxZoom: 19, attribution: GEOPORTAL_ATTR }),
+    sat: cachedWms(WMS.ortho, { maxZoom: 19, attribution: GEOPORTAL_ATTR }),
   };
+}
+
+/** Without signal, swap an online-only base map for the Geoportal topographic map. */
+export function offlineBaseSwitch(map: L.Map, online: L.Layer[], fallback: L.Layer) {
+  const check = () => {
+    if (navigator.onLine) return;
+    const cur = online.find((l) => map.hasLayer(l));
+    if (!cur) return;
+    map.removeLayer(cur);
+    fallback.addTo(map);
+  };
+  check();
+  window.addEventListener('offline', check);
+  return () => window.removeEventListener('offline', check);
 }
 
 export function createMap(el: HTMLElement, onClick: (lat: number, lng: number) => void): MapApi {
@@ -45,27 +62,17 @@ export function createMap(el: HTMLElement, onClick: (lat: number, lng: number) =
   L.control.zoom({ position: 'topright' }).addTo(map);
   L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);
 
-  const { osm, topo, sat } = baseLayers();
+  const { osm, topo, geotopo, sat } = baseLayers();
   osm.addTo(map);
+  offlineBaseSwitch(map, [osm, topo], geotopo);
 
-  const bdlAttr = '&copy; <a href="https://www.bdl.lasy.gov.pl/portal/obwody-lowieckie">Bank Danych o Lasach</a>';
-  const wms = (url: string, layers: string, opacity: number, extra: L.WMSOptions = {}) =>
-    L.tileLayer.wms(url, {
-      layers,
-      format: 'image/png',
-      transparent: true,
-      version: '1.3.0',
-      opacity,
-      attribution: bdlAttr,
-      ...extra,
-    } as L.WMSOptions);
-
-  const districts = wms(BDL_WMS_DISTRICTS, '0', 0.45).addTo(map);
+  const overlay = (def: (typeof WMS)[keyof typeof WMS], opacity: number) => cachedWms(def, { opacity, attribution: BDL_ATTR });
+  const districts = overlay(WMS.districts, 0.45).addTo(map);
   const outlines = createOutlineLayer(map);
   outlines.addTo(map);
-  const forests = wms(BDL_WMS_FORESTS, '5', 0.8);
-  const bans = wms(BDL_WMS_ENTRY_BANS, '3', 0.7);
-  const fire = wms(BDL_WMS_FIRE, '0', 0.5);
+  const forests = overlay(WMS.forests, 0.8);
+  const bans = overlay(WMS.bans, 0.7);
+  const fire = overlay(WMS.fire, 0.5);
   const wind = createWind(map);
 
   let control: L.Control.Layers | null = null;
@@ -74,7 +81,7 @@ export function createMap(el: HTMLElement, onClick: (lat: number, lng: number) =
     control?.remove();
     control = L.control
       .layers(
-        { [t('bOsm')]: osm, [t('bTopo')]: topo, [t('bSat')]: sat },
+        { [t('bOsm')]: osm, [t('bTopo')]: topo, [t('bGeoTopo')]: geotopo, [t('bSat')]: sat },
         { [t('lDistricts')]: districts, [t('lOutlines')]: outlines, [t('lForest')]: forests, [t('lBans')]: bans, [t('lFire')]: fire, [t('lWind')]: wind.arrows },
         { position: 'topright', collapsed: true },
       )

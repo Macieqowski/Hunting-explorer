@@ -3,8 +3,10 @@
 // huntUi re-attaches after every re-render, so Leaflet keeps its state.
 
 import L from 'leaflet';
-import { fetchDistrictsByIds, BDL_WMS_DISTRICTS, BDL_WMS_FORESTS } from './bdl';
-import { baseLayers, POLAND_BOUNDS } from './map';
+import { fetchDistrictsByIds } from './bdl';
+import { baseLayers, offlineBaseSwitch, BDL_ATTR, POLAND_BOUNDS } from './map';
+import { cachedWms } from './cachedLayer';
+import { WMS } from './tiles';
 import { createWind } from './windLayer';
 import { roleIcon, ROLE_COLOR, speciesIcon, SPECIES_COLOR } from './huntIcons';
 import { freshness, distanceM, offsetPoint, type Area, type DriveState, type Position, type Role, type TrackPoint, type Species, type SightLook } from './hunt';
@@ -48,7 +50,7 @@ export interface HuntMapText {
   ago: (ms: number) => string;
   accuracy: string;
   distance: string;
-  layers: { osm: string; topo: string; sat: string; districts: string; compartments: string; wind: string };
+  layers: { osm: string; topo: string; geotopo: string; sat: string; districts: string; compartments: string; wind: string };
 }
 
 export interface HuntMap {
@@ -84,29 +86,16 @@ export function createHuntMap(text: HuntMapText): HuntMap {
   map.fitBounds(POLAND_BOUNDS);
   L.control.zoom({ position: 'topright' }).addTo(map);
   L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);
-  const { osm, topo, sat } = baseLayers();
+  const { osm, topo, geotopo, sat } = baseLayers();
   osm.addTo(map);
-  const districtsWms = L.tileLayer.wms(BDL_WMS_DISTRICTS, {
-    layers: '0',
-    format: 'image/png',
-    transparent: true,
-    version: '1.3.0',
-    opacity: 0.3,
-    attribution: '&copy; Bank Danych o Lasach',
-  } as L.WMSOptions);
+  const stopOfflineSwitch = offlineBaseSwitch(map, [osm, topo], geotopo);
+  const districtsWms = cachedWms(WMS.districts, { opacity: 0.3, attribution: BDL_ATTR });
   // Forest compartments (oddziały) help the leader follow real lines when drawing a drive.
-  const compartments = L.tileLayer.wms(BDL_WMS_FORESTS, {
-    layers: '3,2',
-    format: 'image/png',
-    transparent: true,
-    version: '1.3.0',
-    opacity: 0.7,
-    attribution: '&copy; Bank Danych o Lasach',
-  } as L.WMSOptions);
+  const compartments = cachedWms(WMS.compartments, { opacity: 0.7, attribution: BDL_ATTR });
   const wind = createWind(map);
   L.control
     .layers(
-      { [text.layers.osm]: osm, [text.layers.topo]: topo, [text.layers.sat]: sat },
+      { [text.layers.osm]: osm, [text.layers.topo]: topo, [text.layers.geotopo]: geotopo, [text.layers.sat]: sat },
       { [text.layers.districts]: districtsWms, [text.layers.compartments]: compartments, [text.layers.wind]: wind.arrows },
       { position: 'topright' },
     )
@@ -456,7 +445,10 @@ export function createHuntMap(text: HuntMapText): HuntMap {
       wind.refresh();
     },
     invalidate: () => map.invalidateSize(),
-    destroy: () => map.remove(),
+    destroy: () => {
+      stopOfflineSwitch();
+      map.remove();
+    },
   };
   return api;
 }
