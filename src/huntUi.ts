@@ -22,11 +22,19 @@ import {
   toGpx,
   gpxFileName,
   type TrackPoint,
+  type Area,
+  type Drive,
+  DRIVE_LIMITS,
+  activeDrive,
+  driveState,
+  sortDrives,
+  validateDrive,
+  nextDriveDefaults,
 } from './hunt';
 import type { District } from './bdl';
 import { fetchDistrictsAtPoint } from './bdl';
 import { fold, districtSlug } from './data';
-import { createHuntMap, type HuntMap, type PersonInfo } from './huntMap';
+import { createHuntMap, type HuntMap, type PersonInfo, type DriveView } from './huntMap';
 import { Sharer } from './huntShare';
 import { openPocket, updatePocket } from './huntPocket';
 import { roleIcon } from './huntIcons';
@@ -217,6 +225,37 @@ const L = {
   lTopo: { pl: 'Topograficzna', en: 'Topographic' },
   lSat: { pl: 'Satelitarna', en: 'Satellite' },
   lDistricts: { pl: 'Obwody łowieckie', en: 'Hunting districts' },
+  lCompartments: { pl: 'Oddziały leśne', en: 'Forest compartments' },
+  drives: { pl: 'Mioty', en: 'Drives' },
+  noDrives: { pl: 'Prowadzący nie dodał jeszcze miotów.', en: 'The leader has not added any drives yet.' },
+  noDrivesLeader: {
+    pl: 'Dodaj mioty: obszar na mapie i planowane godziny. Uczestnicy zobaczą je na mapie.',
+    en: 'Add the drives: an area on the map and the planned times. Participants will see them on the map.',
+  },
+  addDrive: { pl: '+ Miot', en: '+ Drive' },
+  editDrive: { pl: 'Edytuj', en: 'Edit' },
+  newDriveTitle: { pl: 'Nowy miot', en: 'New drive' },
+  editDriveTitle: { pl: 'Edycja miotu', en: 'Edit drive' },
+  dName: { pl: 'Nazwa', en: 'Name' },
+  dStart: { pl: 'Początek', en: 'Start' },
+  dEnd: { pl: 'Koniec', en: 'End' },
+  dCorners: { pl: 'Dotknij mapy, aby dodać narożniki miotu. Narożniki można przeciągać.', en: 'Tap the map to add the corners of the drive. Corners can be dragged.' },
+  dCornerCount: { pl: 'Narożniki:', en: 'Corners:' },
+  dUndo: { pl: '↶ Cofnij narożnik', en: '↶ Undo corner' },
+  dSave: { pl: 'Zapisz miot', en: 'Save drive' },
+  errArea: { pl: 'Zaznacz na mapie co najmniej 3 narożniki miotu.', en: 'Mark at least 3 corners of the drive on the map.' },
+  dStartNow: { pl: 'Rozpocznij miot', en: 'Start drive' },
+  dEndNow: { pl: 'Zakończ miot', en: 'End drive' },
+  dDeleteSure: { pl: 'Tak, usuń miot', en: 'Yes, delete the drive' },
+  dPlanned: { pl: 'planowo', en: 'planned' },
+  dRunning: { pl: 'trwa od', en: 'running since' },
+  dDone: { pl: 'odbył się', en: 'took place' },
+  dNow: { pl: 'Trwa', en: 'Now' },
+  dUntil: { pl: 'planowo do', en: 'planned until' },
+  dNext: { pl: 'Następny', en: 'Next' },
+  dStarted: { pl: 'rozpoczęty', en: 'started' },
+  dEnded: { pl: 'zakończony', en: 'ended' },
+  dMax: { pl: 'Osiągnięto limit miotów.', en: 'The drive limit has been reached.' },
 } as const;
 const l = (k: keyof typeof L) => tt(L[k]);
 
@@ -262,6 +301,18 @@ let tracksUnsub: Unsubscribe | null = null;
 let showTracks = false;
 let ticker: ReturnType<typeof setInterval> | undefined;
 let sharer: Sharer | null = null;
+let drives: Drive[] = [];
+let drivesUnsub: Unsubscribe | null = null;
+/** id of the running drive at the last update; undefined until the first one arrives. */
+let lastActive: string | null | undefined;
+let toast: { text: string; until: number } | null = null;
+/** The drive being added (id null) or redrawn; name and times live in the form draft. */
+let driveEdit: { id: string | null; area: Area; name: string; start: string; end: string } | null = null;
+/** Scroll the drive form and the map below it into view after the next render. */
+let scrollToDriveForm = false;
+let locatingDrive = false;
+/** The drive list's open state once the user toggles it; until then open except for others during the hunt. */
+let driveListOpen: boolean | null = null;
 let purged = new Set<string>();
 const SHARE_KEY = 'huntSharing';
 
@@ -311,6 +362,13 @@ function stopLive() {
   posUnsub = null;
   tracksUnsub?.();
   tracksUnsub = null;
+  drivesUnsub?.();
+  drivesUnsub = null;
+  drives = [];
+  lastActive = undefined;
+  toast = null;
+  driveEdit = null;
+  driveListOpen = null;
   showTracks = false;
   positions = [];
   clearInterval(ticker);
@@ -348,6 +406,7 @@ function syncLive() {
         posUnsub = null;
       },
     );
+    drivesUnsub = conn.be.watchDrives(id!, onDrives, () => (drivesUnsub = null));
     ticker = setInterval(() => {
       hmap?.refreshAges(now());
       updateLiveText();
@@ -371,6 +430,47 @@ function syncLive() {
   }
 }
 
+function onDrives(ds: Drive[]) {
+  drives = sortDrives(ds, hunt?.start ?? '00:00');
+  const act = activeDrive(drives);
+  const actId = act?.id ?? null;
+  if (lastActive !== undefined && actId !== lastActive) {
+    const prev = drives.find((d) => d.id === lastActive);
+    const text = act ? `${act.name} ${l('dStarted')}` : prev ? `${prev.name} ${l('dEnded')}` : '';
+    if (text) {
+      toast = { text, until: Date.now() + 10_000 };
+      navigator.vibrate?.([300, 150, 300]);
+      setTimeout(() => {
+        if (toast && Date.now() >= toast.until) {
+          toast = null;
+          rerender();
+        }
+      }, 10_500);
+    }
+  }
+  lastActive = actId;
+  if (driveEdit?.id && !drives.some((d) => d.id === driveEdit!.id)) driveEdit = null; // deleted meanwhile
+  rerender();
+  updatePocket();
+}
+
+const driveViews = (): DriveView[] => drives.map((d) => ({ id: d.id, name: d.name, area: d.area, state: driveState(d) }));
+
+function onAreaChange(a: Area) {
+  if (!driveEdit) return;
+  driveEdit.area = a;
+  const el = document.querySelector('.hd-corner-count');
+  if (el) el.textContent = String(a.length);
+  const undo = document.querySelector<HTMLButtonElement>('[data-hunt="driveUndo"]');
+  if (undo) undo.disabled = !a.length;
+  if (a.length >= DRIVE_LIMITS.minCorners && badFields.has('area')) {
+    badFields.delete('area');
+    if (!badFields.size) formError = '';
+    document.querySelector('.hd-hint')?.classList.remove('h-error');
+    if (!formError) document.querySelector('.hd-form [role="alert"]')?.remove();
+  }
+}
+
 function drawPositions() {
   if (!hmap) return;
   hmap.setPositions(positions, people(), myUid(), now());
@@ -385,7 +485,7 @@ function ensureMap(): HuntMap {
       ago,
       accuracy: l('accuracy'),
       distance: l('distanceFromYou'),
-      layers: { osm: l('lOsm'), topo: l('lTopo'), sat: l('lSat'), districts: l('lDistricts') },
+      layers: { osm: l('lOsm'), topo: l('lTopo'), sat: l('lSat'), districts: l('lDistricts'), compartments: l('lCompartments') },
     });
   }
   return hmap;
@@ -399,6 +499,13 @@ export function mountHuntMap() {
   slot.replaceWith(m.el);
   m.invalidate();
   m.setDistrict(hunt?.district?.id ?? null);
+  m.setDrives(driveViews());
+  if (driveEdit) m.startDraw(driveEdit.area, onAreaChange, driveEdit.id);
+  else m.stopDraw();
+  if (scrollToDriveForm) {
+    scrollToDriveForm = false;
+    document.querySelector('.hd-form')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
   drawPositions();
   if (showTracks) m.setTracks(lastTracks, people());
   updateLiveText();
@@ -424,7 +531,7 @@ function exportGpx() {
         rerender();
         return;
       }
-      const gpx = toGpx(h.name, tracks, positions, people(), (r) => l(`r_${r}`));
+      const gpx = toGpx(h.name, tracks, positions, people(), (r) => l(`r_${r}`), drives);
       const url = URL.createObjectURL(new Blob([gpx], { type: 'application/gpx+xml' }));
       const a = Object.assign(document.createElement('a'), { href: url, download: gpxFileName(h) });
       document.body.append(a);
@@ -468,8 +575,9 @@ function updateLiveText() {
 function pocketStatus() {
   const on = !!sharer?.active;
   const sentAgo = sharer?.lastSentAt ? `${l('lastSent')} ${ago(Date.now() - sharer.lastSentAt)}` : '';
+  const act = activeDrive(drives);
   return on
-    ? { ok: true, title: sharer!.state === 'on' ? l('shareOn') : l('shareStarting'), detail: [hunt?.name, sentAgo].filter(Boolean).join(' · ') }
+    ? { ok: true, title: sharer!.state === 'on' ? l('shareOn') : l('shareStarting'), detail: [act ? `${l('dNow')}: ${act.name}` : hunt?.name, sentAgo].filter(Boolean).join(' · ') }
     : { ok: false, title: l('pocketStopped'), detail: l('pocketStoppedDetail') };
 }
 
@@ -810,8 +918,10 @@ function renderLive(h: Hunt, me: Participant): string {
   } else if (h.status === 'ended') share = `<p class="muted small">${l('shareEnded')}</p>`;
   else share = `<p class="muted small">${l('shareNotLive')}</p>`;
   const iShare = !!sharer?.active && sharer.huntId === h.id;
-  return `<h3>${l('mapTitle')}</h3>${share}
-    <div class="hm-bar"><div class="hm-counts">${liveCounts()}</div>
+  const t = toast && Date.now() < toast.until ? `<div class="hd-toast" role="alert">${esc(toast.text)}</div>` : '';
+  const drawing = !!driveEdit && h.leaderUid === myUid();
+  return `<h3>${l('mapTitle')}</h3>${t}${share}${renderDrives(h, h.leaderUid === myUid())}
+    <div class="hm-bar"${drawing ? ' hidden' : ''}><div class="hm-counts">${liveCounts()}</div>
       <div class="hm-tools">
         ${iShare ? `<button type="button" class="btn small ghost" data-hunt="centerMe">◎ ${l('centerMe')}</button>` : ''}
         <button type="button" class="btn small ghost" data-hunt="fitAll">${l('fitAll')}</button>
@@ -819,6 +929,75 @@ function renderLive(h: Hunt, me: Participant): string {
         <button type="button" class="btn small ghost" data-hunt="gpx">${l('exportGpx')}</button>
       </div></div>
     <div class="hm-slot"></div>`;
+}
+
+const clock = (ms: number) => new Date(ms).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
+
+function renderDrives(h: Hunt, isLeader: boolean): string {
+  const act = activeDrive(drives);
+  const next = drives.find((d) => driveState(d) === 'planned');
+  let strip = '';
+  if (act) strip = `<div class="hd-now"><span class="hd-dot" aria-hidden="true"></span><strong>${l('dNow')}: ${esc(act.name)}</strong> <span>· ${l('dUntil')} ${esc(act.end)}</span></div>`;
+  else if (next && h.status === 'live') strip = `<div class="hd-now hd-next">${l('dNext')}: <strong>${esc(next.name)}</strong> · ${esc(next.start)}</div>`;
+  if (driveEdit && isLeader) return `${strip}${renderDriveForm()}`;
+  const row = (d: Drive, i: number) => {
+    const st = driveState(d);
+    const when =
+      st === 'planned'
+        ? `${l('dPlanned')} ${esc(d.start)}–${esc(d.end)}`
+        : st === 'active'
+          ? `${l('dRunning')} ${clock(d.startedAt!)} · ${l('dUntil')} ${esc(d.end)}`
+          : `${l('dDone')} ${clock(d.startedAt!)}–${clock(d.endedAt!)}`;
+    let ctl = '';
+    if (isLeader) {
+      const startEnd =
+        h.status === 'live' && st !== 'active'
+          ? `<button type="button" class="btn small${st === 'planned' && d === next && !act ? '' : ' ghost'}" data-hunt="driveStart" data-drive="${esc(d.id)}"${btnBusy()}>${l('dStartNow')}</button>`
+          : st === 'active'
+            ? `<button type="button" class="btn small" data-hunt="driveEnd" data-drive="${esc(d.id)}"${btnBusy()}>${l('dEndNow')}</button>`
+            : '';
+      ctl =
+        confirming === `drive:${d.id}`
+          ? `<button type="button" class="btn small danger" data-hunt="driveDelete" data-drive="${esc(d.id)}"${btnBusy()}>${l('dDeleteSure')}</button>
+             <button type="button" class="btn small ghost" data-hunt="unconfirm">${l('cancel')}</button>`
+          : `${startEnd}<button type="button" class="btn small ghost" data-hunt="driveEdit" data-drive="${esc(d.id)}">${l('editDrive')}</button>
+             <button type="button" class="btn small ghost" data-hunt="askDriveDelete" data-drive="${esc(d.id)}" aria-label="${l('remove')} ${esc(d.name)}">✕</button>`;
+    }
+    return `<li class="hd-drive hd-${st}"><span class="hd-num">${i + 1}</span>
+      <span class="hd-info"><strong>${esc(d.name)}</strong><small class="muted">${when}</small></span>
+      ${ctl ? `<span class="h-pctl">${ctl}</span>` : ''}</li>`;
+  };
+  const list = drives.length
+    ? `<ul class="hd-list">${drives.map(row).join('')}</ul>`
+    : `<p class="muted small">${isLeader ? l('noDrivesLeader') : l('noDrives')}</p>`;
+  const add = isLeader
+    ? drives.length < DRIVE_LIMITS.drives
+      ? `<button type="button" class="btn small" data-hunt="driveNew">${l('addDrive')}</button>`
+      : `<p class="muted small">${l('dMax')}</p>`
+    : '';
+  const open = driveListOpen ?? (isLeader || h.status !== 'live' || !drives.length);
+  return `${strip}<details class="hd-box"${open ? ' open' : ''}><summary data-hunt="driveList" data-open="${open}"><strong>${l('drives')}</strong> <span class="muted">(${drives.length})</span></summary>
+    ${list}${add}${isLeader ? errorBox() : ''}</details>`;
+}
+
+function renderDriveForm(): string {
+  const e = driveEdit!;
+  return `<form class="card h-form hd-form" data-hunt-form="drive" novalidate>
+    <strong>${e.id ? l('editDriveTitle') : l('newDriveTitle')}</strong>
+    <div class="h-row">
+      ${field('drive', 'name', l('dName'), e.name, { max: DRIVE_LIMITS.name, req: true })}
+      ${field('drive', 'start', l('dStart'), e.start, { type: 'time', req: true })}
+      ${field('drive', 'end', l('dEnd'), e.end, { type: 'time', req: true })}
+    </div>
+    <p class="small hd-hint${badFields.has('area') ? ' h-error' : ''}">${l('dCorners')} ${l('dCornerCount')} <strong class="hd-corner-count">${e.area.length}</strong></p>
+    ${errorBox()}
+    <div class="h-actions">
+      <button type="button" class="btn small ghost" data-hunt="driveLocate"${locatingDrive ? ' disabled aria-busy="true"' : ''}>◎ ${l('centerMe')}</button>
+      <button type="button" class="btn small ghost" data-hunt="driveUndo"${e.area.length ? '' : ' disabled'}>${l('dUndo')}</button>
+      <button type="submit" class="btn small"${btnBusy()}>${l('dSave')}</button>
+      <button type="button" class="btn small ghost" data-hunt="driveCancel">${l('cancel')}</button>
+    </div>
+  </form>`;
 }
 
 function renderHunt(): string {
@@ -1005,7 +1184,73 @@ export function handleHuntClick(el: HTMLElement): boolean {
       if (id) run((be) => be.setParticipant(id, uid, { role: el.dataset.to as 'hunter' | 'beater' }));
       return true;
     case 'status':
-      if (id) run((be) => be.updateHunt(id, { status: el.dataset.to as HuntStatus }));
+      if (id)
+        run(async (be) => {
+          const to = el.dataset.to as HuntStatus;
+          const act = activeDrive(drives);
+          if (to === 'ended' && act) await be.endDrive(id, act.id);
+          await be.updateHunt(id, { status: to });
+        });
+      return true;
+    case 'driveNew':
+      if (!hunt) break;
+      clearDraft('drive');
+      driveEdit = { id: null, area: [], ...nextDriveDefaults(drives, hunt) };
+      scrollToDriveForm = true;
+      formError = '';
+      badFields = new Set();
+      break;
+    case 'driveEdit': {
+      const d = drives.find((x) => x.id === el.dataset.drive);
+      if (!d) break;
+      clearDraft('drive');
+      driveEdit = { id: d.id, area: d.area.map(([a, b]) => [a, b] as [number, number]), name: d.name, start: d.start, end: d.end };
+      scrollToDriveForm = true;
+      formError = '';
+      badFields = new Set();
+      break;
+    }
+    case 'driveList':
+      driveListOpen = el.dataset.open !== 'true';
+      break;
+    case 'driveUndo':
+      hmap?.undoCorner();
+      return true;
+    case 'driveLocate':
+      if (!('geolocation' in navigator)) break;
+      locatingDrive = true;
+      navigator.geolocation.getCurrentPosition(
+        (p) => {
+          locatingDrive = false;
+          hmap?.showPoint(p.coords.latitude, p.coords.longitude);
+          rerender();
+        },
+        () => {
+          locatingDrive = false;
+          formError = l('shareDenied');
+          rerender();
+        },
+        { enableHighAccuracy: true, timeout: 20_000, maximumAge: 60_000 },
+      );
+      break;
+    case 'driveCancel':
+      driveEdit = null;
+      clearDraft('drive');
+      formError = '';
+      badFields = new Set();
+      break;
+    case 'askDriveDelete':
+      confirming = `drive:${el.dataset.drive}`;
+      break;
+    case 'driveDelete':
+      confirming = null;
+      if (id) run((be) => be.deleteDrive(id, el.dataset.drive!));
+      return true;
+    case 'driveStart':
+      if (id) run((be) => be.startDrive(id, el.dataset.drive!, drives.filter((d) => driveState(d) === 'active').map((d) => d.id)));
+      return true;
+    case 'driveEnd':
+      if (id) run((be) => be.endDrive(id, el.dataset.drive!));
       return true;
     case 'share':
       if (id && hunt)
@@ -1138,6 +1383,21 @@ export function handleHuntSubmit(form: HTMLFormElement): boolean {
         clearDraft('edit');
       });
     }
+  } else if (kind === 'drive' && watched && driveEdit) {
+    const id = watched;
+    const edit = driveEdit;
+    const input = { name: v('name'), start: v('start'), end: v('end'), area: edit.area };
+    validateDrive(input).forEach((f) => badFields.add(f));
+    if (badFields.size) {
+      formError = badFields.size === 1 && badFields.has('area') ? l('errArea') : l('errFields');
+      rerender();
+      return true;
+    }
+    run(async (be) => {
+      await be.saveDrive(id, edit.id, input);
+      if (driveEdit === edit) driveEdit = null;
+      clearDraft('drive');
+    });
   } else if (kind === 'join' && watched) {
     const id = watched;
     const role = (form.querySelector<HTMLInputElement>('input[name="role"]:checked')?.value ?? 'hunter') as 'hunter' | 'beater';

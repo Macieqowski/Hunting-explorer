@@ -266,8 +266,10 @@ const xml = (s: string) => s.replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&g
 const iso = (ms: number) => new Date(ms).toISOString();
 
 /**
- * GPX 1.1 file with one track per participant and a waypoint at each last known position.
- * Opens in Google Earth, Locus, mapy.cz, OsmAnd, Garmin BaseCamp and most GPS apps.
+ * GPX 1.1 file with a waypoint at each last known position and one track per participant.
+ * When drives were run, each person's track is split into one track per drive, and each
+ * drive's area is added as a closed track. Opens in Google Earth, Locus, mapy.cz, OsmAnd,
+ * Garmin BaseCamp and most GPS apps.
  */
 export function toGpx(
   huntName: string,
@@ -275,27 +277,34 @@ export function toGpx(
   positions: Position[],
   people: Map<string, { name: string; role: Role }>,
   roleName: (r: Role) => string,
+  drives: Drive[] = [],
 ): string {
   const label = (uid: string) => {
     const p = people.get(uid);
     return p ? `${p.name} (${roleName(p.role)})` : uid;
   };
+  const trk = (name: string, type: string, pts: { lat: number; lng: number; ts?: number }[]) =>
+    `  <trk><name>${xml(name)}</name><type>${type}</type><trkseg>\n` +
+    pts.map((p) => `    <trkpt lat="${p.lat}" lon="${p.lng}">${p.ts != null ? `<time>${iso(p.ts)}</time>` : ''}</trkpt>`).join('\n') +
+    `\n  </trkseg></trk>`;
   const wpts = positions
     .filter((p) => people.has(p.uid))
     .map((p) => `  <wpt lat="${p.lat}" lon="${p.lng}"><time>${iso(p.ts)}</time><name>${xml(label(p.uid))}</name><type>${people.get(p.uid)!.role}</type></wpt>`);
+  const run = drives.filter((d) => d.startedAt != null);
   const trks = [...tracks]
     .filter(([uid]) => people.has(uid))
-    .map(
-      ([uid, pts]) =>
-        `  <trk><name>${xml(label(uid))}</name><type>${people.get(uid)!.role}</type><trkseg>\n` +
-        pts.map((p) => `    <trkpt lat="${p.lat}" lon="${p.lng}"><time>${iso(p.ts)}</time></trkpt>`).join('\n') +
-        `\n  </trkseg></trk>`,
-    );
+    .flatMap(([uid, pts]) => {
+      const role = people.get(uid)!.role;
+      if (!run.length) return [trk(label(uid), role, pts)];
+      return splitByDrive(pts, run).map((part) => trk(part.drive ? `${label(uid)} · ${part.drive.name}` : label(uid), role, part.pts));
+    });
+  const areas = drives.filter((d) => d.area.length >= 3).map((d) => trk(d.name, 'drive', [...d.area, d.area[0]].map(([lat, lng]) => ({ lat, lng }))));
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<gpx version="1.1" creator="Hunting Explorer" xmlns="http://www.topografix.com/GPX/1/1">',
     `  <metadata><name>${xml(huntName)}</name></metadata>`,
     ...wpts,
+    ...areas,
     ...trks,
     '</gpx>',
     '',
@@ -314,4 +323,122 @@ export function gpxFileName(h: Pick<Hunt, 'date' | 'name'>): string {
     .replace(/^-|-$/g, '')
     .slice(0, 50);
   return `${h.date}-${slug || 'polowanie'}.gpx`;
+}
+
+// ---------------------------------------------------------------- drives (mioty)
+
+/** A drive's area: corners as [lat, lng], in drawing order (the polygon closes itself). */
+export type Area = [number, number][];
+
+export interface DriveInput {
+  name: string;
+  start: string; // HH:MM, planned
+  end: string; // HH:MM, planned
+  area: Area;
+}
+
+export interface Drive extends DriveInput {
+  id: string;
+  /** Server time when the leader started / ended it; null while planned / running. */
+  startedAt: number | null;
+  endedAt: number | null;
+}
+
+export type DriveState = 'planned' | 'active' | 'done';
+
+export const DRIVE_LIMITS = { name: 40, drives: 20, corners: 50, minCorners: 3 } as const;
+
+export const driveState = (d: Pick<Drive, 'startedAt' | 'endedAt'>): DriveState =>
+  d.startedAt == null ? 'planned' : d.endedAt == null ? 'active' : 'done';
+
+export type DriveError = 'name' | 'start' | 'end' | 'area';
+
+export function validateDrive(d: DriveInput): DriveError[] {
+  const errs: DriveError[] = [];
+  if (!cleanText(d.name, DRIVE_LIMITS.name)) errs.push('name');
+  if (!TIME_RE.test(d.start)) errs.push('start');
+  if (!TIME_RE.test(d.end)) errs.push('end');
+  if (d.area.length < DRIVE_LIMITS.minCorners || d.area.length > DRIVE_LIMITS.corners) errs.push('area');
+  return errs;
+}
+
+/** Stored as "lat,lng;lat,lng;…" with 6 decimals (about 10 cm), which keeps the rules simple. */
+export const encodeArea = (a: Area) => a.map(([lat, lng]) => `${+lat.toFixed(6)},${+lng.toFixed(6)}`).join(';');
+
+export function decodeArea(s: unknown): Area {
+  if (typeof s !== 'string' || !s) return [];
+  const out: Area = [];
+  for (const pair of s.split(';')) {
+    const [lat, lng] = pair.split(',').map(Number);
+    if (isNum(lat) && isNum(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) out.push([lat, lng]);
+  }
+  return out;
+}
+
+const minutes = (t: string) => {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+};
+const hhmm = (min: number) => {
+  const m = ((Math.round(min) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+};
+
+/** Minutes since the hunt's start, so drives after midnight sort after the evening ones. */
+const sinceStart = (t: string, huntStart: string) => (minutes(t) - minutes(huntStart) + 1440) % 1440;
+
+/** By planned start (relative to the hunt's start), then name. */
+export function sortDrives<T extends DriveInput>(ds: T[], huntStart: string): T[] {
+  return [...ds].sort((a, b) => sinceStart(a.start, huntStart) - sinceStart(b.start, huntStart) || a.name.localeCompare(b.name, 'pl', { numeric: true }));
+}
+
+export const activeDrive = <T extends Pick<Drive, 'startedAt' | 'endedAt'>>(ds: T[]): T | null =>
+  ds.filter((d) => driveState(d) === 'active').sort((a, b) => b.startedAt! - a.startedAt!)[0] ?? null;
+
+/** Suggested name and times for a new drive: 15 minutes after the last one ends, 60 minutes long. */
+export function nextDriveDefaults(ds: DriveInput[], hunt: Pick<HuntInput, 'start'>): { name: string; start: string; end: string } {
+  const sorted = sortDrives(ds, hunt.start);
+  const last = sorted[sorted.length - 1];
+  const start = last ? minutes(last.end) + 15 : minutes(hunt.start);
+  return { name: `Miot ${ds.length + 1}`, start: hhmm(start), end: hhmm(start + 60) };
+}
+
+export function parseDrives(v: unknown): Drive[] {
+  if (!v || typeof v !== 'object') return [];
+  const out: Drive[] = [];
+  for (const [id, raw] of Object.entries(v as Record<string, unknown>)) {
+    if (!raw || typeof raw !== 'object') continue;
+    const o = raw as Record<string, unknown>;
+    if (typeof o.name !== 'string' || typeof o.start !== 'string' || typeof o.end !== 'string') continue;
+    out.push({
+      id,
+      name: o.name,
+      start: o.start,
+      end: o.end,
+      area: decodeArea(o.area),
+      startedAt: isNum(o.startedAt) ? o.startedAt : null,
+      endedAt: isNum(o.startedAt) && isNum(o.endedAt) ? o.endedAt : null,
+    });
+  }
+  return out;
+}
+
+/** The drive running at time ts (by the leader's start and end taps), if any. */
+export function driveAt<T extends Pick<Drive, 'startedAt' | 'endedAt'>>(ds: T[], ts: number): T | null {
+  let best: T | null = null;
+  for (const d of ds)
+    if (d.startedAt != null && d.startedAt <= ts && (d.endedAt == null || ts < d.endedAt) && (!best || d.startedAt > best.startedAt!)) best = d;
+  return best;
+}
+
+/** Split a track into runs of consecutive points that fall in the same drive (null = between drives). */
+export function splitByDrive<P extends { ts: number }, D extends Pick<Drive, 'startedAt' | 'endedAt'>>(pts: P[], ds: D[]): { drive: D | null; pts: P[] }[] {
+  const out: { drive: D | null; pts: P[] }[] = [];
+  for (const p of pts) {
+    const d = driveAt(ds, p.ts);
+    const cur = out[out.length - 1];
+    if (cur && cur.drive === d) cur.pts.push(p);
+    else out.push({ drive: d, pts: [p] });
+  }
+  return out;
 }

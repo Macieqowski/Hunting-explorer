@@ -4,7 +4,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, connectAuthEmulator } from 'firebase/auth';
 import { getDatabase, ref, child, push, get, update, onValue, serverTimestamp, connectDatabaseEmulator } from 'firebase/database';
-import { parseHunt, parseParticipants, parsePositions, parseTracks, shouldPurge, cleanText, cleanNotes, LIMITS, type Hunt, type HuntInput } from './hunt';
+import { parseHunt, parseParticipants, parsePositions, parseTracks, parseDrives, encodeArea, shouldPurge, cleanText, cleanNotes, LIMITS, DRIVE_LIMITS, type Hunt, type HuntInput } from './hunt';
 import { HuntError, type FirebaseConfig, type HuntBackend } from './huntBackend';
 
 function wrap(e: unknown): HuntError {
@@ -84,6 +84,7 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
           [`participants/${id}`]: null,
           [`positions/${id}`]: null,
           [`tracks/${id}`]: null,
+          [`drives/${id}`]: null,
           [`joins/${id}/${uid}`]: null,
           // Other people's "my hunts" entries are cleaned up by their own browsers (see myHunts).
           [`userHunts/${uid}/${id}`]: null,
@@ -179,5 +180,40 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
     },
 
     purgeLocations: (id) => guard(purge(id)),
+
+    watchDrives(id, cb, onDenied) {
+      return onValue(
+        child(root, `drives/${id}`),
+        (s) => cb(parseDrives(s.val())),
+        () => onDenied(),
+      );
+    },
+
+    async saveDrive(id, driveId, d) {
+      const key = driveId ?? push(child(root, `drives/${id}`)).key!;
+      // Only the plan; startedAt / endedAt are left as they are.
+      await guard(
+        update(child(root, `drives/${id}/${key}`), {
+          name: cleanText(d.name, DRIVE_LIMITS.name),
+          start: d.start,
+          end: d.end,
+          area: encodeArea(d.area.slice(0, DRIVE_LIMITS.corners)),
+        }),
+      );
+      return key;
+    },
+
+    deleteDrive: (id, driveId) => guard(update(root, { [`drives/${id}/${driveId}`]: null })),
+
+    startDrive: (id, driveId, running) =>
+      guard(
+        update(root, {
+          ...Object.fromEntries(running.filter((r) => r !== driveId).map((r) => [`drives/${id}/${r}/endedAt`, serverTimestamp()])),
+          [`drives/${id}/${driveId}/startedAt`]: serverTimestamp(),
+          [`drives/${id}/${driveId}/endedAt`]: null,
+        }),
+      ),
+
+    endDrive: (id, driveId) => guard(update(root, { [`drives/${id}/${driveId}/endedAt`]: serverTimestamp() })),
   };
 }

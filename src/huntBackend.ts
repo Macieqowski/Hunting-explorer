@@ -2,7 +2,7 @@
 // lives in huntFirebase.ts and is loaded on demand, so people who never open the
 // group hunt section never download the Firebase SDK.
 
-import type { Hunt, HuntInput, HuntStatus, Participant, Position, Role, TrackPoint } from './hunt';
+import type { Drive, DriveInput, Hunt, HuntInput, HuntStatus, Participant, Position, Role, TrackPoint } from './hunt';
 
 export type Unsubscribe = () => void;
 
@@ -33,6 +33,14 @@ export interface HuntBackend {
   watchTracks(id: string, cb: (tracks: Map<string, TrackPoint[]>) => void, onDenied: () => void): Unsubscribe;
   /** Leader only: delete all positions and tracks of a hunt. */
   purgeLocations(id: string): Promise<void>;
+  /** Drives (mioty): readable by confirmed participants, written by the leader. */
+  watchDrives(id: string, cb: (ds: Drive[]) => void, onDenied: () => void): Unsubscribe;
+  /** Create (driveId null) or replace a drive's plan; returns its id. */
+  saveDrive(id: string, driveId: string | null, d: DriveInput): Promise<string>;
+  deleteDrive(id: string, driveId: string): Promise<void>;
+  /** Start a drive now, ending the ones still running. */
+  startDrive(id: string, driveId: string, running: string[]): Promise<void>;
+  endDrive(id: string, driveId: string): Promise<void>;
 }
 
 /** Errors the UI explains in words. */

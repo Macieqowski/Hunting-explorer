@@ -242,3 +242,51 @@ describe('positions and tracks', () => {
     await assertSucceeds(update(ref(db('lead')), { 'hunts/h1': null, 'participants/h1': null, 'positions/h1': null, 'tracks/h1': null }));
   });
 });
+
+describe('drives', () => {
+  const plan = { name: 'Miot 1', start: '08:30', end: '09:30', area: '52.1,21.1;52.2,21.1;52.2,21.2' };
+  beforeEach(async () => {
+    await createHunt('lead');
+    await join('a', 'beater');
+    await join('c');
+    await update(ref(db('lead'), 'participants/h1/a'), { status: 'confirmed' });
+  });
+  it('are planned by the leader only', async () => {
+    await assertSucceeds(set(ref(db('lead'), 'drives/h1/d1'), plan));
+    await assertFails(set(ref(db('a'), 'drives/h1/d2'), plan));
+    await assertFails(update(ref(db('a'), 'drives/h1/d1'), { name: 'Mój miot' }));
+    await assertSucceeds(update(ref(db('lead'), 'drives/h1/d1'), { name: 'Miot pod Borkiem', end: '10:00' }));
+  });
+  it('need a name, times and an area of at least three corners', async () => {
+    await assertFails(set(ref(db('lead'), 'drives/h1/d1'), { ...plan, name: '' }));
+    await assertFails(set(ref(db('lead'), 'drives/h1/d1'), { ...plan, start: '8:30' }));
+    await assertFails(set(ref(db('lead'), 'drives/h1/d1'), { ...plan, area: '52.1,21.1;52.2,21.1' }));
+    await assertFails(set(ref(db('lead'), 'drives/h1/d1'), { ...plan, area: 'x' }));
+    await assertFails(set(ref(db('lead'), 'drives/h1/d1'), { ...plan, extra: 1 }));
+    await assertFails(set(ref(db('lead'), 'drives/h1/d1'), { name: 'Miot 1', start: '08:30', end: '09:30' }));
+  });
+  it('are started and ended with the server time', async () => {
+    await set(ref(db('lead'), 'drives/h1/d1'), plan);
+    await set(ref(db('lead'), 'drives/h1/d2'), { ...plan, name: 'Miot 2' });
+    await assertFails(update(ref(db('lead'), 'drives/h1/d1'), { startedAt: 12345 }));
+    await assertFails(update(ref(db('lead'), 'drives/h1/d1'), { endedAt: serverTimestamp() })); // not started
+    await assertSucceeds(update(ref(db('lead'), 'drives/h1/d1'), { startedAt: serverTimestamp() }));
+    await assertFails(update(ref(db('a'), 'drives/h1/d1'), { endedAt: serverTimestamp() }));
+    // Starting the next drive ends the running one in the same write.
+    await assertSucceeds(update(ref(db('lead')), { 'drives/h1/d1/endedAt': serverTimestamp(), 'drives/h1/d2/startedAt': serverTimestamp(), 'drives/h1/d2/endedAt': null }));
+    await assertSucceeds(update(ref(db('lead'), 'drives/h1/d1'), { name: 'Miot 1a' })); // times are kept
+  });
+  it('are visible to confirmed participants only', async () => {
+    await set(ref(db('lead'), 'drives/h1/d1'), plan);
+    await assertSucceeds(get(ref(db('a'), 'drives/h1')));
+    await assertFails(get(ref(db('c'), 'drives/h1')));
+    await assertFails(get(ref(db('stranger'), 'drives/h1')));
+  });
+  it('are deleted by the leader, also together with the hunt', async () => {
+    await set(ref(db('lead'), 'drives/h1/d1'), plan);
+    await set(ref(db('lead'), 'drives/h1/d2'), plan);
+    await assertFails(set(ref(db('a'), 'drives/h1/d1'), null));
+    await assertSucceeds(set(ref(db('lead'), 'drives/h1/d1'), null));
+    await assertSucceeds(update(ref(db('lead')), { 'hunts/h1': null, 'participants/h1': null, 'drives/h1': null }));
+  });
+});

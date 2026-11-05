@@ -1,4 +1,4 @@
-import { toGpx, gpxFileName, freshness, distanceM, sendDecision, shouldPurge, parsePositions, parseTracks, STALE_MS, LOST_MS, HEARTBEAT_MS, RETENTION_MS, validateHunt, huntWindow, sortHunts, sortParticipants, countRoles, parseHunt, parseParticipants, cleanText, validPersonName, nextStatuses, type Hunt } from './hunt';
+import { toGpx, gpxFileName, freshness, distanceM, sendDecision, shouldPurge, parsePositions, parseTracks, STALE_MS, LOST_MS, HEARTBEAT_MS, RETENTION_MS, validateHunt, huntWindow, sortHunts, sortParticipants, countRoles, parseHunt, parseParticipants, cleanText, validPersonName, nextStatuses, validateDrive, encodeArea, decodeArea, sortDrives, driveState, activeDrive, nextDriveDefaults, parseDrives, splitByDrive, type Hunt } from './hunt';
 
 const base: Hunt = {
   id: 'x',
@@ -131,4 +131,55 @@ describe('GPX export', () => {
   });
   it('escapes names', () => expect(gpx).toContain('Adam &amp; &lt;Syn&gt; (hunter)'));
   it('builds a safe file name', () => expect(gpxFileName({ date: '2026-12-12', name: 'Polowanie na dziki – Łęg' })).toBe('2026-12-12-polowanie-na-dziki-leg.gpx'));
+});
+
+describe('drives', () => {
+  const area: [number, number][] = [
+    [52.1, 21.1],
+    [52.2, 21.1],
+    [52.2, 21.2],
+  ];
+  const d = (name: string, start: string, end: string, startedAt: number | null = null, endedAt: number | null = null) => ({ id: name, name, start, end, area, startedAt, endedAt });
+
+  it('validates name, times and corners', () => {
+    expect(validateDrive({ name: 'Miot 1', start: '08:30', end: '09:30', area })).toEqual([]);
+    expect(validateDrive({ name: ' ', start: '8:30', end: '25:00', area: area.slice(0, 2) })).toEqual(['name', 'start', 'end', 'area']);
+  });
+  it('encodes and decodes areas', () => {
+    const s = encodeArea([[52.1234567, 21.7654321], [52.2, 21.1], [52.2, 21.2]]);
+    expect(s).toBe('52.123457,21.765432;52.2,21.1;52.2,21.2');
+    expect(decodeArea(s)).toEqual([[52.123457, 21.765432], [52.2, 21.1], [52.2, 21.2]]);
+    expect(decodeArea('x;52,21;91,0')).toEqual([[52, 21]]);
+    expect(decodeArea(undefined)).toEqual([]);
+  });
+  it('sorts by planned start from the hunt start, also past midnight', () => {
+    const ds = [d('Nocny', '00:30', '01:30'), d('Miot 10', '22:00', '23:00'), d('Miot 2', '21:00', '22:00')];
+    expect(sortDrives(ds, '20:00').map((x) => x.name)).toEqual(['Miot 2', 'Miot 10', 'Nocny']);
+  });
+  it('knows the state and the running drive', () => {
+    expect(driveState(d('a', '08:00', '09:00'))).toBe('planned');
+    expect(driveState(d('a', '08:00', '09:00', 1))).toBe('active');
+    expect(driveState(d('a', '08:00', '09:00', 1, 2))).toBe('done');
+    expect(activeDrive([d('a', '08:00', '09:00', 1, 2), d('b', '09:00', '10:00', 3)])?.name).toBe('b');
+    expect(activeDrive([d('a', '08:00', '09:00')])).toBeNull();
+  });
+  it('suggests the next drive 15 minutes after the last one', () => {
+    expect(nextDriveDefaults([], { start: '08:00' })).toEqual({ name: 'Miot 1', start: '08:00', end: '09:00' });
+    expect(nextDriveDefaults([d('Miot 1', '08:00', '09:00'), d('Miot 2', '09:15', '10:30')], { start: '08:00' })).toEqual({ name: 'Miot 3', start: '10:45', end: '11:45' });
+    expect(nextDriveDefaults([d('Miot 1', '23:00', '23:50')], { start: '22:00' })).toEqual({ name: 'Miot 2', start: '00:05', end: '01:05' });
+  });
+  it('parses stored drives and ignores broken ones', () => {
+    const ds = parseDrives({ d1: { name: 'Miot 1', start: '08:00', end: '09:00', area: '52,21;52.1,21;52.1,21.1', startedAt: 5 }, d2: { name: 1 }, d3: null });
+    expect(ds).toEqual([{ id: 'd1', name: 'Miot 1', start: '08:00', end: '09:00', area: [[52, 21], [52.1, 21], [52.1, 21.1]], startedAt: 5, endedAt: null }]);
+  });
+  it('splits a track by drive and adds drive areas to the GPX', () => {
+    const ds = [d('Miot 1', '08:00', '09:00', 100, 200), d('Miot 2', '09:00', '10:00', 300, 400)];
+    const pts = [50, 120, 150, 250, 310, 500].map((ts) => ({ lat: 52, lng: 21, ts }));
+    expect(splitByDrive(pts, ds).map((g) => [g.drive?.name ?? null, g.pts.length])).toEqual([[null, 1], ['Miot 1', 2], [null, 1], ['Miot 2', 1], [null, 1]]);
+    const people = new Map([['u1', { name: 'Jan', role: 'hunter' as const }]]);
+    const gpx = toGpx('Test', new Map([['u1', pts]]), [], people, () => 'Myśliwy', ds);
+    expect(gpx).toContain('<trk><name>Miot 1</name><type>drive</type>');
+    expect(gpx).toContain('<name>Jan (Myśliwy) · Miot 2</name>');
+    expect(gpx.match(/<trk>/g)).toHaveLength(7); // 2 areas + 5 track parts
+  });
 });

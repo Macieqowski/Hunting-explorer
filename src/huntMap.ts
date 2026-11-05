@@ -3,14 +3,21 @@
 // huntUi re-attaches after every re-render, so Leaflet keeps its state.
 
 import L from 'leaflet';
-import { fetchDistrictsByIds, BDL_WMS_DISTRICTS } from './bdl';
+import { fetchDistrictsByIds, BDL_WMS_DISTRICTS, BDL_WMS_FORESTS } from './bdl';
 import { baseLayers, POLAND_BOUNDS } from './map';
 import { roleIcon, ROLE_COLOR } from './huntIcons';
-import { freshness, distanceM, type Position, type Role, type TrackPoint } from './hunt';
+import { freshness, distanceM, type Area, type DriveState, type Position, type Role, type TrackPoint } from './hunt';
 
 export interface PersonInfo {
   name: string;
   role: Role;
+}
+
+export interface DriveView {
+  id: string;
+  name: string;
+  area: Area;
+  state: DriveState;
 }
 
 export interface HuntMapText {
@@ -19,7 +26,7 @@ export interface HuntMapText {
   ago: (ms: number) => string;
   accuracy: string;
   distance: string;
-  layers: { osm: string; topo: string; sat: string; districts: string };
+  layers: { osm: string; topo: string; sat: string; districts: string; compartments: string };
 }
 
 export interface HuntMap {
@@ -30,6 +37,12 @@ export interface HuntMap {
   refreshAges(now: number): void;
   fitAll(): void;
   centerOn(uid: string): boolean;
+  setDrives(ds: DriveView[]): void;
+  /** Tap the map to add corners, drag corners to move them; onChange gets every change. */
+  startDraw(area: Area, onChange: (a: Area) => void, hideDrive?: string | null): void;
+  undoCorner(): void;
+  showPoint(lat: number, lng: number): void;
+  stopDraw(): void;
   invalidate(): void;
   destroy(): void;
 }
@@ -54,11 +67,27 @@ export function createHuntMap(text: HuntMapText): HuntMap {
     opacity: 0.3,
     attribution: '&copy; Bank Danych o Lasach',
   } as L.WMSOptions);
+  // Forest compartments (oddziały) help the leader follow real lines when drawing a drive.
+  const compartments = L.tileLayer.wms(BDL_WMS_FORESTS, {
+    layers: '3,2',
+    format: 'image/png',
+    transparent: true,
+    version: '1.3.0',
+    opacity: 0.7,
+    attribution: '&copy; Bank Danych o Lasach',
+  } as L.WMSOptions);
   L.control
-    .layers({ [text.layers.osm]: osm, [text.layers.topo]: topo, [text.layers.sat]: sat }, { [text.layers.districts]: districtsWms }, { position: 'topright' })
+    .layers(
+      { [text.layers.osm]: osm, [text.layers.topo]: topo, [text.layers.sat]: sat },
+      { [text.layers.districts]: districtsWms, [text.layers.compartments]: compartments },
+      { position: 'topright' },
+    )
     .addTo(map);
 
   const districtLayer = L.featureGroup().addTo(map);
+  const driveLayer = L.featureGroup().addTo(map);
+  const labelLayer = L.layerGroup().addTo(map);
+  const drawLayer = L.layerGroup().addTo(map);
   const trackLayer = L.layerGroup().addTo(map);
   const accLayer = L.layerGroup().addTo(map);
   const markerLayer = L.featureGroup().addTo(map);
@@ -67,6 +96,9 @@ export function createHuntMap(text: HuntMapText): HuntMap {
   let userMoved = false; // stop auto-fitting once the user pans or zooms
   let lastNow = Date.now();
   let myUid = '';
+  let drives: DriveView[] = [];
+  let hidden: string | null = null; // the drive being redrawn
+  let draw: { area: Area; onChange: (a: Area) => void; compartmentsWereOn: boolean } | null = null;
 
   // Programmatic fits fire zoom events too, so only pointer and wheel input count as the user looking around.
   el.addEventListener('pointerdown', () => (userMoved = true), { passive: true });
@@ -95,12 +127,65 @@ export function createHuntMap(text: HuntMapText): HuntMap {
     return rows.join('<br>');
   };
 
+  const areaBounds = (a: Area) => L.latLngBounds(a.map(([lat, lng]) => L.latLng(lat, lng)));
+  /** Everyone plus the running drive; with no drive running, the district and all drives. */
   const allBounds = () => {
     const b = L.latLngBounds([]);
     if (markerLayer.getLayers().length) b.extend(markerLayer.getBounds());
-    if (districtLayer.getLayers().length) b.extend(districtLayer.getBounds());
+    const active = drives.find((d) => d.state === 'active' && d.area.length);
+    if (active) b.extend(areaBounds(active.area));
+    else {
+      if (districtLayer.getLayers().length) b.extend(districtLayer.getBounds());
+      for (const d of drives) if (d.area.length) b.extend(areaBounds(d.area));
+    }
     return b;
   };
+
+  const DRIVE_STYLE: Record<DriveState, L.PolylineOptions> = {
+    active: { color: '#c2410c', weight: 4, fillColor: '#f97316', fillOpacity: 0.16 },
+    planned: { color: '#7c2d12', weight: 2, dashArray: '6 6', fillOpacity: 0.03 },
+    done: { color: '#6b7280', weight: 2, fillColor: '#6b7280', fillOpacity: 0.06 },
+  };
+  const drawDrives = () => {
+    driveLayer.clearLayers();
+    labelLayer.clearLayers();
+    for (const d of drives) {
+      if (d.id === hidden || d.area.length < 3) continue;
+      const poly = L.polygon(d.area, { ...DRIVE_STYLE[d.state], interactive: false }).addTo(driveLayer);
+      L.marker(poly.getCenter(), {
+        icon: L.divIcon({ className: 'hm-icon', html: `<div class="hm-drive-label hm-drive-${d.state}">${esc(d.name)}</div>`, iconSize: [0, 0] }),
+        interactive: false,
+        keyboard: false,
+        zIndexOffset: -2000, // under the people
+      }).addTo(labelLayer);
+    }
+  };
+
+  const cornerIcon = (first: boolean) =>
+    L.divIcon({ className: 'hm-icon', html: `<div class="hm-corner${first ? ' first' : ''}"></div>`, iconSize: [0, 0] });
+  const drawEditor = () => {
+    drawLayer.clearLayers();
+    if (!draw) return;
+    const a = draw.area;
+    if (a.length >= 3) L.polygon(a, { color: '#c2410c', weight: 3, fillColor: '#f97316', fillOpacity: 0.2, interactive: false }).addTo(drawLayer);
+    else if (a.length === 2) L.polyline(a, { color: '#c2410c', weight: 3, interactive: false }).addTo(drawLayer);
+    a.forEach((ll, i) => {
+      const m = L.marker(ll, { icon: cornerIcon(i === 0), draggable: true, keyboard: false, zIndexOffset: 2000 }).addTo(drawLayer);
+      m.on('drag', () => {
+        const p = m.getLatLng();
+        a[i] = [p.lat, p.lng];
+        const shape = drawLayer.getLayers().find((x) => x instanceof L.Polyline) as L.Polyline | undefined;
+        shape?.setLatLngs(a);
+      });
+      m.on('dragend', () => draw?.onChange([...a]));
+    });
+  };
+  map.on('click', (e: L.LeafletMouseEvent) => {
+    if (!draw) return;
+    draw.area.push([e.latlng.lat, e.latlng.lng]);
+    drawEditor();
+    draw.onChange([...draw.area]);
+  });
   /** Show the district and everyone, until the user starts looking around themselves. */
   const autoFit = () => {
     if (userMoved) return;
@@ -218,6 +303,52 @@ export function createHuntMap(text: HuntMapText): HuntMap {
       if (!m) return false;
       map.setView(m.marker.getLatLng(), Math.max(map.getZoom(), 15));
       return true;
+    },
+
+    setDrives(ds) {
+      const before = JSON.stringify(drives.map((d) => [d.id, d.state]));
+      drives = ds;
+      drawDrives();
+      if (JSON.stringify(drives.map((d) => [d.id, d.state])) !== before) autoFit();
+    },
+
+    startDraw(area, onChange, hideDrive = null) {
+      const wasOn = draw ? draw.compartmentsWereOn : map.hasLayer(compartments);
+      draw = { area: [...area], onChange, compartmentsWereOn: wasOn };
+      if (!map.hasLayer(compartments)) compartments.addTo(map);
+      if (!el.classList.contains('hm-drawing')) {
+        el.classList.add('hm-drawing');
+        map.invalidateSize();
+      }
+      if (hidden !== hideDrive) {
+        hidden = hideDrive;
+        drawDrives();
+        if (area.length >= 3) map.fitBounds(areaBounds(area).pad(0.3), { maxZoom: 16, animate: false });
+      }
+      drawEditor();
+    },
+
+    undoCorner() {
+      if (!draw || !draw.area.length) return;
+      draw.area.pop();
+      drawEditor();
+      draw.onChange([...draw.area]);
+    },
+
+    showPoint(lat, lng) {
+      userMoved = true;
+      map.setView([lat, lng], Math.max(map.getZoom(), 15));
+    },
+
+    stopDraw() {
+      if (!draw) return;
+      if (!draw.compartmentsWereOn) compartments.remove();
+      draw = null;
+      hidden = null;
+      el.classList.remove('hm-drawing');
+      map.invalidateSize();
+      drawLayer.clearLayers();
+      drawDrives();
     },
 
     invalidate: () => map.invalidateSize(),
