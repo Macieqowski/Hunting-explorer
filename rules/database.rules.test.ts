@@ -329,6 +329,35 @@ describe('stands', () => {
   });
 });
 
+describe('club stands', () => {
+  const stands = { s000: { n: '1', k: 'zwyzka', lat: 52.1, lng: 21.1 } };
+  it('are read and written only by people who gave the passphrase', async () => {
+    await assertFails(get(ref(db('x'), 'club/stands')));
+    await assertFails(set(ref(db('x'), 'club/stands'), stands));
+    await assertFails(set(ref(db('x'), 'club/members/x'), 'zle-haslo'));
+    await assertFails(set(ref(db('x'), 'club/members/y'), PASS)); // not for someone else
+    await assertSucceeds(set(ref(db('x'), 'club/members/x'), PASS));
+    await assertFails(get(ref(db('x'), 'club/members/x')));
+    await assertSucceeds(set(ref(db('x'), 'club/stands'), stands));
+    await assertSucceeds(get(ref(db('x'), 'club/stands')));
+    await assertFails(get(ref(db('stranger'), 'club/stands')));
+    await assertFails(set(ref(db('x'), 'club/stands'), { s000: { ...stands.s000, k: 'bunkier' } }));
+    await assertFails(set(ref(db('x'), 'club/other'), 1));
+  });
+  it('are unlocked by creating or joining a hunt', async () => {
+    await update(ref(db('lead')), {
+      'joins/h1/lead': PASS,
+      'club/members/lead': PASS,
+      'hunts/h1': huntData('lead'),
+      'participants/h1/lead': { name: 'Jan Prowadzący', role: 'leader', status: 'confirmed', joinedAt: serverTimestamp() },
+      'userHunts/lead/h1': true,
+    });
+    await assertSucceeds(get(ref(db('lead'), 'club/stands')));
+    await assertSucceeds(update(ref(db('a')), { 'joins/h1/a': PASS, 'club/members/a': PASS, 'participants/h1/a': { name: 'Osoba a', role: 'hunter', status: 'registered', joinedAt: serverTimestamp() }, 'userHunts/a/h1': true }));
+    await assertSucceeds(get(ref(db('a'), 'club/stands')));
+  });
+});
+
 describe('sightings', () => {
   const sight = (uid: string, extra: Record<string, unknown> = {}) => ({
     uid,

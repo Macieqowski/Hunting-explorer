@@ -47,6 +47,11 @@ export interface HuntBackend {
   watchStands(id: string, cb: (ss: Stand[]) => void, onDenied: () => void): Unsubscribe;
   /** Replace the hunt's stands (an empty list removes them). */
   saveStands(id: string, ss: Stand[]): Promise<void>;
+  /** The club's permanent high seats, shown in hunts without their own. Readable and writable by anyone who gave the passphrase. */
+  watchClubStands(cb: (ss: Stand[]) => void, onDenied: () => void): Unsubscribe;
+  saveClubStands(ss: Stand[]): Promise<void>;
+  /** Unlock the club's seats on this device (devices that joined a hunt before they existed). */
+  joinClub(passphrase: string): Promise<void>;
   /** Game sightings: reported by confirmed participants while the hunt is live, newest first. */
   watchSightings(id: string, cb: (ss: Sighting[]) => void, onDenied: () => void): Unsubscribe;
   addSighting(id: string, s: SightingInput): Promise<string>;
