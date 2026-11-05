@@ -1,5 +1,6 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { createWind } from './windLayer';
 import {
   fetchOutlinesInBounds,
   labelPoint,
@@ -72,6 +73,7 @@ export function createMap(el: HTMLElement, onClick: (lat: number, lng: number) =
   const forests = overlay(WMS.forests, 0.8);
   const bans = overlay(WMS.bans, 0.7);
   const fire = overlay(WMS.fire, 0.5);
+  const wind = createWind(map);
 
   let control: L.Control.Layers | null = null;
   const rebuildLayerControl = () => {
@@ -80,10 +82,11 @@ export function createMap(el: HTMLElement, onClick: (lat: number, lng: number) =
     control = L.control
       .layers(
         { [t('bOsm')]: osm, [t('bTopo')]: topo, [t('bGeoTopo')]: geotopo, [t('bSat')]: sat },
-        { [t('lDistricts')]: districts, [t('lOutlines')]: outlines, [t('lForest')]: forests, [t('lBans')]: bans, [t('lFire')]: fire },
+        { [t('lDistricts')]: districts, [t('lOutlines')]: outlines, [t('lForest')]: forests, [t('lBans')]: bans, [t('lFire')]: fire, [t('lWind')]: wind.arrows },
         { position: 'topright', collapsed: true },
       )
       .addTo(map);
+    wind.refresh();
   };
   rebuildLayerControl();
 
@@ -94,9 +97,14 @@ export function createMap(el: HTMLElement, onClick: (lat: number, lng: number) =
   return {
     map,
     rebuildLayerControl,
-    clearHighlight: () => hl.clearLayers(),
+    clearHighlight: () => {
+      hl.clearLayers();
+      wind.setScentOrigin(null);
+    },
     highlight(items, opts = {}) {
       hl.clearLayers();
+      // A tapped point also shows where a hunter's scent would drift from there.
+      wind.setScentOrigin(opts.marker ? L.latLng(opts.marker) : null);
       for (const it of items) {
         if (!it.geometry.length) continue;
         L.polygon(it.geometry as L.LatLngExpression[][][], {

@@ -66,6 +66,12 @@
         "endedAt": {
           ".validate": "newData.isNumber() && newData.val() === now && newData.parent().child('status').val() === 'ended'"
         },
+        "pokotLockedAt": {
+          ".validate": "newData.isNumber() && newData.val() === now && newData.parent().child('status').val() === 'ended'"
+        },
+        "pokotTitles": {
+          ".validate": "newData.isBoolean()"
+        },
         "$other": {
           ".validate": false
         }
@@ -213,6 +219,56 @@
           },
           "ts": {
             ".validate": "newData.val() === now"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "shots": {
+      "$h": {
+        ".read": "auth != null && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed'",
+        ".write": "auth != null && !newData.exists() && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid",
+        "$s": {
+          ".write": "auth != null && !root.child('hunts/' + $h + '/pokotLockedAt').exists() && ((root.child('hunts/' + $h + '/leaderUid').val() === auth.uid && root.child('hunts/' + $h + '/status').val().matches(/^(live|ended)$/)) || (!data.exists() && newData.child('uid').val() === auth.uid && root.child('hunts/' + $h + '/status').val() === 'live' && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed' && root.child('participants/' + $h + '/' + auth.uid + '/role').val().matches(/^(leader|hunter)$/)) || (data.exists() && data.child('uid').val() === auth.uid && root.child('hunts/' + $h + '/status').val().matches(/^(live|ended)$/) && (!newData.exists() || (newData.child('uid').val() === auth.uid && newData.child('driveId').val() === data.child('driveId').val()))))",
+          ".validate": "newData.hasChildren(['uid', 'outcome', 'ts'])",
+          "uid": {
+            ".validate": "newData.isString() && (newData.val() === auth.uid || (data.exists() && newData.val() === data.val()) || (root.child('hunts/' + $h + '/leaderUid').val() === auth.uid && (newData.val() === '-' || root.child('participants/' + $h + '/' + newData.val() + '/role').val() === 'hunter' || root.child('participants/' + $h + '/' + newData.val() + '/role').val() === 'leader')))"
+          },
+          "outcome": {
+            ".validate": "newData.isString() && newData.val().matches(/^(kill|wound|miss|unknown)$/)"
+          },
+          "game": {
+            ".validate": "newData.isString() && newData.val().matches(/^(red_stag|red_hind|red_calf|fallow_buck|fallow_doe|fallow_fawn|roe_buck|roe_doe|roe_kid|boar_male|boar_sow|boar_yearling|boar_piglet|mouflon_ram|mouflon_ewe|fox|raccoon_dog|raccoon|badger|marten|polecat|mink|jackal|hare|rabbit|pheasant_cock|pheasant_hen|partridge|duck|goose|coot|pigeon|woodcock)$/)"
+          },
+          "driveId": {
+            ".validate": "newData.isString() && newData.val().length <= 40"
+          },
+          "note": {
+            ".validate": "newData.isString() && newData.val().length <= 120"
+          },
+          "ts": {
+            ".validate": "newData.isNumber() && (data.exists() ? newData.val() === data.val() : newData.val() === now)"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "shotSpots": {
+      "$h": {
+        ".read": "auth != null && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed'",
+        ".write": "auth != null && !newData.exists() && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid",
+        "$s": {
+          ".write": "auth != null && ((!data.exists() && newData.exists() && newData.parent().parent().parent().child('shots/' + $h + '/' + $s + '/uid').val() === auth.uid && !root.child('shots/' + $h + '/' + $s).exists()) || (!newData.exists() && (root.child('shots/' + $h + '/' + $s + '/uid').val() === auth.uid || root.child('hunts/' + $h + '/leaderUid').val() === auth.uid)))",
+          ".validate": "newData.hasChildren(['lat', 'lng'])",
+          "lat": {
+            ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
+          },
+          "lng": {
+            ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180"
           },
           "$other": {
             ".validate": false

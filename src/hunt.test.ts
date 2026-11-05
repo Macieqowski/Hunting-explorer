@@ -13,6 +13,8 @@ const base: Hunt = {
   status: 'open',
   createdAt: 0,
   endedAt: null,
+  pokotLockedAt: null,
+  pokotTitles: false,
   district: null,
 };
 

@@ -7,6 +7,7 @@ import { fetchDistrictsByIds } from './bdl';
 import { baseLayers, offlineBaseSwitch, BDL_ATTR, POLAND_BOUNDS } from './map';
 import { cachedWms } from './cachedLayer';
 import { WMS } from './tiles';
+import { createWind } from './windLayer';
 import { roleIcon, ROLE_COLOR, speciesIcon, SPECIES_COLOR } from './huntIcons';
 import { freshness, distanceM, offsetPoint, type Area, type DriveState, type Position, type Role, type TrackPoint, type Species, type SightLook } from './hunt';
 
@@ -33,13 +34,23 @@ export interface SightView {
   popup: string; // HTML
 }
 
+/** A shot on the map: wounds (postrzał) in orange so the search starts from there, kills in green. */
+export interface ShotView {
+  id: string;
+  lat: number;
+  lng: number;
+  kind: 'wound' | 'kill';
+  label: string;
+  popup: string; // HTML
+}
+
 export interface HuntMapText {
   you: string;
   role: (r: Role) => string;
   ago: (ms: number) => string;
   accuracy: string;
   distance: string;
-  layers: { osm: string; topo: string; geotopo: string; sat: string; districts: string; compartments: string };
+  layers: { osm: string; topo: string; geotopo: string; sat: string; districts: string; compartments: string; wind: string };
 }
 
 export interface HuntMap {
@@ -52,12 +63,15 @@ export interface HuntMap {
   centerOn(uid: string): boolean;
   setDrives(ds: DriveView[]): void;
   setSightings(ss: SightView[]): void;
+  setShots(ss: ShotView[]): void;
   centerOnPoint(lat: number, lng: number): void;
   /** Tap the map to add corners, drag corners to move them; onChange gets every change. */
   startDraw(area: Area, onChange: (a: Area) => void, hideDrive?: string | null): void;
   undoCorner(): void;
   showPoint(lat: number, lng: number): void;
   stopDraw(): void;
+  /** The moment the wind badge shows by default (the next drive); null = now. */
+  setWindTime(t: number | null): void;
   invalidate(): void;
   destroy(): void;
 }
@@ -78,10 +92,11 @@ export function createHuntMap(text: HuntMapText): HuntMap {
   const districtsWms = cachedWms(WMS.districts, { opacity: 0.3, attribution: BDL_ATTR });
   // Forest compartments (oddziały) help the leader follow real lines when drawing a drive.
   const compartments = cachedWms(WMS.compartments, { opacity: 0.7, attribution: BDL_ATTR });
+  const wind = createWind(map);
   L.control
     .layers(
       { [text.layers.osm]: osm, [text.layers.topo]: topo, [text.layers.geotopo]: geotopo, [text.layers.sat]: sat },
-      { [text.layers.districts]: districtsWms, [text.layers.compartments]: compartments },
+      { [text.layers.districts]: districtsWms, [text.layers.compartments]: compartments, [text.layers.wind]: wind.arrows },
       { position: 'topright' },
     )
     .addTo(map);
@@ -93,6 +108,7 @@ export function createHuntMap(text: HuntMapText): HuntMap {
   const trackLayer = L.layerGroup().addTo(map);
   const accLayer = L.layerGroup().addTo(map);
   const sightLayer = L.layerGroup().addTo(map);
+  const shotLayer = L.layerGroup().addTo(map);
   const markerLayer = L.featureGroup().addTo(map);
   const markers = new Map<string, { marker: L.Marker; acc: L.Circle | null; pos: Position; info: PersonInfo; me: boolean; cls: string }>();
   let districtId: number | null = null;
@@ -149,7 +165,14 @@ export function createHuntMap(text: HuntMapText): HuntMap {
     planned: { color: '#7c2d12', weight: 2, dashArray: '6 6', fillOpacity: 0.03 },
     done: { color: '#6b7280', weight: 2, fillColor: '#6b7280', fillOpacity: 0.06 },
   };
+  /** Colour drive edges by the wind: the one being drawn, else the running drive, else the planned ones. */
+  const windDrives = () => {
+    if (draw) return wind.setDrives(draw.area.length >= 3 ? [draw.area] : []);
+    const active = drives.find((d) => d.state === 'active');
+    wind.setDrives((active ? [active] : drives.filter((d) => d.state === 'planned')).map((d) => d.area));
+  };
   const drawDrives = () => {
+    windDrives();
     driveLayer.clearLayers();
     labelLayer.clearLayers();
     for (const d of drives) {
@@ -180,8 +203,12 @@ export function createHuntMap(text: HuntMapText): HuntMap {
         const shape = drawLayer.getLayers().find((x) => x instanceof L.Polyline) as L.Polyline | undefined;
         shape?.setLatLngs(a);
       });
-      m.on('dragend', () => draw?.onChange([...a]));
+      m.on('dragend', () => {
+        windDrives();
+        draw?.onChange([...a]);
+      });
     });
+    windDrives();
   };
   map.on('click', (e: L.LeafletMouseEvent) => {
     if (!draw) return;
@@ -266,6 +293,9 @@ export function createHuntMap(text: HuntMapText): HuntMap {
           markers.delete(uid);
         }
       if (markers.size > before) autoFit();
+      // Your own scent cone, so you can see whether game in front of you will wind you.
+      const mine = markers.get(me);
+      wind.setScentOrigin(mine && freshness(mine.pos.ts, now) !== 'lost' ? { lat: mine.pos.lat, lng: mine.pos.lng } : null);
     },
 
     setTracks(tracks, people) {
@@ -343,6 +373,22 @@ export function createHuntMap(text: HuntMapText): HuntMap {
       }
     },
 
+    setShots(ss) {
+      shotLayer.clearLayers();
+      for (const s of ss)
+        L.marker([s.lat, s.lng], {
+          icon: L.divIcon({
+            className: 'hm-icon',
+            html: `<div class="hp-marker hp-${s.kind}"><span aria-hidden="true">${s.kind === 'wound' ? '!' : '✕'}</span><span class="hm-label">${esc(s.label)}</span></div>`,
+            iconSize: [0, 0],
+          }),
+          zIndexOffset: s.kind === 'wound' ? 900 : -400,
+          title: s.label,
+        })
+          .bindPopup(s.popup)
+          .addTo(shotLayer);
+    },
+
     centerOnPoint(lat, lng) {
       userMoved = true;
       map.setView([lat, lng], Math.max(map.getZoom(), 15));
@@ -394,6 +440,10 @@ export function createHuntMap(text: HuntMapText): HuntMap {
       drawDrives();
     },
 
+    setWindTime: (t) => {
+      wind.setTime(t);
+      wind.refresh();
+    },
     invalidate: () => map.invalidateSize(),
     destroy: () => {
       stopOfflineSwitch();

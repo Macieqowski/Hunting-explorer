@@ -5,6 +5,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, connectAuthEmulator } from 'firebase/auth';
 import { getDatabase, ref, child, push, get, update, onValue, serverTimestamp, connectDatabaseEmulator } from 'firebase/database';
 import { parseHunt, parseParticipants, parsePositions, parseTracks, parseDrives, parseSightings, encodeArea, shouldPurge, cleanText, cleanNotes, LIMITS, DRIVE_LIMITS, type Hunt, type HuntInput } from './hunt';
+import { parseShots, parseShotSpots, NOTE_MAX, type ShotInput } from './pokot';
 import { HuntError, type FirebaseConfig, type HuntBackend } from './huntBackend';
 
 function wrap(e: unknown): HuntError {
@@ -35,6 +36,15 @@ function cleanInput(i: Partial<HuntInput>): Partial<HuntInput> {
   return out;
 }
 
+function shotRecord(uid: string, s: ShotInput & { driveId: string | null }): Record<string, unknown> {
+  const rec: Record<string, unknown> = { uid, outcome: s.outcome, ts: serverTimestamp() };
+  if (s.game) rec.game = s.game;
+  const note = cleanText(s.note, NOTE_MAX);
+  if (note) rec.note = note;
+  if (s.driveId) rec.driveId = s.driveId;
+  return rec;
+}
+
 export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
   const app = initializeApp(cfg);
   const auth = getAuth(app);
@@ -50,7 +60,7 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
   const root = ref(db);
   let offset = 0;
   onValue(ref(db, '.info/serverTimeOffset'), (s) => (offset = Number(s.val()) || 0));
-  const purge = (id: string) => update(root, { [`positions/${id}`]: null, [`tracks/${id}`]: null, [`sightings/${id}`]: null });
+  const purge = (id: string) => update(root, { [`positions/${id}`]: null, [`tracks/${id}`]: null, [`sightings/${id}`]: null, [`shotSpots/${id}`]: null });
 
   return {
     uid,
@@ -74,6 +84,8 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
         update(child(root, `hunts/${id}`), {
           ...cleanInput(patch),
           ...(patch.status ? { status: patch.status, endedAt: patch.status === 'ended' ? serverTimestamp() : null } : {}),
+          // Reopening the hunt unlocks the pokot, so shots can be logged again.
+          ...(patch.status && patch.status !== 'ended' ? { pokotLockedAt: null } : {}),
         }),
       ),
 
@@ -86,6 +98,8 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
           [`tracks/${id}`]: null,
           [`drives/${id}`]: null,
           [`sightings/${id}`]: null,
+          [`shots/${id}`]: null,
+          [`shotSpots/${id}`]: null,
           [`joins/${id}/${uid}`]: null,
           // Other people's "my hunts" entries are cleaned up by their own browsers (see myHunts).
           [`userHunts/${uid}/${id}`]: null,
@@ -241,6 +255,52 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
     },
 
     deleteSighting: (id, sid) => guard(update(root, { [`sightings/${id}/${sid}`]: null })),
+
+    watchShots(id, cb, onDenied) {
+      return onValue(
+        child(root, `shots/${id}`),
+        (s) => cb(parseShots(s.val())),
+        () => onDenied(),
+      );
+    },
+
+    watchShotSpots(id, cb, onDenied) {
+      return onValue(
+        child(root, `shotSpots/${id}`),
+        (s) => cb(parseShotSpots(s.val())),
+        () => onDenied(),
+      );
+    },
+
+    async addShot(id, s, at) {
+      const key = push(child(root, `shots/${id}`)).key!;
+      const upd: Record<string, unknown> = { [`shots/${id}/${key}`]: shotRecord(uid, s) };
+      if (at) upd[`shotSpots/${id}/${key}`] = { lat: at.lat, lng: at.lng };
+      await guard(update(root, upd));
+      return key;
+    },
+
+    async addShotFor(id, who, s) {
+      const key = push(child(root, `shots/${id}`)).key!;
+      await guard(update(root, { [`shots/${id}/${key}`]: shotRecord(who, s) }));
+      return key;
+    },
+
+    updateShot(id, sid, p) {
+      const upd: Record<string, unknown> = {};
+      if (p.outcome !== undefined) upd.outcome = p.outcome;
+      if (p.game !== undefined) upd.game = p.game;
+      if (p.note !== undefined) upd.note = cleanText(p.note, NOTE_MAX) || null;
+      if (p.uid !== undefined) upd.uid = p.uid;
+      if (p.driveId !== undefined) upd.driveId = p.driveId;
+      return guard(update(child(root, `shots/${id}/${sid}`), upd));
+    },
+
+    deleteShot: (id, sid) => guard(update(root, { [`shots/${id}/${sid}`]: null, [`shotSpots/${id}/${sid}`]: null })),
+
+    lockPokot: (id, locked) => guard(update(child(root, `hunts/${id}`), { pokotLockedAt: locked ? serverTimestamp() : null })),
+
+    setPokotTitles: (id, on) => guard(update(child(root, `hunts/${id}`), { pokotTitles: on })),
 
     endDrive: (id, driveId) => guard(update(root, { [`drives/${id}/${driveId}/endedAt`]: serverTimestamp() })),
   };

@@ -101,6 +101,7 @@ const dict = {
   lForest: { pl: 'Nadleśnictwa (BDL)', en: 'Forest districts (BDL)' },
   lBans: { pl: 'Zakazy wstępu do lasu', en: 'Forest entry bans' },
   lFire: { pl: 'Zagrożenie pożarowe', en: 'Fire danger' },
+  lWind: { pl: 'Strzałki wiatru', en: 'Wind arrows' },
   bOsm: { pl: 'Mapa (OSM)', en: 'Map (OSM)' },
   bTopo: { pl: 'Topograficzna (OpenTopoMap)', en: 'Topographic (OpenTopoMap)' },
   bGeoTopo: { pl: 'Topograficzna (Geoportal, offline)', en: 'Topographic (Geoportal, offline)' },

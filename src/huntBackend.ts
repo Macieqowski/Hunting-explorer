@@ -2,6 +2,7 @@
 // lives in huntFirebase.ts and is loaded on demand, so people who never open the
 // group hunt section never download the Firebase SDK.
 
+import type { Shot, ShotInput, ShotSpot } from './pokot';
 import type { Drive, DriveInput, Sighting, SightingInput, Hunt, HuntInput, HuntStatus, Participant, Position, Role, TrackPoint } from './hunt';
 
 export type Unsubscribe = () => void;
@@ -45,6 +46,20 @@ export interface HuntBackend {
   watchSightings(id: string, cb: (ss: Sighting[]) => void, onDenied: () => void): Unsubscribe;
   addSighting(id: string, s: SightingInput): Promise<string>;
   deleteSighting(id: string, sightingId: string): Promise<void>;
+  /** Shots for the pokot: readable by confirmed participants, oldest first. */
+  watchShots(id: string, cb: (ss: Shot[]) => void, onDenied: () => void): Unsubscribe;
+  /** Where each shot was fired (deleted with the other locations after RETENTION_MS). */
+  watchShotSpots(id: string, cb: (spots: Map<string, ShotSpot>) => void, onDenied: () => void): Unsubscribe;
+  /** Log my shot now, at `at`; returns its id. */
+  addShot(id: string, s: ShotInput & { driveId: string | null }, at: ShotSpot | null): Promise<string>;
+  /** Leader only: add game for a hunter (or NO_SHOOTER) without a logged shot. */
+  addShotFor(id: string, uid: string, s: ShotInput & { driveId: string | null }): Promise<string>;
+  /** The shooter: outcome, game and note; the leader also uid and driveId. */
+  updateShot(id: string, shotId: string, patch: Partial<ShotInput & { uid: string; driveId: string | null }>): Promise<void>;
+  deleteShot(id: string, shotId: string): Promise<void>;
+  /** Leader only, after the hunt ended: freeze (or unfreeze) the pokot. */
+  lockPokot(id: string, locked: boolean): Promise<void>;
+  setPokotTitles(id: string, on: boolean): Promise<void>;
 }
 
 /** Errors the UI explains in words. */
