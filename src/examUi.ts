@@ -1,10 +1,12 @@
-import { drawExam, isCorrect, scoreExam, answerText, answerImage, type Answer, type Bank, type DrawnQuestion, type ExamResult } from './exam';
+import { drawExam, isCorrect, scoreExam, shuffle, shuffleAnswers, answerText, answerImage, type Answer, type Bank, type DrawnQuestion, type ExamResult, type Question } from './exam';
+import { recordAnswer, weightOf, dueQuestions, summarize, mostMissed, parseProgress, mergeProgress, type Progress, type Counts } from './examProgress';
 import { seasonQuestions, SEASON_TOPIC } from './seasonQuestions';
 import { getLang, tt, fmtNum } from './i18n';
 
 const BANK_IDS = ['mysliwy', 'selekcjoner'] as const;
 type BankId = (typeof BANK_IDS)[number];
-type Mode = 'exam' | 'learn';
+type Mode = 'exam' | 'learn' | 'review';
+const MODES: Mode[] = ['exam', 'learn', 'review'];
 
 const esc = (s: unknown) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -17,7 +19,38 @@ const L = {
   examMode: { pl: 'Egzamin', en: 'Exam' },
   examModeHint: { pl: 'z limitem czasu, wynik na końcu', en: 'timed, score at the end' },
   learnMode: { pl: 'Nauka', en: 'Learning' },
-  learnModeHint: { pl: 'odpowiedź i wyjaśnienie od razu', en: 'answer and explanation right away' },
+  learnModeHint: { pl: 'odpowiedź od razu, częściej słabe pytania', en: 'answer right away, weak questions more often' },
+  reviewMode: { pl: 'Powtórka', en: 'Review' },
+  reviewModeHint: { pl: 'tylko pytania do powtórki', en: 'only questions due for review' },
+  nothingDue: {
+    pl: 'Nie masz teraz pytań do powtórki. Tryb Nauka podsunie Ci pytania, których jeszcze nie widziałeś.',
+    en: 'Nothing is due for review right now. Learning mode will give you questions you have not seen yet.',
+  },
+  learnNew: { pl: 'Ucz się nowych pytań', en: 'Learn new questions' },
+  dueCount: { pl: 'do powtórki', en: 'due for review' },
+  progress: { pl: 'Twoje postępy', en: 'Your progress' },
+  progressHint: {
+    pl: 'Pytania z błędną odpowiedzią wracają od razu, a dobrze rozwiązane po 1, 3, 7 i 21 dniach. Postępy są zapisane tylko na tym urządzeniu.',
+    en: 'Questions you get wrong come back right away, right ones after 1, 3, 7 and 21 days. Progress is saved on this device only.',
+  },
+  stMastered: { pl: 'opanowane', en: 'mastered' },
+  stLearning: { pl: 'w nauce', en: 'learning' },
+  stWrong: { pl: 'błędne', en: 'wrong' },
+  stNew: { pl: 'nowe', en: 'not seen' },
+  ofBank: { pl: 'z', en: 'of' },
+  byTopic: { pl: 'Opanowanie działów', en: 'Mastery by topic' },
+  drillHint: { pl: 'Dotknij działu, żeby go poćwiczyć.', en: 'Tap a topic to practise it.' },
+  missed: { pl: 'Najczęściej mylone pytania', en: 'Most missed questions' },
+  missedTimes: { pl: 'błędów', en: 'wrong' },
+  trend: { pl: 'Wyniki egzaminów', en: 'Exam scores' },
+  trendHint: { pl: 'ostatnie podejścia, linia = próg zaliczenia', en: 'recent attempts, line = pass mark' },
+  exportBtn: { pl: 'Eksportuj postępy', en: 'Export progress' },
+  importBtn: { pl: 'Importuj postępy', en: 'Import progress' },
+  resetBtn: { pl: 'Wyzeruj postępy', en: 'Reset progress' },
+  resetConfirm: { pl: 'Na pewno? Dotknij jeszcze raz', en: 'Sure? Tap again' },
+  imported: { pl: 'Zaimportowano postępy', en: 'Progress imported' },
+  importError: { pl: 'To nie jest plik z postępami.', en: 'This is not a progress file.' },
+  resetDone: { pl: 'Postępy wyzerowane', en: 'Progress reset' },
   questions: { pl: 'pytań', en: 'questions' },
   pass: { pl: 'próg zaliczenia', en: 'pass mark' },
   min: { pl: 'min', en: 'min' },
@@ -78,6 +111,8 @@ interface Attempt {
   deadline: number | null;
   result: ExamResult | null;
   timedOut: boolean;
+  /** Indices of questions already recorded in the progress (learning modes record on reveal). */
+  recorded: Set<number>;
 }
 
 const banks = new Map<BankId, Bank>();
@@ -94,6 +129,8 @@ const answersInline = (d: DrawnQuestion, idx: number[]) =>
 let loadState: 'idle' | 'loading' | 'done' | 'error' = 'idle';
 let attempt: Attempt | null = null;
 let setup = { bank: 'mysliwy' as BankId, mode: 'exam' as Mode, count: 0, topic: '' };
+let resetArmed = false;
+let toolNote = '';
 let timer: ReturnType<typeof setInterval> | undefined;
 let rerender: () => void = () => {};
 
@@ -106,10 +143,77 @@ function readHistory(): HistoryEntry[] {
 }
 function pushHistory(e: HistoryEntry) {
   try {
-    localStorage.setItem('examHistory', JSON.stringify([e, ...readHistory()].slice(0, 20)));
+    localStorage.setItem('examHistory', JSON.stringify([e, ...readHistory()].slice(0, 50)));
   } catch {
     /* storage unavailable */
   }
+}
+
+const PROGRESS_KEY = 'examProgress.v1';
+let progressCache: Progress | null = null;
+function readProgress(): Progress {
+  if (progressCache) return progressCache;
+  try {
+    progressCache = parseProgress(JSON.parse(localStorage.getItem(PROGRESS_KEY) ?? '{}'));
+  } catch {
+    progressCache = {};
+  }
+  return progressCache;
+}
+function saveProgress(p: Progress) {
+  progressCache = p;
+  try {
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(p));
+  } catch {
+    /* storage unavailable */
+  }
+}
+/** Records the answer to question `i` of the attempt once. */
+function record(a: Attempt, i: number) {
+  if (a.recorded.has(i)) return;
+  a.recorded.add(i);
+  const p = readProgress();
+  const id = a.drawn[i].question.id;
+  saveProgress({ ...p, [id]: recordAnswer(p[id], isCorrect(a.drawn[i], a.answers[i]), Date.now()) });
+}
+
+/** The learning-mode answer to the current question is complete, so it is shown and recorded. */
+const revealed = (a: Attempt, i: number) => {
+  const chosen = a.answers[i];
+  return a.mode !== 'exam' && !!chosen?.length && chosen.length >= a.drawn[i].correct.length;
+};
+
+function exportProgress() {
+  const data = { app: 'hunting-explorer', kind: 'examProgress', version: 1, exported: new Date().toISOString(), progress: readProgress(), history: readHistory() };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `postepy-egzamin-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function importProgress(file: File) {
+  try {
+    const data = JSON.parse(await file.text());
+    if (data?.kind !== 'examProgress') throw new Error('kind');
+    saveProgress(mergeProgress(readProgress(), parseProgress(data.progress)));
+    if (Array.isArray(data.history)) {
+      const seen = new Set(readHistory().map((h) => h.date));
+      const merged = [...readHistory(), ...(data.history as HistoryEntry[]).filter((h) => h?.date && !seen.has(h.date))].sort((x, y) => y.date.localeCompare(x.date));
+      try {
+        localStorage.setItem('examHistory', JSON.stringify(merged.slice(0, 50)));
+      } catch {
+        /* storage unavailable */
+      }
+    }
+    toolNote = l('imported');
+  } catch {
+    toolNote = l('importError');
+  }
+  rerender();
 }
 
 async function loadBanks() {
@@ -134,7 +238,20 @@ const topicsOf = (b: Bank) => [...new Set(b.questions.map((q) => q.topic))].sort
 function startAttempt() {
   const b = banks.get(setup.bank)!;
   const count = setup.count || b.count;
-  const drawn = drawExam(b.questions, count, Math.random, setup.topic ? [setup.topic] : undefined, b.sections);
+  const topics = setup.topic ? [setup.topic] : undefined;
+  const progress = readProgress();
+  const now = Date.now();
+  let drawn: DrawnQuestion[];
+  if (setup.mode === 'review') {
+    const due = dueQuestions(b.questions, progress, now).filter((q) => !topics || topics.includes(q.topic));
+    drawn = shuffle(due.slice(0, count)).map((q) => shuffleAnswers(q));
+    if (!drawn.length) {
+      attempt = null;
+      return;
+    }
+  } else if (setup.mode === 'learn') {
+    drawn = drawExam(b.questions, count, Math.random, topics, b.sections, (q) => weightOf(progress[q.id], now));
+  } else drawn = drawExam(b.questions, count, Math.random, topics, b.sections);
   attempt = {
     bank: b,
     mode: setup.mode,
@@ -144,6 +261,7 @@ function startAttempt() {
     deadline: setup.mode === 'exam' ? Date.now() + Math.round((b.minutes * 60000 * drawn.length) / b.count) : null,
     result: null,
     timedOut: false,
+    recorded: new Set(),
   };
   startTimer();
 }
@@ -175,6 +293,10 @@ function finish() {
   if (!attempt || attempt.result) return;
   clearInterval(timer);
   attempt.result = scoreExam(attempt.drawn, attempt.answers, attempt.bank.passPct, attempt.bank.sections);
+  // Exam mode records every question (unanswered = wrong); learning modes only the ones answered.
+  attempt.drawn.forEach((_, i) => {
+    if (attempt!.mode === 'exam' || attempt!.answers[i]?.length) record(attempt!, i);
+  });
   if (attempt.mode === 'exam')
     pushHistory({
       bank: attempt.bank.id as BankId,
@@ -201,9 +323,16 @@ function renderSetup() {
   const b = banks.get(setup.bank)!;
   const topics = topicsOf(b);
   const pzlCount = b.questions.filter((q) => q.topic !== SEASON_TOPIC).length;
-  const hist = readHistory().slice(0, 5);
+  const hist = readHistory()
+    .filter((h) => h.bank === setup.bank)
+    .slice(0, 5);
   const counts = [10, 20, 30, 50].filter((n) => n <= b.questions.length);
   const count = setup.count || b.count;
+  const progress = readProgress();
+  const now = Date.now();
+  const sum = summarize(b.questions, progress, now);
+  const dueHere = setup.topic ? (sum.byTopic.find((t) => t.topic === setup.topic)?.due ?? 0) : sum.due;
+  const noReview = setup.mode === 'review' && !dueHere;
   return `<p class="small">${l('intro')}</p>
   <div class="exam-cards">${BANK_IDS.map((id) => {
     const bk = banks.get(id)!;
@@ -216,12 +345,10 @@ function renderSetup() {
       ? `<div class="notice">${l('noQuestions')}</div>`
       : `${pzlCount === 0 ? `<div class="notice small">${l('onlySeasons')}</div>` : ''}
   <div class="seg-toggle" role="radiogroup">
-    ${(['exam', 'learn'] as Mode[])
-      .map(
-        (m) => `<button type="button" role="radio" aria-checked="${setup.mode === m}" data-exam="mode" data-mode="${m}">
-        <strong>${l(m === 'exam' ? 'examMode' : 'learnMode')}</strong><span>${l(m === 'exam' ? 'examModeHint' : 'learnModeHint')}</span></button>`,
-      )
-      .join('')}
+    ${MODES.map(
+      (m) => `<button type="button" role="radio" aria-checked="${setup.mode === m}" data-exam="mode" data-mode="${m}">
+        <strong>${l(`${m}Mode`)}${m === 'review' && sum.due ? ` <span class="due-badge">${fmtNum(sum.due)}</span>` : ''}</strong><span>${l(`${m}ModeHint`)}</span></button>`,
+    ).join('')}
   </div>
   <div class="filters">
     <select data-exam-filter="count" aria-label="${l('count')}">${[...new Set([...counts, Math.min(b.count, b.questions.length)])]
@@ -236,7 +363,12 @@ function renderSetup() {
     .filter((s) => s.minPct != null)
     .map((s) => ` · ${esc(tt(s.name))}: ${l('minSection')} ${s.minPct}%`)
     .join('')}</p>
-  <button type="button" class="btn" data-exam="start">${l('start')}</button>`
+  ${
+    noReview
+      ? `<div class="notice small">${l('nothingDue')}</div><button type="button" class="btn" data-exam="learnNew">${l('learnNew')}</button>`
+      : `<button type="button" class="btn" data-exam="start">${l('start')}${setup.mode === 'review' ? ` <span class="small">(${fmtNum(Math.min(dueHere, count))})</span>` : ''}</button>`
+  }
+  ${renderProgress(b, progress, sum)}`
   }
   ${b.origin?.url ? `<p><a href="${esc(b.origin.url)}" target="_blank" rel="noopener">${l('official')}</a></p>` : ''}
   ${
@@ -251,11 +383,77 @@ function renderSetup() {
   }`;
 }
 
+/** Stacked bar: mastered / learning / wrong / not seen. */
+function stackBar(c: Counts, cls = '') {
+  const seg = (k: keyof Counts, name: string) => (c[k] ? `<span class="st-${name}" style="flex-grow:${c[k]}"></span>` : '');
+  return `<span class="stack${cls}">${seg('mastered', 'mastered')}${seg('learning', 'learning')}${seg('wrong', 'wrong')}${seg('new', 'new')}</span>`;
+}
+
+function renderProgress(b: Bank, progress: Progress, sum: ReturnType<typeof summarize>) {
+  const lang = getLang();
+  const missed = mostMissed(b.questions, progress, 10);
+  const scores = readHistory()
+    .filter((h) => h.bank === b.id && h.total > 0)
+    .slice(0, 20)
+    .reverse();
+  const legend = (['mastered', 'learning', 'wrong', 'new'] as const)
+    .map((k) => `<span><i class="st-${k}"></i>${l(`st${k[0].toUpperCase()}${k.slice(1)}` as keyof typeof L)} <b>${fmtNum(sum[k])}</b></span>`)
+    .join('');
+  const correctOf = (q: Question) => (Array.isArray(q.correct) ? q.correct : [q.correct]);
+  const W = 300;
+  const H = 70;
+  const bw = W / Math.max(scores.length, 10);
+  const yOf = (pct: number) => H - (pct / 100) * H;
+  const trend = scores.length
+    ? `<h3>${l('trend')}</h3><p class="muted small">${l('trendHint')}</p>
+    <svg class="trend" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${l('trend')}">
+      ${scores
+        .map((h, i) => {
+          const pct = (h.correct / h.total) * 100;
+          return `<rect class="${h.passed ? 'ok' : 'bad'}" x="${i * bw + 1}" y="${yOf(pct)}" width="${Math.max(1, bw - 2)}" height="${H - yOf(pct)}"><title>${new Date(h.date).toLocaleDateString(lang === 'pl' ? 'pl-PL' : 'en-GB')}: ${fmtNum(pct)}%</title></rect>`;
+        })
+        .join('')}
+      <line x1="0" x2="${W}" y1="${yOf(b.passPct)}" y2="${yOf(b.passPct)}" />
+    </svg>`
+    : '';
+  return `<h3>${l('progress')}</h3>
+  <p class="progress-head"><b>${fmtNum(sum.mastered)}</b> ${l('ofBank')} ${fmtNum(sum.total)} ${l('stMastered')}${sum.due ? ` · <b>${fmtNum(sum.due)}</b> ${l('dueCount')}` : ''}</p>
+  ${stackBar(sum, ' big')}
+  <p class="prog-legend small">${legend}</p>
+  <p class="muted small">${l('progressHint')}</p>
+  <details class="prog-topics"><summary>${l('byTopic')}</summary><p class="muted small">${l('drillHint')}</p>
+  ${sum.byTopic
+    .map(
+      (t) => `<button type="button" class="topic-row" data-exam="drill" data-topic="${esc(t.topic)}"><span class="topic-name">${esc(t.topic)}</span>
+      <span class="num small">${fmtNum(t.mastered)}/${fmtNum(t.total)}${t.due ? ` · ${fmtNum(t.due)} ${l('dueCount')}` : ''}</span>${stackBar(t)}</button>`,
+    )
+    .join('')}</details>
+  ${
+    missed.length
+      ? `<details class="prog-missed"><summary>${l('missed')}</summary>${missed
+          .map(
+            (q) => `<article class="card review"><p class="eyebrow">${esc(q.topic)} · ${progress[q.id].wrong} ${l('missedTimes')}</p><p><strong>${esc(q.q)}</strong></p>${img(q.image, 'q-img small-img')}
+            <p class="small ok-text">✓ ${correctOf(q)
+              .map((c) => `<span class="ans-inline">${answerHtml(q.answers[c])}</span>`)
+              .join(', ')}</p></article>`,
+          )
+          .join('')}</details>`
+      : ''
+  }
+  ${trend}
+  <div class="actions prog-tools">
+    <button type="button" class="btn ghost small" data-exam="export">${l('exportBtn')}</button>
+    <label class="btn ghost small">${l('importBtn')}<input type="file" accept="application/json,.json" data-exam-filter="import" hidden /></label>
+    <button type="button" class="btn ghost small${resetArmed ? ' danger' : ''}" data-exam="reset">${l(resetArmed ? 'resetConfirm' : 'resetBtn')}</button>
+  </div>
+  ${toolNote ? `<p class="small muted">${esc(toolNote)}</p>` : ''}`;
+}
+
 function renderQuestion(a: Attempt) {
   const d = a.drawn[a.index];
   const chosen = a.answers[a.index];
   const multi = d.correct.length > 1;
-  const reveal = a.mode === 'learn' && !!chosen?.length && (!multi || chosen.length >= d.correct.length);
+  const reveal = a.mode !== 'exam' && !!chosen?.length && (!multi || chosen.length >= d.correct.length);
   const answered = a.answers.filter((x) => x?.length).length;
   const last = a.index === a.drawn.length - 1;
   return `<div class="exam-head">
@@ -282,7 +480,7 @@ function renderQuestion(a: Attempt) {
     }
     <div class="actions exam-nav">
       ${a.mode === 'exam' && a.index > 0 ? `<button type="button" class="btn ghost" data-exam="prev">${l('prev')}</button>` : ''}
-      ${!last ? `<button type="button" class="btn${a.mode === 'learn' && !reveal ? ' ghost' : ''}" data-exam="next">${l('next')}</button>` : ''}
+      ${!last ? `<button type="button" class="btn${a.mode !== 'exam' && !reveal ? ' ghost' : ''}" data-exam="next">${l('next')}</button>` : ''}
       ${last || a.mode === 'exam' ? `<button type="button" class="btn${last ? '' : ' ghost'}" data-exam="finish">${l('finish')}${a.mode === 'exam' && answered < a.drawn.length ? ` <span class="muted small">(${l('confirmFinish')}: ${a.drawn.length - answered})</span>` : ''}</button>` : ''}
       <button type="button" class="btn ghost" data-exam="quit">${l('quit')}</button>
     </div>
@@ -343,7 +541,33 @@ function renderResult(a: Attempt) {
 export function handleExamClick(el: HTMLElement): boolean {
   const action = el.dataset.exam;
   if (!action) return false;
+  if (action !== 'reset') resetArmed = false;
+  toolNote = '';
   switch (action) {
+    case 'drill':
+      setup = { ...setup, mode: 'learn', topic: el.dataset.topic ?? '' };
+      startAttempt();
+      break;
+    case 'learnNew':
+      setup.mode = 'learn';
+      startAttempt();
+      break;
+    case 'export':
+      exportProgress();
+      return true;
+    case 'reset':
+      if (resetArmed) {
+        saveProgress({});
+        try {
+          localStorage.removeItem('examHistory');
+        } catch {
+          /* storage unavailable */
+        }
+        resetArmed = false;
+        toolNote = l('resetDone');
+      } else resetArmed = true;
+      rerender();
+      return true;
     case 'pick':
       setup = { ...setup, bank: el.dataset.bank as BankId, count: 0, topic: '' };
       break;
@@ -364,6 +588,7 @@ export function handleExamClick(el: HTMLElement): boolean {
         else cur.add(i);
         attempt.answers[attempt.index] = [...cur];
       } else attempt.answers[attempt.index] = [i];
+      if (revealed(attempt, attempt.index)) record(attempt, attempt.index);
       break;
     }
     case 'prev':
@@ -388,9 +613,15 @@ export function handleExamClick(el: HTMLElement): boolean {
   return true;
 }
 
-export function handleExamChange(el: HTMLSelectElement): boolean {
+export function handleExamChange(el: HTMLSelectElement | HTMLInputElement): boolean {
   const f = el.dataset.examFilter;
   if (!f) return false;
+  if (f === 'import') {
+    const file = (el as HTMLInputElement).files?.[0];
+    if (file) importProgress(file);
+    (el as HTMLInputElement).value = '';
+    return true;
+  }
   if (f === 'count') setup.count = Number(el.value);
   if (f === 'topic') setup.topic = el.value;
   rerender();
