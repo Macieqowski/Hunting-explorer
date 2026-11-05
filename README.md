@@ -1,4 +1,4 @@
-# Hunting Explorer – mapa kół łowieckich
+# Polowanie – mapa kół łowieckich
 
 Interactive web map of all **hunting districts (obwody łowieckie)** in Poland and the **hunting clubs (koła łowieckie)** and other entities that lease or manage them.
 

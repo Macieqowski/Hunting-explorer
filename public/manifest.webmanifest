@@ -1,6 +1,6 @@
 {
-  "name": "Mapa kół łowieckich",
-  "short_name": "Łowiectwo",
+  "name": "Polowanie",
+  "short_name": "Polowanie",
   "description": "Obwody i koła łowieckie, polowania zbiorowe, egzaminy i mapy offline.",
   "lang": "pl",
   "start_url": "./",

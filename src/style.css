@@ -333,14 +333,29 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; text-transform: uppercase; le
 .page-mode .mapwrap, .page-mode .tabs { display: none; }
 .page-mode .panel { width: 100%; max-width: none; height: auto; flex: 1; border: 0; }
 .page-mode .content { padding: 20px max(16px, calc((100% - 760px) / 2)) 48px; }
+/* Phones: sections move into a drop-down menu opened by the ☰ button */
+.menubtn, .menu-scrim, .cur-section { display: none; }
 @media (max-width: 760px) {
-  .topbar { flex-wrap: wrap; }
+  .topbar { position: relative; z-index: 1100; gap: 8px; padding: 8px 8px 8px 14px; }
   .brand p { display: none; }
   .brand { flex: 1 1 0; }
   .brand h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sections { order: 3; width: 100%; margin-left: 0; overflow-x: auto; scrollbar-width: none; }
-  .sections::-webkit-scrollbar { display: none; }
-  .sections button { flex: 1 0 auto; }
+  .cur-section { display: inline; font-weight: 500; color: var(--muted); }
+  .cur-section::before { content: ' · '; }
+  .menubtn {
+    display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex: none;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text); border-radius: 8px; cursor: pointer;
+  }
+  .menu-open .menubtn { color: var(--accent); border-color: var(--accent); }
+  .sections {
+    display: none; position: absolute; top: 100%; left: 0; right: 0; margin: 0;
+    flex-direction: column; gap: 2px; padding: 8px; background: var(--surface);
+    border-bottom: 1px solid var(--border); box-shadow: var(--shadow);
+  }
+  .menu-open .sections { display: flex; }
+  .sections button { text-align: left; padding: 12px 14px; font-size: 1rem; }
+  .sections button[aria-current='page'] { box-shadow: inset 3px 0 0 var(--accent); }
+  .menu-scrim:not([hidden]) { display: block; position: fixed; inset: 0; z-index: 1050; background: rgb(0 0 0 / 0.3); }
 }
 
 /* Weather */

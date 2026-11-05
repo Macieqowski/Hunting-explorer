@@ -71,12 +71,16 @@ app.innerHTML = `
   <header class="topbar">
     <div class="brand">
       <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M12 2 4 14h4l-3 5h6v3h2v-3h6l-3-5h4z"/></svg>
-      <div><h1 data-t="title"></h1><p data-t="subtitle"></p></div>
+      <div><h1><span data-t="title"></span><span class="cur-section" id="cursection"></span></h1><p data-t="subtitle"></p></div>
     </div>
     <nav class="sections" id="sections" aria-label="Sections"></nav>
     <span class="netbadge" id="netbadge" hidden></span>
     <button class="lang" id="lang" type="button" aria-label="Language"></button>
+    <button class="menubtn" id="menubtn" type="button" aria-controls="sections" aria-expanded="false">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+    </button>
   </header>
+  <div class="menu-scrim" id="menuscrim" hidden></div>
   <main class="layout">
     <aside class="panel" id="panel">
       <nav class="tabs" id="tabs" role="tablist"></nav>
@@ -205,17 +209,12 @@ function renderStatic() {
   $('#sections').innerHTML = SECTIONS.map(
     ([id, k]) => `<button type="button" data-section="${id}" aria-current="${section === id ? 'page' : 'false'}">${t(k)}</button>`,
   ).join('');
+  const curKey = SECTIONS.find(([id]) => id === section)![1];
+  $('#cursection').textContent = t(curKey);
+  $('#menubtn').setAttribute('aria-label', t('menu'));
   app.classList.toggle('page-mode', section !== 'map');
   if (section !== lastSection) {
     lastSection = section;
-    // On phones the section bar scrolls sideways; keep the current section visible.
-    const nav = $('#sections');
-    const cur = nav.querySelector<HTMLElement>('[aria-current="page"]');
-    if (cur && nav.scrollWidth > nav.clientWidth) {
-      const n = nav.getBoundingClientRect();
-      const c = cur.getBoundingClientRect();
-      if (c.right > n.right || c.left < n.left) nav.scrollLeft += c.left - n.left - 16;
-    }
     content.scrollTop = 0;
     // Leaflet needs a size refresh after its container was hidden.
     if (section === 'map') setTimeout(() => mapApi.map.invalidateSize(), 0);
@@ -655,8 +654,24 @@ $('#lang').addEventListener('click', () => {
   render();
 });
 
+// On phones the sections live in a drop-down menu behind the ☰ button.
+function setMenu(open: boolean) {
+  app.classList.toggle('menu-open', open);
+  $('#menubtn').setAttribute('aria-expanded', String(open));
+  $('#menuscrim').hidden = !open;
+}
+$('#menubtn').addEventListener('click', () => setMenu(!app.classList.contains('menu-open')));
+$('#menuscrim').addEventListener('click', () => setMenu(false));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && app.classList.contains('menu-open')) {
+    setMenu(false);
+    $('#menubtn').focus();
+  }
+});
+
 $('#sections').addEventListener('click', (e) => {
   const b = (e.target as HTMLElement).closest<HTMLElement>('[data-section]');
+  if (b) setMenu(false);
   if (!b || b.dataset.section === sectionOf(state.view)) return;
   const s = b.dataset.section as Section;
   navigate(s === 'map' ? lastMapView : { kind: 'tab', tab: s });

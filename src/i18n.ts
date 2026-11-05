@@ -1,7 +1,8 @@
 export type Lang = 'pl' | 'en';
 
 const dict = {
-  title: { pl: 'Mapa kół łowieckich', en: 'Polish Hunting Clubs Map' },
+  title: { pl: 'Polowanie', en: 'Polowanie' },
+  menu: { pl: 'Menu', en: 'Menu' },
   subtitle: { pl: 'Obwody łowieckie i ich dzierżawcy w całej Polsce', en: 'Hunting districts and their leaseholders across Poland' },
   sectionMap: { pl: 'Mapa', en: 'Map' },
   tabClubs: { pl: 'Koła', en: 'Clubs' },
