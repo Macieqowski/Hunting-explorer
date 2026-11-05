@@ -311,7 +311,7 @@ export function toGpx(
   const areas = drives.filter((d) => d.area.length >= 3).map((d) => trk(d.name, 'drive', [...d.area, d.area[0]].map(([lat, lng]) => ({ lat, lng }))));
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    '<gpx version="1.1" creator="Hunting Explorer" xmlns="http://www.topografix.com/GPX/1/1">',
+    '<gpx version="1.1" creator="Polowanie" xmlns="http://www.topografix.com/GPX/1/1">',
     `  <metadata><name>${xml(huntName)}</name></metadata>`,
     ...wpts,
     ...sights,

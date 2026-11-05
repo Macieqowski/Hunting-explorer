@@ -83,7 +83,7 @@ export const PL = {
   pDraft: { pl: 'WERSJA ROBOCZA – pokot nie został zatwierdzony przez prowadzącego', en: 'DRAFT – the leader has not confirmed these results' },
   pLockedAt: { pl: 'Zatwierdzony', en: 'Confirmed' },
   pSign: { pl: 'Podpis prowadzącego polowanie', en: "Hunt leader's signature" },
-  pMade: { pl: 'Wygenerowano w Hunting Explorer', en: 'Generated with Hunting Explorer' },
+  pMade: { pl: 'Wygenerowano w aplikacji Polowanie', en: 'Generated with Polowanie' },
   pClose: { pl: 'Zamknij podgląd', en: 'Close preview' },
   pPrint: { pl: 'Drukuj / zapisz PDF', en: 'Print / save PDF' },
 } as const;
