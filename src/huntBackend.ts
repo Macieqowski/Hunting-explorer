@@ -2,7 +2,7 @@
 // lives in huntFirebase.ts and is loaded on demand, so people who never open the
 // group hunt section never download the Firebase SDK.
 
-import type { Drive, DriveInput, Hunt, HuntInput, HuntStatus, Participant, Position, Role, TrackPoint } from './hunt';
+import type { Drive, DriveInput, Sighting, SightingInput, Hunt, HuntInput, HuntStatus, Participant, Position, Role, TrackPoint } from './hunt';
 
 export type Unsubscribe = () => void;
 
@@ -31,7 +31,7 @@ export interface HuntBackend {
   /** Readable by confirmed participants; onDenied for anyone else. */
   watchPositions(id: string, cb: (ps: Position[]) => void, onDenied: () => void): Unsubscribe;
   watchTracks(id: string, cb: (tracks: Map<string, TrackPoint[]>) => void, onDenied: () => void): Unsubscribe;
-  /** Leader only: delete all positions and tracks of a hunt. */
+  /** Leader only: delete all positions, tracks and sightings of a hunt. */
   purgeLocations(id: string): Promise<void>;
   /** Drives (mioty): readable by confirmed participants, written by the leader. */
   watchDrives(id: string, cb: (ds: Drive[]) => void, onDenied: () => void): Unsubscribe;
@@ -41,6 +41,10 @@ export interface HuntBackend {
   /** Start a drive now, ending the ones still running. */
   startDrive(id: string, driveId: string, running: string[]): Promise<void>;
   endDrive(id: string, driveId: string): Promise<void>;
+  /** Game sightings: reported by confirmed participants while the hunt is live, newest first. */
+  watchSightings(id: string, cb: (ss: Sighting[]) => void, onDenied: () => void): Unsubscribe;
+  addSighting(id: string, s: SightingInput): Promise<string>;
+  deleteSighting(id: string, sightingId: string): Promise<void>;
 }
 
 /** Errors the UI explains in words. */

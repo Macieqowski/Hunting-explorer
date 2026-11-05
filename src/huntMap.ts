@@ -5,8 +5,8 @@
 import L from 'leaflet';
 import { fetchDistrictsByIds, BDL_WMS_DISTRICTS, BDL_WMS_FORESTS } from './bdl';
 import { baseLayers, POLAND_BOUNDS } from './map';
-import { roleIcon, ROLE_COLOR } from './huntIcons';
-import { freshness, distanceM, type Area, type DriveState, type Position, type Role, type TrackPoint } from './hunt';
+import { roleIcon, ROLE_COLOR, speciesIcon, SPECIES_COLOR } from './huntIcons';
+import { freshness, distanceM, offsetPoint, type Area, type DriveState, type Position, type Role, type TrackPoint, type Species, type SightLook } from './hunt';
 
 export interface PersonInfo {
   name: string;
@@ -18,6 +18,17 @@ export interface DriveView {
   name: string;
   area: Area;
   state: DriveState;
+}
+
+export interface SightView {
+  id: string;
+  species: Species;
+  label: string; // "Dziki 3–6"
+  lat: number;
+  lng: number;
+  heading: number;
+  look: SightLook;
+  popup: string; // HTML
 }
 
 export interface HuntMapText {
@@ -38,6 +49,8 @@ export interface HuntMap {
   fitAll(): void;
   centerOn(uid: string): boolean;
   setDrives(ds: DriveView[]): void;
+  setSightings(ss: SightView[]): void;
+  centerOnPoint(lat: number, lng: number): void;
   /** Tap the map to add corners, drag corners to move them; onChange gets every change. */
   startDraw(area: Area, onChange: (a: Area) => void, hideDrive?: string | null): void;
   undoCorner(): void;
@@ -90,6 +103,7 @@ export function createHuntMap(text: HuntMapText): HuntMap {
   const drawLayer = L.layerGroup().addTo(map);
   const trackLayer = L.layerGroup().addTo(map);
   const accLayer = L.layerGroup().addTo(map);
+  const sightLayer = L.layerGroup().addTo(map);
   const markerLayer = L.featureGroup().addTo(map);
   const markers = new Map<string, { marker: L.Marker; acc: L.Circle | null; pos: Position; info: PersonInfo; me: boolean; cls: string }>();
   let districtId: number | null = null;
@@ -303,6 +317,46 @@ export function createHuntMap(text: HuntMapText): HuntMap {
       if (!m) return false;
       map.setView(m.marker.getLatLng(), Math.max(map.getZoom(), 15));
       return true;
+    },
+
+    setSightings(ss) {
+      sightLayer.clearLayers();
+      // Oldest first, so the newest is drawn on top.
+      for (const s of [...ss].reverse()) {
+        const color = SPECIES_COLOR[s.species];
+        const o = { lat: s.lat, lng: s.lng };
+        const len = 150;
+        const opacity = s.look === 'bright' ? 1 : s.look === 'faded' ? 0.55 : 0.35;
+        // Phone compasses are 10–20° off, so the direction is a narrow fan, not a line.
+        const fan = [o, offsetPoint(o, s.heading - 15, len), offsetPoint(o, s.heading, len * 1.05), offsetPoint(o, s.heading + 15, len)];
+        L.polygon(fan, { color, weight: 1, opacity: opacity * 0.6, fillColor: color, fillOpacity: 0.15 * opacity, interactive: false }).addTo(sightLayer);
+        const tip = offsetPoint(o, s.heading, len * 1.05);
+        L.polyline([o, tip], { color, weight: 3, opacity, interactive: false }).addTo(sightLayer);
+        L.polygon([tip, offsetPoint(tip, s.heading + 150, 35), offsetPoint(tip, s.heading - 150, 35)], {
+          color,
+          weight: 1,
+          fillColor: color,
+          fillOpacity: opacity,
+          opacity,
+          interactive: false,
+        }).addTo(sightLayer);
+        L.marker([s.lat, s.lng], {
+          icon: L.divIcon({
+            className: 'hm-icon',
+            html: `<div class="hs-marker hs-${s.look}">${speciesIcon(s.species, 24)}<span class="hm-label">${esc(s.label)}</span></div>`,
+            iconSize: [0, 0],
+          }),
+          zIndexOffset: s.look === 'bright' ? 800 : -500,
+          title: s.label,
+        })
+          .bindPopup(s.popup)
+          .addTo(sightLayer);
+      }
+    },
+
+    centerOnPoint(lat, lng) {
+      userMoved = true;
+      map.setView([lat, lng], Math.max(map.getZoom(), 15));
     },
 
     setDrives(ds) {

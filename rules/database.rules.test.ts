@@ -290,3 +290,59 @@ describe('drives', () => {
     await assertSucceeds(update(ref(db('lead')), { 'hunts/h1': null, 'participants/h1': null, 'drives/h1': null }));
   });
 });
+
+describe('sightings', () => {
+  const sight = (uid: string, extra: Record<string, unknown> = {}) => ({
+    uid,
+    species: 'boar',
+    count: '3-6',
+    lat: 52.1,
+    lng: 21.1,
+    heading: 42,
+    src: 'compass',
+    ts: serverTimestamp(),
+    ...extra,
+  });
+  beforeEach(async () => {
+    await createHunt('lead');
+    await join('a', 'beater');
+    await join('b');
+    await join('c');
+    await update(ref(db('lead'), 'participants/h1/a'), { status: 'confirmed' });
+    await update(ref(db('lead'), 'participants/h1/b'), { status: 'confirmed' });
+  });
+  it('can be reported by confirmed participants only while the hunt is live', async () => {
+    await assertFails(set(ref(db('a'), 'sightings/h1/s1'), sight('a')));
+    await update(ref(db('lead'), 'hunts/h1'), { status: 'live' });
+    await assertSucceeds(set(ref(db('a'), 'sightings/h1/s1'), sight('a', { driveId: 'd1' })));
+    await assertSucceeds(set(ref(db('b'), 'sightings/h1/s2'), sight('b'))); // hunters too
+    await assertFails(set(ref(db('c'), 'sightings/h1/s3'), sight('c'))); // not confirmed
+    await assertFails(set(ref(db('a'), 'sightings/h1/s4'), sight('b'))); // in someone else's name
+  });
+  it('are checked: species, count, heading, server time', async () => {
+    await update(ref(db('lead'), 'hunts/h1'), { status: 'live' });
+    await assertFails(set(ref(db('a'), 'sightings/h1/x'), sight('a', { species: 'bear' })));
+    await assertFails(set(ref(db('a'), 'sightings/h1/x'), sight('a', { count: '10' })));
+    await assertFails(set(ref(db('a'), 'sightings/h1/x'), sight('a', { heading: 360 })));
+    await assertFails(set(ref(db('a'), 'sightings/h1/x'), sight('a', { ts: 5 })));
+    await assertFails(set(ref(db('a'), 'sightings/h1/x'), sight('a', { note: 'x' })));
+    await assertSucceeds(set(ref(db('a'), 'sightings/h1/x'), sight('a', { count: '6+', heading: 359.5, src: 'buttons' })));
+  });
+  it('cannot be changed, only deleted by the author or the leader', async () => {
+    await update(ref(db('lead'), 'hunts/h1'), { status: 'live' });
+    await set(ref(db('a'), 'sightings/h1/s1'), sight('a'));
+    await set(ref(db('a'), 'sightings/h1/s2'), sight('a'));
+    await assertFails(update(ref(db('a'), 'sightings/h1/s1'), { heading: 90 }));
+    await assertFails(set(ref(db('b'), 'sightings/h1/s1'), null));
+    await assertSucceeds(set(ref(db('a'), 'sightings/h1/s1'), null));
+    await assertSucceeds(set(ref(db('lead'), 'sightings/h1/s2'), null));
+  });
+  it('are visible to confirmed participants only and purged by the leader', async () => {
+    await update(ref(db('lead'), 'hunts/h1'), { status: 'live' });
+    await set(ref(db('a'), 'sightings/h1/s1'), sight('a'));
+    await assertSucceeds(get(ref(db('b'), 'sightings/h1')));
+    await assertFails(get(ref(db('c'), 'sightings/h1')));
+    await assertFails(set(ref(db('a'), 'sightings/h1'), null));
+    await assertSucceeds(update(ref(db('lead')), { 'positions/h1': null, 'tracks/h1': null, 'sightings/h1': null }));
+  });
+});

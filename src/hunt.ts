@@ -278,6 +278,7 @@ export function toGpx(
   people: Map<string, { name: string; role: Role }>,
   roleName: (r: Role) => string,
   drives: Drive[] = [],
+  sightings: { s: Sighting; label: string }[] = [],
 ): string {
   const label = (uid: string) => {
     const p = people.get(uid);
@@ -290,6 +291,9 @@ export function toGpx(
   const wpts = positions
     .filter((p) => people.has(p.uid))
     .map((p) => `  <wpt lat="${p.lat}" lon="${p.lng}"><time>${iso(p.ts)}</time><name>${xml(label(p.uid))}</name><type>${people.get(p.uid)!.role}</type></wpt>`);
+  const sights = sightings.map(
+    ({ s, label }) => `  <wpt lat="${s.lat}" lon="${s.lng}"><time>${iso(s.ts)}</time><name>${xml(label)}</name><type>${s.species}</type></wpt>`,
+  );
   const run = drives.filter((d) => d.startedAt != null);
   const trks = [...tracks]
     .filter(([uid]) => people.has(uid))
@@ -304,6 +308,7 @@ export function toGpx(
     '<gpx version="1.1" creator="Hunting Explorer" xmlns="http://www.topografix.com/GPX/1/1">',
     `  <metadata><name>${xml(huntName)}</name></metadata>`,
     ...wpts,
+    ...sights,
     ...areas,
     ...trks,
     '</gpx>',
@@ -441,4 +446,128 @@ export function splitByDrive<P extends { ts: number }, D extends Pick<Drive, 'st
     else out.push({ drive: d, pts: [p] });
   }
   return out;
+}
+
+// ---------------------------------------------------------------- game sightings
+
+export type Species = 'deer' | 'boar' | 'roe' | 'predator';
+export type Herd = '1-3' | '3-6' | '6+';
+export type HeadingSource = 'compass' | 'buttons';
+
+export const SPECIES: Species[] = ['deer', 'boar', 'roe', 'predator'];
+export const HERDS: Herd[] = ['1-3', '3-6', '6+'];
+
+export interface SightingInput {
+  species: Species;
+  count: Herd;
+  lat: number;
+  lng: number;
+  heading: number; // degrees from true north, clockwise, 0–359
+  src: HeadingSource;
+  driveId: string | null;
+}
+
+export interface Sighting extends SightingInput {
+  id: string;
+  uid: string;
+  ts: number;
+}
+
+/** Sightings stay bright this long, then fade until their drive ends (or SIGHT_LOOSE_MS without a drive). */
+export const SIGHT_FRESH_MS = 5 * 60e3;
+export const SIGHT_LOOSE_MS = 30 * 60e3;
+/** Hunters this close to a sighting and within this angle of its direction get an alert. */
+export const ALERT_M = 500;
+export const ALERT_DEG = 30;
+
+export function parseSightings(v: unknown): Sighting[] {
+  if (!v || typeof v !== 'object') return [];
+  const out: Sighting[] = [];
+  for (const [id, raw] of Object.entries(v as Record<string, unknown>)) {
+    if (!raw || typeof raw !== 'object') continue;
+    const o = raw as Record<string, unknown>;
+    if (!SPECIES.includes(o.species as Species) || !HERDS.includes(o.count as Herd)) continue;
+    if (!isNum(o.lat) || !isNum(o.lng) || !isNum(o.heading) || !isNum(o.ts) || typeof o.uid !== 'string') continue;
+    out.push({
+      id,
+      uid: o.uid,
+      species: o.species as Species,
+      count: o.count as Herd,
+      lat: o.lat,
+      lng: o.lng,
+      heading: normDeg(o.heading),
+      src: o.src === 'buttons' ? 'buttons' : 'compass',
+      driveId: typeof o.driveId === 'string' ? o.driveId : null,
+      ts: o.ts,
+    });
+  }
+  return out.sort((a, b) => b.ts - a.ts);
+}
+
+export const normDeg = (d: number) => ((d % 360) + 360) % 360;
+/** Smallest angle between two directions, 0–180. */
+export const angleDiff = (a: number, b: number) => {
+  const d = Math.abs(normDeg(a) - normDeg(b));
+  return d > 180 ? 360 - d : d;
+};
+
+const POINTS_PL = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+/** Eight-point compass name for a heading (N, NE, E…). */
+export const compassPoint = (deg: number) => POINTS_PL[Math.round(normDeg(deg) / 45) % 8];
+
+/** Initial bearing from a to b, degrees clockwise from north. */
+export function bearing(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const rad = Math.PI / 180;
+  const y = Math.sin((b.lng - a.lng) * rad) * Math.cos(b.lat * rad);
+  const x = Math.cos(a.lat * rad) * Math.sin(b.lat * rad) - Math.sin(a.lat * rad) * Math.cos(b.lat * rad) * Math.cos((b.lng - a.lng) * rad);
+  return normDeg(Math.atan2(y, x) / rad);
+}
+
+/** Point `m` metres from p in direction `deg` (flat-earth approximation, fine for a few km). */
+export function offsetPoint(p: { lat: number; lng: number }, deg: number, m: number): { lat: number; lng: number } {
+  const rad = Math.PI / 180;
+  const dLat = (m * Math.cos(deg * rad)) / 111_320;
+  const dLng = (m * Math.sin(deg * rad)) / (111_320 * Math.cos(p.lat * rad));
+  return { lat: p.lat + dLat, lng: p.lng + dLng };
+}
+
+/** Whether the game is heading toward `me`: within ALERT_M of the sighting and ALERT_DEG of its direction. */
+export function headingToward(s: Pick<Sighting, 'lat' | 'lng' | 'heading'>, me: { lat: number; lng: number }): boolean {
+  const d = distanceM(s, me);
+  if (d > ALERT_M) return false;
+  if (d < 30) return true; // right next to it
+  return angleDiff(bearing(s, me), s.heading) <= ALERT_DEG;
+}
+
+export type SightLook = 'bright' | 'faded' | 'old';
+
+/** Bright for SIGHT_FRESH_MS, then faded while its drive runs (or SIGHT_LOOSE_MS when there was none), then old. */
+export function sightLook(s: Pick<Sighting, 'ts' | 'driveId'>, now: number, activeDriveId: string | null): SightLook {
+  const age = now - s.ts;
+  if (age < SIGHT_FRESH_MS) return 'bright';
+  if (s.driveId ? s.driveId === activeDriveId : age < SIGHT_LOOSE_MS) return 'faded';
+  return 'old';
+}
+
+/**
+ * Magnetic declination in Poland (east, degrees), about 5° in the west to 7.5° in the east in the mid-2020s.
+ * Close enough for an arrow drawn as a 30° fan.
+ */
+export const declination = (lng: number) => Math.min(8, Math.max(4, 5 + (lng - 14) * 0.25));
+
+/**
+ * Compass heading (degrees from magnetic north) of where the phone points, from absolute
+ * DeviceOrientation angles. Held upright, that is where the back camera looks; held flat,
+ * where the top edge points. null when the phone points straight up or down.
+ */
+export function headingFromOrientation(alpha: number, beta: number, gamma: number): number | null {
+  const r = Math.PI / 180;
+  const [cA, sA, cB, sB, cG, sG] = [Math.cos(alpha * r), Math.sin(alpha * r), Math.cos(beta * r), Math.sin(beta * r), Math.cos(gamma * r), Math.sin(gamma * r)];
+  // Device axes in earth coordinates (x east, y north, z up), W3C rotation order Z-X'-Y''.
+  const back = [-(cG * sA * sB + cA * sG), -(sA * sG - cA * cG * sB), -(cB * cG)];
+  const top = [-cB * sA, cA * cB, sB];
+  const flatness = Math.hypot(back[0], back[1]); // 0 = lying flat, 1 = upright
+  const v = flatness > 0.6 ? back : top;
+  if (Math.hypot(v[0], v[1]) < 0.2) return null;
+  return normDeg(Math.atan2(v[0], v[1]) / r);
 }

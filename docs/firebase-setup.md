@@ -41,7 +41,8 @@ Firebase's menu was reorganised in 2025. If a menu name below does not match, us
 - Only the leader can confirm people, change their role, remove them, close sign-up, start or end the hunt, and delete it.
 - Live positions (`positions/`) and tracks (`tracks/`) can be written only by confirmed participants, only for themselves, and only while the hunt status is "live". Only confirmed participants can read them.
 - Drives (`drives/`) can be added, changed, started, ended and deleted only by the leader. Only confirmed participants can read them. They stay until the hunt is deleted.
-- Positions and tracks are kept for 7 days after the leader ends the hunt. There is no server code on the free plan, so the leader's browser deletes them the next time the leader opens the hunt or the hunt list after those 7 days. Deleting the hunt deletes them at once.
+- Game sightings (`sightings/`) can be reported by confirmed participants, in their own name, only while the hunt is live, and cannot be changed afterwards. The author or the leader can delete one. Only confirmed participants can read them.
+- Positions, tracks and sightings are kept for 7 days after the leader ends the hunt. There is no server code on the free plan, so the leader's browser deletes them the next time the leader opens the hunt or the hunt list after those 7 days. Deleting the hunt deletes them at once.
 
 ## Local development with emulators
 

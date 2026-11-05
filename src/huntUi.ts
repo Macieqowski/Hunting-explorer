@@ -30,14 +30,21 @@ import {
   sortDrives,
   validateDrive,
   nextDriveDefaults,
+  type Sighting,
+  type Herd,
+  headingToward,
+  sightLook,
+  compassPoint,
+  distanceM,
 } from './hunt';
 import type { District } from './bdl';
 import { fetchDistrictsAtPoint } from './bdl';
 import { fold, districtSlug } from './data';
-import { createHuntMap, type HuntMap, type PersonInfo, type DriveView } from './huntMap';
+import { createHuntMap, type HuntMap, type PersonInfo, type DriveView, type SightView } from './huntMap';
 import { Sharer } from './huntShare';
 import { openPocket, updatePocket } from './huntPocket';
-import { roleIcon } from './huntIcons';
+import { roleIcon, speciesIcon } from './huntIcons';
+import { openReport, closeReport } from './huntSighting';
 import { firebaseConfig, getBackend, HuntError, type HuntBackend, type Unsubscribe } from './huntBackend';
 
 const esc = (s: unknown) =>
@@ -256,6 +263,33 @@ const L = {
   dStarted: { pl: 'rozpoczęty', en: 'started' },
   dEnded: { pl: 'zakończony', en: 'ended' },
   dMax: { pl: 'Osiągnięto limit miotów.', en: 'The drive limit has been reached.' },
+  sightReport: { pl: 'Zwierzyna', en: 'Game spotted' },
+  sightReportHint: { pl: 'Zgłoś zwierzynę i kierunek, w którym poszła', en: 'Report game and the direction it went' },
+  sightTitle: { pl: 'Co widzisz?', en: 'What do you see?' },
+  sightCount: { pl: 'Ile', en: 'How many' },
+  sp_deer: { pl: 'Jelenie', en: 'Red deer' },
+  sp_boar: { pl: 'Dziki', en: 'Wild boar' },
+  sp_roe: { pl: 'Sarny', en: 'Roe deer' },
+  sp_predator: { pl: 'Drapieżniki', en: 'Predators' },
+  sightPoint: {
+    pl: 'Skieruj telefon tam, dokąd poszła zwierzyna (tyłem telefonu albo górną krawędzią).',
+    en: 'Point the phone where the game went (with its back or its top edge).',
+  },
+  sightWent: { pl: 'Tam poszły', en: 'They went there' },
+  sightWhere: { pl: 'dokąd poszły?', en: 'which way?' },
+  sightNoCompass: { pl: 'Kompas niedostępny. Wybierz kierunek (góra = północ).', en: 'No compass. Pick the direction (up = north).' },
+  sightCalibrate: { pl: 'Kompas niedokładny: zatocz telefonem ósemkę.', en: 'Compass is inaccurate: move the phone in a figure of eight.' },
+  sightButtons: { pl: 'Wybiorę kierunek przyciskiem', en: 'Pick the direction with a button' },
+  sightCompass: { pl: 'Użyj kompasu', en: 'Use the compass' },
+  sightBack: { pl: 'Wstecz', en: 'Back' },
+  sightSaving: { pl: 'Zapisywanie…', en: 'Saving…' },
+  sightNoFix: { pl: 'Nie udało się ustalić Twojego położenia.', en: 'Could not get your position.' },
+  sightSaved: { pl: 'Zgłoszono', en: 'Reported' },
+  sightUndo: { pl: 'Cofnij', en: 'Undo' },
+  sightToward: { pl: 'idą w Twoją stronę', en: 'heading your way' },
+  sightings: { pl: 'Zwierzyna', en: 'Game' },
+  sightNone: { pl: 'Nikt jeszcze nie zgłosił zwierzyny.', en: 'Nobody has reported game yet.' },
+  sightBy: { pl: 'zgłosił(a)', en: 'reported by' },
 } as const;
 const l = (k: keyof typeof L) => tt(L[k]);
 
@@ -305,7 +339,11 @@ let drives: Drive[] = [];
 let drivesUnsub: Unsubscribe | null = null;
 /** id of the running drive at the last update; undefined until the first one arrives. */
 let lastActive: string | null | undefined;
-let toast: { text: string; until: number } | null = null;
+let toast: { text: string; until: number; undo?: string } | null = null;
+let sightings: Sighting[] = [];
+let sightUnsub: Unsubscribe | null = null;
+/** Sightings already seen, so only new ones raise an alert; null until the first update. */
+let seenSights: Set<string> | null = null;
 /** The drive being added (id null) or redrawn; name and times live in the form draft. */
 let driveEdit: { id: string | null; area: Area; name: string; start: string; end: string } | null = null;
 /** Scroll the drive form and the map below it into view after the next render. */
@@ -364,6 +402,11 @@ function stopLive() {
   tracksUnsub = null;
   drivesUnsub?.();
   drivesUnsub = null;
+  sightUnsub?.();
+  sightUnsub = null;
+  sightings = [];
+  seenSights = null;
+  closeReport();
   drives = [];
   lastActive = undefined;
   toast = null;
@@ -407,8 +450,10 @@ function syncLive() {
       },
     );
     drivesUnsub = conn.be.watchDrives(id!, onDrives, () => (drivesUnsub = null));
+    sightUnsub = conn.be.watchSightings(id!, onSightings, () => (sightUnsub = null));
     ticker = setInterval(() => {
       hmap?.refreshAges(now());
+      drawSightings();
       updateLiveText();
     }, 15_000);
   }
@@ -438,20 +483,140 @@ function onDrives(ds: Drive[]) {
     const prev = drives.find((d) => d.id === lastActive);
     const text = act ? `${act.name} ${l('dStarted')}` : prev ? `${prev.name} ${l('dEnded')}` : '';
     if (text) {
-      toast = { text, until: Date.now() + 10_000 };
+      showToast(text);
       navigator.vibrate?.([300, 150, 300]);
-      setTimeout(() => {
-        if (toast && Date.now() >= toast.until) {
-          toast = null;
-          rerender();
-        }
-      }, 10_500);
     }
   }
   lastActive = actId;
   if (driveEdit?.id && !drives.some((d) => d.id === driveEdit!.id)) driveEdit = null; // deleted meanwhile
   rerender();
   updatePocket();
+}
+
+function showToast(text: string, undo?: string) {
+  const t = { text, until: Date.now() + 10_000, undo };
+  toast = t;
+  rerender();
+  setTimeout(() => {
+    if (toast === t) {
+      toast = null;
+      rerender();
+    }
+  }, 10_500);
+}
+
+// ---------------------------------------------------------------- game sightings
+
+const herdLabel = (h: Herd) => h.replace('-', '–');
+const sightName = (s: Pick<Sighting, 'species' | 'count'>) => `${l(`sp_${s.species}` as keyof typeof L)} ${herdLabel(s.count)}`;
+
+/** Where I am: the sharing fix, or my last published position. */
+function myPos(): { lat: number; lng: number } | null {
+  if (sharer?.active && sharer.huntId === watched && sharer.lastFix) return sharer.lastFix;
+  return positions.find((p) => p.uid === myUid()) ?? null;
+}
+
+function onSightings(ss: Sighting[]) {
+  sightings = ss;
+  if (seenSights) {
+    const me = myPos();
+    for (const s of ss) {
+      if (seenSights.has(s.id)) continue;
+      seenSights.add(s.id);
+      if (s.uid === myUid() || now() - s.ts > 2 * 60e3 || !me || !headingToward(s, me)) continue;
+      navigator.vibrate?.([200, 100, 200, 100, 400]);
+      showToast(`${sightName(s)} ${l('sightToward')} (${Math.round(distanceM(s, me))} m)`);
+    }
+  } else seenSights = new Set(ss.map((s) => s.id));
+  drawSightings();
+}
+
+/** Sightings shown on the map: bright and faded ones, and old ones too while tracks are shown. */
+function visibleSightings(): { s: Sighting; look: ReturnType<typeof sightLook> }[] {
+  const act = activeDrive(drives)?.id ?? null;
+  const t = now();
+  return sightings.map((s) => ({ s, look: sightLook(s, t, act) })).filter((x) => x.look !== 'old' || showTracks);
+}
+
+function sightPopup(s: Sighting): string {
+  const who = members?.find((p) => p.uid === s.uid)?.name ?? '?';
+  return `<strong>${esc(sightName(s))}</strong> → ${compassPoint(s.heading)} · ${Math.round(s.heading)}°<br>${l('sightBy')} ${esc(who)}<br>${esc(ago(Math.max(0, now() - s.ts)))}`;
+}
+
+function drawSightings() {
+  const vis = visibleSightings();
+  hmap?.setSightings(
+    vis.map(({ s, look }): SightView => ({ id: s.id, species: s.species, label: sightName(s), lat: s.lat, lng: s.lng, heading: s.heading, look, popup: sightPopup(s) })),
+  );
+  const list = document.querySelector('.hs-list');
+  if (list) list.innerHTML = sightListHtml();
+}
+
+function sightListHtml(): string {
+  const vis = visibleSightings().slice(0, 12);
+  if (!vis.length) return `<p class="muted small">${l('sightNone')}</p>`;
+  return `<ul>${vis
+    .map(({ s, look }) => {
+      const who = members?.find((p) => p.uid === s.uid)?.name ?? '?';
+      return `<li class="hs-${look}"><button type="button" data-hunt="sightShow" data-sid="${esc(s.id)}">${speciesIcon(s.species, 22)}
+        <strong>${esc(sightName(s))}</strong> <span class="hs-dir" style="--deg:${Math.round(s.heading)}deg" aria-hidden="true">↑</span> ${compassPoint(s.heading)}
+        <span class="muted small">· ${esc(who)} · ${esc(ago(Math.max(0, now() - s.ts)))}</span></button></li>`;
+    })
+    .join('')}</ul>`;
+}
+
+function getFix(): Promise<{ lat: number; lng: number }> {
+  const known = sharer?.active && sharer.huntId === watched ? sharer.lastFix : null;
+  if (known) return Promise.resolve(known);
+  return new Promise((resolve, reject) => {
+    if (!('geolocation' in navigator)) return reject(new Error(l('sightNoFix')));
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      () => reject(new Error(l('sightNoFix'))),
+      { enableHighAccuracy: true, timeout: 20_000, maximumAge: 30_000 },
+    );
+  });
+}
+
+function openSightReport() {
+  const id = watched;
+  if (!id || conn.s !== 'ready') return;
+  const be = conn.be;
+  // Start the GPS fix right away, while the person picks the animal.
+  const fix = getFix();
+  fix.catch(() => {});
+  let lng: number | null = myPos()?.lng ?? null;
+  fix.then((f) => (lng = f.lng), () => {});
+  openReport(
+    {
+      title: l('sightTitle'),
+      count: l('sightCount'),
+      species: { deer: l('sp_deer'), boar: l('sp_boar'), roe: l('sp_roe'), predator: l('sp_predator') },
+      herd: herdLabel,
+      where: (name) => `${name}: ${l('sightWhere')}`,
+      point: l('sightPoint'),
+      went: l('sightWent'),
+      noCompass: l('sightNoCompass'),
+      calibrate: l('sightCalibrate'),
+      useButtons: l('sightButtons'),
+      useCompass: l('sightCompass'),
+      cancel: l('cancel'),
+      back: l('sightBack'),
+      saving: l('sightSaving'),
+    },
+    () => lng,
+    async (r) => {
+      const at = await fix;
+      let sid: string;
+      try {
+        sid = await be.addSighting(id, { ...r, lat: at.lat, lng: at.lng, driveId: activeDrive(drives)?.id ?? null });
+      } catch (e) {
+        throw new Error(errText(e));
+      }
+      navigator.vibrate?.(80);
+      showToast(`${l('sightSaved')}: ${sightName(r)} → ${compassPoint(r.heading)}`, sid);
+    },
+  );
 }
 
 const driveViews = (): DriveView[] => drives.map((d) => ({ id: d.id, name: d.name, area: d.area, state: driveState(d) }));
@@ -507,6 +672,7 @@ export function mountHuntMap() {
     document.querySelector('.hd-form')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
   drawPositions();
+  drawSightings();
   if (showTracks) m.setTracks(lastTracks, people());
   updateLiveText();
 }
@@ -531,7 +697,8 @@ function exportGpx() {
         rerender();
         return;
       }
-      const gpx = toGpx(h.name, tracks, positions, people(), (r) => l(`r_${r}`), drives);
+      const sights = sightings.map((s) => ({ s, label: `${sightName(s)} → ${Math.round(s.heading)}°` }));
+      const gpx = toGpx(h.name, tracks, positions, people(), (r) => l(`r_${r}`), drives, sights);
       const url = URL.createObjectURL(new Blob([gpx], { type: 'application/gpx+xml' }));
       const a = Object.assign(document.createElement('a'), { href: url, download: gpxFileName(h) });
       document.body.append(a);
@@ -546,6 +713,7 @@ function exportGpx() {
 function toggleTracks() {
   if (!watched || conn.s !== 'ready') return;
   showTracks = !showTracks;
+  queueMicrotask(drawSightings); // old sightings show with the tracks
   tracksUnsub?.();
   tracksUnsub = null;
   if (showTracks)
@@ -918,9 +1086,16 @@ function renderLive(h: Hunt, me: Participant): string {
   } else if (h.status === 'ended') share = `<p class="muted small">${l('shareEnded')}</p>`;
   else share = `<p class="muted small">${l('shareNotLive')}</p>`;
   const iShare = !!sharer?.active && sharer.huntId === h.id;
-  const t = toast && Date.now() < toast.until ? `<div class="hd-toast" role="alert">${esc(toast.text)}</div>` : '';
+  const t =
+    toast && Date.now() < toast.until
+      ? `<div class="hd-toast" role="alert"><span>${esc(toast.text)}</span>${toast.undo ? `<button type="button" class="btn small" data-hunt="sightUndo" data-sid="${esc(toast.undo)}">${l('sightUndo')}</button>` : ''}</div>`
+      : '';
   const drawing = !!driveEdit && h.leaderUid === myUid();
-  return `<h3>${l('mapTitle')}</h3>${t}${share}${renderDrives(h, h.leaderUid === myUid())}
+  const report =
+    h.status === 'live' && !drawing
+      ? `<button type="button" class="btn hs-report" data-hunt="sightOpen" aria-label="${esc(l('sightReportHint'))}">${speciesIcon('boar', 28)} ${l('sightReport')}</button>`
+      : '';
+  return `<h3>${l('mapTitle')}</h3>${t}${report}${share}${renderDrives(h, h.leaderUid === myUid())}
     <div class="hm-bar"${drawing ? ' hidden' : ''}><div class="hm-counts">${liveCounts()}</div>
       <div class="hm-tools">
         ${iShare ? `<button type="button" class="btn small ghost" data-hunt="centerMe">◎ ${l('centerMe')}</button>` : ''}
@@ -928,7 +1103,8 @@ function renderLive(h: Hunt, me: Participant): string {
         <button type="button" class="btn small ghost" data-hunt="tracks" aria-pressed="${showTracks}">${showTracks ? l('hideTracks') : l('showTracks')}</button>
         <button type="button" class="btn small ghost" data-hunt="gpx">${l('exportGpx')}</button>
       </div></div>
-    <div class="hm-slot"></div>`;
+    <div class="hm-slot"></div>
+    ${drawing ? '' : `<h4>${l('sightings')}</h4><div class="hs-list">${sightListHtml()}</div>`}`;
 }
 
 const clock = (ms: number) => new Date(ms).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
@@ -1209,6 +1385,23 @@ export function handleHuntClick(el: HTMLElement): boolean {
       formError = '';
       badFields = new Set();
       break;
+    }
+    case 'sightOpen':
+      openSightReport();
+      return true;
+    case 'sightUndo':
+      if (id && el.dataset.sid) {
+        toast = null;
+        run((be) => be.deleteSighting(id, el.dataset.sid!));
+      }
+      return true;
+    case 'sightShow': {
+      const s = sightings.find((x) => x.id === el.dataset.sid);
+      if (s) {
+        hmap?.centerOnPoint(s.lat, s.lng);
+        document.querySelector('.hm-map')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+      return true;
     }
     case 'driveList':
       driveListOpen = el.dataset.open !== 'true';
