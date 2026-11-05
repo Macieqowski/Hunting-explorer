@@ -22,7 +22,8 @@
   "homepage": "https://github.com/Macieqowski/Hunting-explorer#readme",
   "dependencies": {
     "firebase": "^13.2.0",
-    "leaflet": "^1.9.4"
+    "leaflet": "^1.9.4",
+    "qrcode-generator": "^2.0.4"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^6.0.0",

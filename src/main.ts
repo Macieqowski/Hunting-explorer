@@ -39,7 +39,7 @@ type View =
   | { kind: 'district'; slug: string }
   | { kind: 'club'; key: string }
   | { kind: 'point'; lat: number; lng: number }
-  | { kind: 'hunt'; id: string }
+  | { kind: 'hunt'; id: string; invite?: string }
   | { kind: 'atlas'; slug: string | null };
 
 const state = {
@@ -127,7 +127,7 @@ function viewToHash(v: View): string {
     case 'tab':
       return v.tab === 'clubs' ? '' : v.tab === 'hunt' ? '#/polowanie' : `#/${v.tab}`;
     case 'hunt':
-      return `#/polowanie/${encodeURIComponent(v.id)}`;
+      return `#/polowanie/${encodeURIComponent(v.id)}${v.invite ? `/${v.invite}` : ''}`;
     case 'atlas':
       return v.slug ? `#/atlas/${v.slug}` : '#/atlas';
     case 'district':
@@ -140,9 +140,10 @@ function viewToHash(v: View): string {
 }
 
 function hashToView(h: string): View {
-  const [, kind, arg] = h.replace(/^#/, '').split('/');
+  const [, kind, arg, arg2] = h.replace(/^#/, '').split('/');
   if (kind === 'obwod' && arg) return { kind: 'district', slug: arg };
-  if (kind === 'polowanie') return arg ? { kind: 'hunt', id: decodeURIComponent(arg) } : { kind: 'tab', tab: 'hunt' };
+  // #/polowanie/<hunt>/<invitation token>
+  if (kind === 'polowanie') return arg ? { kind: 'hunt', id: decodeURIComponent(arg), ...(arg2 ? { invite: arg2 } : {}) } : { kind: 'tab', tab: 'hunt' };
   if (kind === 'atlas') return { kind: 'atlas', slug: arg || null };
   if (kind === 'kolo' && arg) return { kind: 'club', key: decodeURIComponent(arg) };
   if (kind === 'punkt' && arg) {
@@ -257,7 +258,7 @@ function render() {
     content.innerHTML = renderAtlas(v.slug, render);
     return;
   }
-  if (v.kind === 'hunt' || (v.kind === 'tab' && v.tab === 'hunt')) return renderHuntSection(v.kind === 'hunt' ? v.id : null);
+  if (v.kind === 'hunt' || (v.kind === 'tab' && v.tab === 'hunt')) return renderHuntSection(v.kind === 'hunt' ? v.id : null, v.kind === 'hunt' ? v.invite : undefined);
   leaveHunts();
   if (v.kind === 'tab' && v.tab === 'offline') return void (content.innerHTML = renderOffline());
   if (v.kind === 'tab' && (v.tab === 'seasons' || v.tab === 'about')) {
@@ -282,13 +283,13 @@ function render() {
   }
 }
 
-function renderHuntSection(id: string | null) {
+function renderHuntSection(id: string | null, invite?: string) {
   const goTo = (to: string | null) => navigate(to ? { kind: 'hunt', id: to } : { kind: 'tab', tab: 'hunt' });
   // Keep the focused field and caret when live updates re-render the page while someone types.
   const active = document.activeElement as HTMLInputElement | null;
   const focusName = active && content.contains(active) && active.name ? active.name : null;
   const caret = focusName ? [active!.selectionStart, active!.selectionEnd] : null;
-  content.innerHTML = renderHunts(id, {
+  content.innerHTML = renderHunts(id, invite, {
     onChange: render,
     go: goTo,
     districts: () => ({ list: state.loaded ? state.districts : null, error: state.error }),

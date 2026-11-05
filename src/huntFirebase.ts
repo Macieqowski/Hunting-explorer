@@ -7,6 +7,7 @@ import { getDatabase, ref, child, push, get, set, update, onValue, serverTimesta
 import { parseHunt, parseParticipants, parsePositions, parseTracks, parseDrives, parseSightings, encodeArea, shouldPurge, cleanText, cleanNotes, LIMITS, DRIVE_LIMITS, type Hunt, type HuntInput } from './hunt';
 import { parseShots, parseShotSpots, NOTE_MAX, type ShotInput } from './pokot';
 import { parseStands, encodeStands } from './stands';
+import { newInviteToken, inviteExpiry, parseInvites } from './invite';
 import { HuntError, type FirebaseConfig, type HuntBackend } from './huntBackend';
 
 function wrap(e: unknown): HuntError {
@@ -76,6 +77,7 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
           [`hunts/${id}`]: { ...cleanInput(input), leaderUid: uid, leaderName: name, status: 'open', createdAt: serverTimestamp() },
           [`participants/${id}/${uid}`]: { name, role: 'leader', status: 'confirmed', joinedAt: serverTimestamp() },
           [`userHunts/${uid}/${id}`]: true,
+          [`invites/${id}/${newInviteToken()}`]: { exp: inviteExpiry(input, Date.now() + offset), createdAt: serverTimestamp() },
         }),
       );
       return id;
@@ -104,6 +106,7 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
           [`shots/${id}`]: null,
           [`shotSpots/${id}`]: null,
           [`joins/${id}/${uid}`]: null,
+          [`invites/${id}`]: null,
           // Other people's "my hunts" entries are cleaned up by their own browsers (see myHunts).
           [`userHunts/${uid}/${id}`]: null,
         }),
@@ -135,6 +138,31 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
         }),
       ),
 
+    joinByInvite: (id, name, role, token) =>
+      guard(
+        update(root, {
+          [`inviteJoins/${id}/${uid}`]: token,
+          [`participants/${id}/${uid}`]: { name: cleanText(name, LIMITS.name), role, status: 'registered', joinedAt: serverTimestamp() },
+          [`userHunts/${uid}/${id}`]: true,
+        }),
+      ),
+
+    watchInvites(id, cb, onDenied) {
+      return onValue(
+        child(root, `invites/${id}`),
+        (s) => cb(parseInvites(s.val())),
+        () => onDenied(),
+      );
+    },
+
+    async newInvite(id, exp) {
+      const token = newInviteToken();
+      await guard(set(child(root, `invites/${id}`), { [token]: { exp, createdAt: serverTimestamp() } }));
+      return token;
+    },
+
+    revokeInvites: (id) => guard(set(child(root, `invites/${id}`), null)),
+
     rename: (id, name) => guard(update(child(root, `participants/${id}/${uid}`), { name: cleanText(name, LIMITS.name) })),
 
     withdraw: (id) =>
@@ -144,6 +172,7 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
           [`positions/${id}/${uid}`]: null,
           [`tracks/${id}/${uid}`]: null,
           [`joins/${id}/${uid}`]: null,
+          [`inviteJoins/${id}/${uid}`]: null,
           [`userHunts/${uid}/${id}`]: null,
         }),
       ),

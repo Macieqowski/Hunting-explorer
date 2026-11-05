@@ -502,3 +502,92 @@ describe('shots (pokot)', () => {
     await assertSucceeds(update(ref(db('lead')), { 'hunts/h1': null, 'participants/h1': null, 'shots/h1': null }));
   });
 });
+
+describe('invitations', () => {
+  const TOK = 'Abc_def-1234567890XYZw';
+  const DAY = 24 * 3600e3;
+  const invite = (uid: string, tok = TOK, exp = Date.now() + DAY, id = 'h1') =>
+    update(ref(db(uid)), { [`invites/${id}/${tok}`]: { exp, createdAt: serverTimestamp() } });
+  const guestJoin = (uid: string, tok = TOK, role = 'hunter', status = 'registered', id = 'h1') =>
+    update(ref(db(uid)), {
+      [`inviteJoins/${id}/${uid}`]: tok,
+      [`participants/${id}/${uid}`]: { name: `Gość ${uid}`, role, status, joinedAt: serverTimestamp() },
+      [`userHunts/${uid}/${id}`]: true,
+    });
+
+  it('can be created together with the hunt', async () => {
+    await assertSucceeds(
+      update(ref(db('lead')), {
+        'joins/h1/lead': PASS,
+        'hunts/h1': huntData('lead'),
+        'participants/h1/lead': { name: 'Jan Prowadzący', role: 'leader', status: 'confirmed', joinedAt: serverTimestamp() },
+        [`invites/h1/${TOK}`]: { exp: Date.now() + DAY, createdAt: serverTimestamp() },
+      }),
+    );
+  });
+  it('are created and read by the leader only', async () => {
+    await createHunt('lead');
+    await join('a');
+    await assertFails(invite('a'));
+    await assertSucceeds(invite('lead'));
+    await assertSucceeds(get(ref(db('lead'), 'invites/h1')));
+    await assertFails(get(ref(db('a'), 'invites/h1')));
+    await assertFails(get(ref(db('stranger'), `invites/h1/${TOK}`)));
+  });
+  it('need a sane token and an expiry in the future, at most 100 days ahead', async () => {
+    await createHunt('lead');
+    await assertFails(invite('lead', 'short'));
+    await assertFails(invite('lead', TOK, Date.now() - 1000));
+    await assertFails(invite('lead', TOK, Date.now() + 101 * DAY));
+    await assertFails(update(ref(db('lead')), { [`invites/h1/${TOK}`]: { exp: Date.now() + DAY, createdAt: serverTimestamp(), extra: 1 } }));
+  });
+  it('let a guest sign up without the passphrase, unconfirmed', async () => {
+    await createHunt('lead');
+    await invite('lead');
+    await assertFails(guestJoin('g', TOK, 'hunter', 'confirmed'));
+    await assertFails(guestJoin('g', TOK, 'leader'));
+    await assertSucceeds(guestJoin('g', TOK, 'beater'));
+    await assertSucceeds(get(ref(db('g'), 'participants/h1')));
+    await assertFails(get(ref(db('g'), 'club/stands')));
+    await assertSucceeds(update(ref(db('lead'), 'participants/h1/g'), { status: 'confirmed' }));
+  });
+  it('reject a wrong, revoked or expired token', async () => {
+    await createHunt('lead');
+    await assertFails(guestJoin('g'));
+    await invite('lead');
+    await assertFails(guestJoin('g', 'Zzz_def-1234567890XYZw'));
+    await assertFails(guestJoin('g', `${TOK}/exp`));
+    await update(ref(db('lead')), { 'invites/h1': null });
+    await assertFails(guestJoin('g'));
+    await env.withSecurityRulesDisabled((ctx) =>
+      set(ref(ctx.database() as unknown as Database, `invites/h1/${TOK}`), { exp: Date.now() - 1000, createdAt: 1 }),
+    );
+    await assertFails(guestJoin('g'));
+  });
+  it('do not work for another hunt or once registration is closed', async () => {
+    await createHunt('lead');
+    await createHunt('lead2', 'h2');
+    await invite('lead');
+    await assertFails(guestJoin('g', TOK, 'hunter', 'registered', 'h2'));
+    await update(ref(db('lead'), 'hunts/h1'), { status: 'closed' });
+    await assertFails(guestJoin('g'));
+  });
+  it('do not let a guest create hunts or unlock club seats', async () => {
+    await createHunt('lead');
+    await invite('lead');
+    await assertFails(set(ref(db('g'), 'club/members/g'), TOK));
+    await assertFails(update(ref(db('g')), { 'joins/h9/g': TOK, 'hunts/h9': huntData('g') }));
+  });
+  it('the token used cannot be read back, and goes when the guest withdraws', async () => {
+    await createHunt('lead');
+    await invite('lead');
+    await guestJoin('g');
+    await assertFails(get(ref(db('lead'), 'inviteJoins/h1/g')));
+    await assertSucceeds(update(ref(db('g')), { 'participants/h1/g': null, 'inviteJoins/h1/g': null, 'userHunts/g/h1': null }));
+  });
+  it('are deleted with the hunt', async () => {
+    await createHunt('lead');
+    await invite('lead');
+    await assertSucceeds(update(ref(db('lead')), { 'hunts/h1': null, 'participants/h1': null, 'invites/h1': null }));
+  });
+});

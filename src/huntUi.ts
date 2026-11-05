@@ -38,6 +38,7 @@ import {
   distanceM,
   windFocusTime,
 } from './hunt';
+import { currentInvite, inviteExpiry, inviteLink, validToken, type Invite } from './invite';
 import type { District } from './bdl';
 import { fetchDistrictsAtPoint } from './bdl';
 import { fold, districtSlug } from './data';
@@ -153,8 +154,28 @@ const L = {
   sure: { pl: 'Na pewno?', en: 'Sure?' },
   invite: { pl: 'Zaproś uczestników', en: 'Invite participants' },
   inviteHint: {
-    pl: 'Wyślij ten link na grupę koła. Do zapisu potrzebne jest też hasło koła.',
-    en: 'Send this link to the club group. The club passphrase is also needed to sign up.',
+    pl: 'Goście zapisują się tym linkiem albo kodem QR, bez hasła koła. Każdą osobę potwierdzasz na liście uczestników.',
+    en: 'Guests sign up with this link or QR code, without the club passphrase. You confirm each person in the participant list.',
+  },
+  inviteValid: { pl: 'Link działa do', en: 'The link works until' },
+  inviteNone: { pl: 'Nie ma aktywnego linku zaproszenia.', en: 'There is no active invitation link.' },
+  inviteCreate: { pl: 'Utwórz link zaproszenia', en: 'Create an invitation link' },
+  inviteNew: { pl: 'Nowy link', en: 'New link' },
+  inviteNewHint: { pl: 'Nowy link lub unieważnienie wyłącza poprzedni link. Osoby już zapisane zostają.', en: 'A new link or revoking turns the old link off. People already signed up stay.' },
+  inviteRevoke: { pl: 'Unieważnij link', en: 'Revoke link' },
+  inviteRevokeSure: { pl: 'Tak, unieważnij', en: 'Yes, revoke' },
+  qrShow: { pl: 'Kod QR', en: 'QR code' },
+  qrHide: { pl: 'Ukryj kod QR', en: 'Hide QR code' },
+  qrHint: { pl: 'Zeskanuj aparatem telefonu.', en: 'Scan with a phone camera.' },
+  clubLink: { pl: 'Link dla członków koła (zapis z hasłem koła)', en: 'Link for club members (sign-up with the club passphrase)' },
+  guestTitle: { pl: 'Zaproszenie na polowanie', en: 'Invitation to the hunt' },
+  guestHint: {
+    pl: 'Masz link zaproszenia, więc hasło koła nie jest potrzebne. Po zapisie prowadzący potwierdzi Twój udział.',
+    en: 'You have an invitation link, so no club passphrase is needed. After you sign up, the hunt leader confirms you.',
+  },
+  errInvite: {
+    pl: 'Ten link zaproszenia wygasł albo został unieważniony. Poproś prowadzącego o nowy link albo zapisz się hasłem koła.',
+    en: 'This invitation link has expired or was revoked. Ask the hunt leader for a new link, or sign up with the club passphrase.',
   },
   share: { pl: 'Udostępnij link', en: 'Share link' },
   copy: { pl: 'Kopiuj link', en: 'Copy link' },
@@ -378,7 +399,17 @@ let confirming: string | null = null; // 'delete' | 'withdraw' | `remove:${uid}`
 let busy = false;
 let formError = '';
 let badFields = new Set<string>();
-let copied = false;
+let copied: string | null = null;
+/** Invitation token from the link this hunt was opened with (dropped once it is refused). */
+let guestToken: { id: string; token: string } | null = null;
+/** Tokens the database refused, so the link in the address bar does not bring the guest form back. */
+const refusedTokens = new Set<string>();
+/** The leader's invitation links: null until loaded. */
+let invites: Invite[] | null = null;
+let invitesFor: string | null = null;
+let qrOpen = false;
+/** QR code SVG for one link, made on demand (the generator is loaded lazily). */
+let qr: { url: string; svg: string } | null = null;
 /** Text typed into forms, kept across re-renders caused by live updates. */
 const draft = new Map<string, string>();
 
@@ -1196,6 +1227,28 @@ function watchMembers(id: string) {
   );
 }
 
+/** Leader only: invitation links are unreadable for everyone else. */
+function watchInvites(id: string) {
+  if (conn.s !== 'ready' || invitesFor === id) return;
+  invitesFor = id;
+  unsubs.push(
+    conn.be.watchInvites(
+      id,
+      (list) => {
+        invites = list;
+        rerender();
+      },
+      () => {
+        invites = [];
+        rerender();
+      },
+    ),
+  );
+}
+
+/** The guest's invitation token for the open hunt, if any. */
+const myGuestToken = () => (guestToken && guestToken.id === watched ? guestToken.token : null);
+
 function loadMine() {
   if (conn.s !== 'ready') return;
   mine = { s: 'loading' };
@@ -1224,7 +1277,10 @@ function setRoute(id: string | null) {
   confirming = null;
   formError = '';
   badFields = new Set();
-  copied = false;
+  copied = null;
+  invites = null;
+  invitesFor = null;
+  qrOpen = false;
   if (id) subscribe(id);
   else mine = { s: 'idle' };
 }
@@ -1284,13 +1340,14 @@ const btnBusy = () => (busy ? ' disabled aria-busy="true"' : '');
 
 // ---------------------------------------------------------------- rendering
 
-export function renderHunts(id: string | null, ctx: HuntContext): string {
+export function renderHunts(id: string | null, invite: string | undefined, ctx: HuntContext): string {
   rerender = ctx.onChange;
   go = ctx.go;
   districtsOf = ctx.districts;
   saveOfflineCb = ctx.saveOffline;
   if (!firebaseConfig()) return `<div class="hunts"><h2>${tt({ pl: 'Polowanie zbiorowe', en: 'Group hunts' })}</h2><div class="notice">${l('notConfigured')}</div></div>`;
   setRoute(id);
+  if (id && validToken(invite) && !refusedTokens.has(invite)) guestToken = { id, token: invite };
   connect();
   let body: string;
   if (conn.s === 'error')
@@ -1690,6 +1747,7 @@ function renderHunt(): string {
     return `${back}${info}${renderJoin(h)}`;
   }
   syncLive();
+  if (isLeader) watchInvites(h.id);
   return `${back}${info}${renderMe(me, isLeader)}${renderLive(h, me)}${isLeader ? renderInvite(h) : ''}${renderMembers(uid, isLeader)}${isLeader ? renderManage(h) : ''}`;
 }
 
@@ -1698,11 +1756,13 @@ function renderJoin(h: Hunt): string {
   const role = draft.get('join.role') ?? 'hunter';
   const radio = (r: 'hunter' | 'beater') =>
     `<label class="h-role"><input type="radio" name="role" value="${r}" data-hunt-field="join"${role === r ? ' checked' : ''} />${roleIcon(r, 22)}<span>${l(`r_${r}`)}</span></label>`;
+  const guest = !!myGuestToken();
   return `<form class="card h-form" data-hunt-form="join" novalidate>
-    <h3>${l('joinTitle')}</h3>
+    <h3>${l(guest ? 'guestTitle' : 'joinTitle')}</h3>
+    ${guest ? `<p class="small">${l('guestHint')}</p>` : ''}
     <fieldset class="h-roles"><legend>${l('fRole')}</legend>${radio('hunter')}${radio('beater')}</fieldset>
     ${field('join', 'pname', l('fYourName'), storedName(), { max: LIMITS.name, req: true, hint: l('fYourNameHint'), auto: 'name' })}
-    ${field('join', 'pass', l('fPass'), '', { req: true, hint: l('fPassHint'), auto: 'off' })}
+    ${guest ? '' : field('join', 'pass', l('fPass'), '', { req: true, hint: l('fPassHint'), auto: 'off' })}
     ${errorBox()}
     <div class="h-actions"><button type="submit" class="btn"${btnBusy()}>${l('join')}</button></div>
   </form>`;
@@ -1721,11 +1781,49 @@ function renderMe(me: Participant, isLeader: boolean): string {
 }
 
 function renderInvite(h: Hunt): string {
-  const url = inviteUrl(h.id);
-  return `<h3>${l('invite')}</h3><p class="small muted">${l('inviteHint')}</p>
-    <div class="h-invite"><input type="text" readonly value="${esc(url)}" aria-label="${l('invite')}" data-hunt-select />
-      ${'share' in navigator ? `<button type="button" class="btn" data-hunt="share">${l('share')}</button>` : ''}
-      <button type="button" class="btn ghost" data-hunt="copy">${copied ? `✓ ${l('copied')}` : l('copy')}</button></div>`;
+  const now = conn.s === 'ready' ? conn.be.serverNow() : Date.now();
+  const inv = invites ? currentInvite(invites, now) : null;
+  const copyBtn = (what: string) =>
+    `<button type="button" class="btn ghost" data-hunt="copy" data-what="${what}">${copied === what ? `✓ ${l('copied')}` : l('copy')}</button>`;
+  let body: string;
+  if (invites === null) body = `<p class="muted small">${l('loading')}</p>`;
+  else if (!inv)
+    body = `<p class="small muted">${l('inviteNone')}</p>
+      <div class="h-actions"><button type="button" class="btn" data-hunt="inviteNew"${btnBusy()}>${l('inviteCreate')}</button></div>`;
+  else {
+    const url = inviteLink(appBase(), h.id, inv.token);
+    const exp = new Date(inv.exp).toLocaleString(locale(), { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+    if (qrOpen && qr?.url !== url) makeQr(url);
+    const revoke =
+      confirming === 'revoke'
+        ? `<button type="button" class="btn small danger" data-hunt="inviteRevoke"${btnBusy()}>${l('inviteRevokeSure')}</button>
+           <button type="button" class="btn small ghost" data-hunt="unconfirm">${l('cancel')}</button>`
+        : `<button type="button" class="btn small ghost" data-hunt="inviteNew"${btnBusy()}>${l('inviteNew')}</button>
+           <button type="button" class="btn small ghost danger-text" data-hunt="askRevoke">${l('inviteRevoke')}</button>`;
+    body = `<p class="small muted">${l('inviteHint')}</p>
+      <div class="h-invite"><input type="text" readonly value="${esc(url)}" aria-label="${l('invite')}" data-hunt-select />
+        ${'share' in navigator ? `<button type="button" class="btn" data-hunt="share">${l('share')}</button>` : ''}
+        ${copyBtn('invite')}
+        <button type="button" class="btn ghost" data-hunt="qr" aria-expanded="${qrOpen}">${qrOpen ? l('qrHide') : l('qrShow')}</button></div>
+      ${qrOpen ? `<figure class="h-qr">${qr?.url === url ? qr.svg : `<p class="muted small">${l('loading')}</p>`}<figcaption class="small muted">${esc(h.name)} · ${l('qrHint')}</figcaption></figure>` : ''}
+      <p class="small">${l('inviteValid')} ${esc(exp)}</p>
+      <div class="h-actions">${revoke}</div>
+      <p class="small muted">${l('inviteNewHint')}</p>`;
+  }
+  return `<h3>${l('invite')}</h3>${body}
+    <details class="h-clublink"><summary class="small">${l('clubLink')}</summary>
+      <div class="h-invite"><input type="text" readonly value="${esc(inviteUrl(h.id))}" aria-label="${l('clubLink')}" data-hunt-select />${copyBtn('club')}</div>
+    </details>`;
+}
+
+function makeQr(url: string) {
+  import('qrcode-generator').then(({ default: qrcode }) => {
+    const q = qrcode(0, 'M');
+    q.addData(url);
+    q.make();
+    qr = { url, svg: q.createSvgTag({ cellSize: 6, margin: 3, scalable: true }) };
+    rerender();
+  });
 }
 
 function renderMembers(uid: string, isLeader: boolean): string {
@@ -1771,7 +1869,13 @@ function renderManage(h: Hunt): string {
     <div class="h-actions h-danger">${del}</div>`;
 }
 
-const inviteUrl = (id: string) => `${location.origin}${location.pathname}#/polowanie/${id}`;
+const appBase = () => `${location.origin}${location.pathname}`;
+const inviteUrl = (id: string) => `${appBase()}#/polowanie/${id}`;
+/** The link the share button sends: the invitation if there is one. */
+function shareUrl(id: string): string {
+  const inv = invites && conn.s === 'ready' ? currentInvite(invites, conn.be.serverNow()) : null;
+  return inv ? inviteLink(appBase(), id, inv.token) : inviteUrl(id);
+}
 
 // ---------------------------------------------------------------- events
 
@@ -2081,7 +2185,25 @@ export function handleHuntClick(el: HTMLElement): boolean {
       return true;
     case 'share':
       if (id && hunt)
-        navigator.share?.({ title: hunt.name, text: `${hunt.name} – ${fmtDate(hunt.date)} ${hunt.start}`, url: inviteUrl(id) }).catch(() => {});
+        navigator.share?.({ title: hunt.name, text: `${hunt.name} – ${fmtDate(hunt.date)} ${hunt.start}`, url: shareUrl(id) }).catch(() => {});
+      return true;
+    case 'qr':
+      qrOpen = !qrOpen;
+      break;
+    case 'askRevoke':
+      confirming = 'revoke';
+      break;
+    case 'inviteRevoke':
+      confirming = null;
+      if (id) run((be) => be.revokeInvites(id));
+      return true;
+    case 'inviteNew':
+      if (id && hunt) {
+        const h = hunt;
+        run(async (be) => {
+          await be.newInvite(id, inviteExpiry(h, be.serverNow()));
+        });
+      }
       return true;
     case 'pickDistrict':
       draft.set(`${el.dataset.form}.district`, el.dataset.district ?? 'null');
@@ -2138,17 +2260,19 @@ export function handleHuntClick(el: HTMLElement): boolean {
     case 'centerMe':
       hmap?.centerOn(myUid());
       return true;
-    case 'copy':
+    case 'copy': {
+      const what = el.dataset.what ?? 'invite';
       if (id)
-        navigator.clipboard?.writeText(inviteUrl(id)).then(() => {
-          copied = true;
+        navigator.clipboard?.writeText(what === 'club' ? inviteUrl(id) : shareUrl(id)).then(() => {
+          copied = what;
           rerender();
           setTimeout(() => {
-            copied = false;
+            copied = null;
             rerender();
           }, 2000);
         });
       return true;
+    }
   }
   rerender();
   return true;
@@ -2277,8 +2401,9 @@ export function handleHuntSubmit(form: HTMLFormElement): boolean {
   } else if (kind === 'join' && watched) {
     const id = watched;
     const role = (form.querySelector<HTMLInputElement>('input[name="role"]:checked')?.value ?? 'hunter') as 'hunter' | 'beater';
+    const token = myGuestToken();
     if (!validPersonName(v('pname'))) badFields.add('pname');
-    if (!v('pass').trim()) badFields.add('pass');
+    if (!token && !v('pass').trim()) badFields.add('pass');
     if (badFields.size) {
       formError = !validPersonName(v('pname')) ? l('errPersonName') : l('errPass');
       rerender();
@@ -2286,13 +2411,27 @@ export function handleHuntSubmit(form: HTMLFormElement): boolean {
     }
     storeName(v('pname').trim());
     run(async (be) => {
-      await be.join(id, v('pname'), role, v('pass'));
+      if (token) {
+        try {
+          await be.joinByInvite(id, v('pname'), role, token);
+        } catch (e) {
+          // Expired or revoked: fall back to the passphrase form.
+          if (e instanceof HuntError && e.code === 'denied') {
+            refusedTokens.add(token);
+            guestToken = null;
+          }
+          throw e;
+        }
+        guestToken = null;
+        // Drop the token from the address bar, so it is not shared further by accident.
+        go(id);
+      } else await be.join(id, v('pname'), role, v('pass'));
       clearDraft('join');
       mine = { s: 'idle' };
       // The participant list was unreadable before joining; listen again now that we are in.
       membersLoaded = false;
       watchMembers(id);
-    }, 'errDeniedJoin');
+    }, token ? 'errInvite' : 'errDeniedJoin');
   }
   return true;
 }
