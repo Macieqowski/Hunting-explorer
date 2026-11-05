@@ -31,6 +31,16 @@ export interface SightView {
   popup: string; // HTML
 }
 
+/** A shot on the map: wounds (postrzał) in orange so the search starts from there, kills in green. */
+export interface ShotView {
+  id: string;
+  lat: number;
+  lng: number;
+  kind: 'wound' | 'kill';
+  label: string;
+  popup: string; // HTML
+}
+
 export interface HuntMapText {
   you: string;
   role: (r: Role) => string;
@@ -50,6 +60,7 @@ export interface HuntMap {
   centerOn(uid: string): boolean;
   setDrives(ds: DriveView[]): void;
   setSightings(ss: SightView[]): void;
+  setShots(ss: ShotView[]): void;
   centerOnPoint(lat: number, lng: number): void;
   /** Tap the map to add corners, drag corners to move them; onChange gets every change. */
   startDraw(area: Area, onChange: (a: Area) => void, hideDrive?: string | null): void;
@@ -104,6 +115,7 @@ export function createHuntMap(text: HuntMapText): HuntMap {
   const trackLayer = L.layerGroup().addTo(map);
   const accLayer = L.layerGroup().addTo(map);
   const sightLayer = L.layerGroup().addTo(map);
+  const shotLayer = L.layerGroup().addTo(map);
   const markerLayer = L.featureGroup().addTo(map);
   const markers = new Map<string, { marker: L.Marker; acc: L.Circle | null; pos: Position; info: PersonInfo; me: boolean; cls: string }>();
   let districtId: number | null = null;
@@ -352,6 +364,22 @@ export function createHuntMap(text: HuntMapText): HuntMap {
           .bindPopup(s.popup)
           .addTo(sightLayer);
       }
+    },
+
+    setShots(ss) {
+      shotLayer.clearLayers();
+      for (const s of ss)
+        L.marker([s.lat, s.lng], {
+          icon: L.divIcon({
+            className: 'hm-icon',
+            html: `<div class="hp-marker hp-${s.kind}"><span aria-hidden="true">${s.kind === 'wound' ? '!' : '✕'}</span><span class="hm-label">${esc(s.label)}</span></div>`,
+            iconSize: [0, 0],
+          }),
+          zIndexOffset: s.kind === 'wound' ? 900 : -400,
+          title: s.label,
+        })
+          .bindPopup(s.popup)
+          .addTo(shotLayer);
     },
 
     centerOnPoint(lat, lng) {

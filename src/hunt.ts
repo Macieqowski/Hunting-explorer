@@ -34,6 +34,10 @@ export interface Hunt extends HuntInput {
   createdAt: number;
   /** Set when the leader ends the hunt; positions and tracks are deleted RETENTION_MS later. */
   endedAt: number | null;
+  /** Set when the leader confirms the pokot; shots cannot change then. */
+  pokotLockedAt: number | null;
+  /** Show the hunt king and the misser on the pokot. */
+  pokotTitles: boolean;
 }
 
 /** Last known position of one participant. */
@@ -158,6 +162,8 @@ export function parseHunt(id: string, v: unknown): Hunt | null {
     status,
     createdAt: typeof o.createdAt === 'number' ? o.createdAt : 0,
     endedAt: typeof o.endedAt === 'number' ? o.endedAt : null,
+    pokotLockedAt: typeof o.pokotLockedAt === 'number' ? o.pokotLockedAt : null,
+    pokotTitles: o.pokotTitles === true,
     district: parseDistrict(o.district),
   };
 }

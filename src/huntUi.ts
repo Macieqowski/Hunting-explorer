@@ -40,11 +40,14 @@ import {
 import type { District } from './bdl';
 import { fetchDistrictsAtPoint } from './bdl';
 import { fold, districtSlug } from './data';
-import { createHuntMap, type HuntMap, type PersonInfo, type DriveView, type SightView } from './huntMap';
+import { createHuntMap, type HuntMap, type PersonInfo, type DriveView, type SightView, type ShotView } from './huntMap';
 import { Sharer } from './huntShare';
 import { openPocket, updatePocket } from './huntPocket';
 import { roleIcon, speciesIcon } from './huntIcons';
 import { openReport, closeReport } from './huntSighting';
+import { openShotSheet, closeShotSheet } from './huntShot';
+import { renderPokot, renderPokotPrint, gameName, outcomeName, groupName, pl, type PokotCtx } from './huntPokot';
+import { GAMES, NO_SHOOTER, OUTCOMES, outOfSeason, voivodeshipOf, type Outcome, type Shot, type ShotSpot } from './pokot';
 import { firebaseConfig, getBackend, HuntError, type HuntBackend, type Unsubscribe } from './huntBackend';
 
 const esc = (s: unknown) =>
@@ -290,6 +293,15 @@ const L = {
   sightings: { pl: 'Zwierzyna', en: 'Game' },
   sightNone: { pl: 'Nikt jeszcze nie zgłosił zwierzyny.', en: 'Nobody has reported game yet.' },
   sightBy: { pl: 'zgłosił(a)', en: 'reported by' },
+  shot: { pl: 'Strzał', en: 'Shot' },
+  shotHint: { pl: 'Zapisz oddany strzał', en: 'Log a shot you fired' },
+  shotTitle: { pl: 'Strzał zapisany. Efekt?', en: 'Shot logged. Result?' },
+  shotLater: { pl: 'Uzupełnię później', en: 'Fill in later' },
+  shotGameKill: { pl: 'Co leży?', en: 'What is down?' },
+  shotGameWound: { pl: 'Co postrzelone?', en: 'What was wounded?' },
+  shotUnknownGame: { pl: 'Nie wiem', en: 'Not sure' },
+  shotSaved: { pl: 'Strzał zapisany', en: 'Shot logged' },
+  shotWoundAlert: { pl: 'Postrzał', en: 'Wounded game' },
 } as const;
 const l = (k: keyof typeof L) => tt(L[k]);
 
@@ -339,7 +351,7 @@ let drives: Drive[] = [];
 let drivesUnsub: Unsubscribe | null = null;
 /** id of the running drive at the last update; undefined until the first one arrives. */
 let lastActive: string | null | undefined;
-let toast: { text: string; until: number; undo?: string } | null = null;
+let toast: { text: string; until: number; undo?: string; undoKind: 'sight' | 'shot' } | null = null;
 let sightings: Sighting[] = [];
 let sightUnsub: Unsubscribe | null = null;
 /** Sightings already seen, so only new ones raise an alert; null until the first update. */
@@ -352,6 +364,15 @@ let locatingDrive = false;
 /** The drive list's open state once the user toggles it; until then open except for others during the hunt. */
 let driveListOpen: boolean | null = null;
 let purged = new Set<string>();
+let shots: Shot[] = [];
+let shotSpots = new Map<string, ShotSpot>();
+let shotsUnsub: Unsubscribe | null = null;
+let spotsUnsub: Unsubscribe | null = null;
+/** Shot ids already announced as wounded (postrzał), null until the first load. */
+let seenWounds: Set<string> | null = null;
+/** Pokot row being edited: a shot id, 'new' (leader adds game) or `del:<id>`. */
+let shotEdit: string | null = null;
+let pokotError = '';
 const SHARE_KEY = 'huntSharing';
 
 const NAME_KEY = 'huntPersonName';
@@ -404,6 +425,16 @@ function stopLive() {
   drivesUnsub = null;
   sightUnsub?.();
   sightUnsub = null;
+  shotsUnsub?.();
+  shotsUnsub = null;
+  spotsUnsub?.();
+  spotsUnsub = null;
+  shots = [];
+  shotSpots = new Map();
+  seenWounds = null;
+  shotEdit = null;
+  closeShotSheet();
+  closePokotPrint();
   sightings = [];
   seenSights = null;
   closeReport();
@@ -451,6 +482,15 @@ function syncLive() {
     );
     drivesUnsub = conn.be.watchDrives(id!, onDrives, () => (drivesUnsub = null));
     sightUnsub = conn.be.watchSightings(id!, onSightings, () => (sightUnsub = null));
+    shotsUnsub = conn.be.watchShots(id!, onShots, () => (shotsUnsub = null));
+    spotsUnsub = conn.be.watchShotSpots(
+      id!,
+      (m) => {
+        shotSpots = m;
+        drawShots();
+      },
+      () => (spotsUnsub = null),
+    );
     ticker = setInterval(() => {
       hmap?.refreshAges(now());
       drawSightings();
@@ -493,8 +533,8 @@ function onDrives(ds: Drive[]) {
   updatePocket();
 }
 
-function showToast(text: string, undo?: string) {
-  const t = { text, until: Date.now() + 10_000, undo };
+function showToast(text: string, undo?: string, undoKind: 'sight' | 'shot' = 'sight', ms = 10_000) {
+  const t = { text, until: Date.now() + ms, undo, undoKind };
   toast = t;
   rerender();
   setTimeout(() => {
@@ -502,7 +542,7 @@ function showToast(text: string, undo?: string) {
       toast = null;
       rerender();
     }
-  }, 10_500);
+  }, ms + 500);
 }
 
 // ---------------------------------------------------------------- game sightings
@@ -619,6 +659,159 @@ function openSightReport() {
   );
 }
 
+// ---------------------------------------------------------------- shots and pokot
+
+const shotLabel = (x: Pick<Shot, 'outcome' | 'game'>) => gameName(x.game) || outcomeName(x.outcome);
+const personName = (uid: string) => (uid === NO_SHOOTER ? '?' : members?.find((p) => p.uid === uid)?.name ?? '?');
+
+function onShots(ss: Shot[]) {
+  shots = ss;
+  const wounds = ss.filter((x) => x.outcome === 'wound');
+  if (seenWounds) {
+    for (const w of wounds) {
+      if (seenWounds.has(w.id)) continue;
+      seenWounds.add(w.id);
+      if (w.uid === myUid()) continue;
+      navigator.vibrate?.([400, 150, 400]);
+      const d = drives.find((x) => x.id === w.driveId);
+      showToast(`${l('shotWoundAlert')}: ${[gameName(w.game), personName(w.uid), d?.name].filter(Boolean).join(' · ')}`);
+    }
+  } else seenWounds = new Set(wounds.map((w) => w.id));
+  if (shotEdit && shotEdit !== 'new' && !ss.some((x) => shotEdit === x.id || shotEdit === `del:${x.id}`)) shotEdit = null;
+  drawShots();
+  rerender();
+}
+
+function drawShots() {
+  if (!hmap) return;
+  const views: ShotView[] = [];
+  for (const x of shots) {
+    const at = shotSpots.get(x.id);
+    if (!at || (x.outcome !== 'wound' && x.outcome !== 'kill')) continue;
+    const label = `${shotLabel(x)}${x.outcome === 'wound' ? ` · ${outcomeName('wound')}` : ''}`;
+    views.push({
+      id: x.id,
+      lat: at.lat,
+      lng: at.lng,
+      kind: x.outcome,
+      label,
+      popup: `<strong>${esc(label)}</strong><br>${esc(personName(x.uid))}<br>${esc(clock(x.ts))}${x.note ? `<br>${esc(x.note)}` : ''}`,
+    });
+  }
+  hmap.setShots(views);
+}
+
+/** Position for a shot: the sharing fix right away, else a fresh fix within a few seconds, else none. */
+function shotFix(): Promise<ShotSpot | null> {
+  const known = myPos();
+  if (sharer?.active && known) return Promise.resolve({ lat: known.lat, lng: known.lng });
+  return Promise.race([getFix().catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), 5000))]);
+}
+
+const offSeason = (key: string) => !!hunt && outOfSeason(key, hunt.date, voivodeshipOf(hunt.district?.label));
+
+function fireShot() {
+  const id = watched;
+  if (!id || conn.s !== 'ready') return;
+  const be = conn.be;
+  const driveId = activeDrive(drives)?.id ?? null;
+  navigator.vibrate?.(60);
+  // Log the shot first, so it counts even if the sheet is closed without an answer.
+  const logged = shotFix().then((at) => be.addShot(id, { outcome: 'unknown', game: null, note: '', driveId }, at));
+  logged.then(
+    (sid) => showToast(l('shotSaved'), sid, 'shot', 30_000),
+    (e) => {
+      closeShotSheet();
+      showToast(errText(e));
+    },
+  );
+  openShotSheet(
+    {
+      title: l('shotTitle'),
+      outcomes: { kill: outcomeName('kill'), wound: outcomeName('wound'), miss: outcomeName('miss') },
+      later: l('shotLater'),
+      gameTitle: (o) => (o === 'wound' ? l('shotGameWound') : l('shotGameKill')),
+      groups: { deer: groupName('deer'), other: groupName('other'), pred: groupName('pred'), small: groupName('small'), birds: groupName('birds') },
+      game: gameName,
+      unknownGame: l('shotUnknownGame'),
+      offSeason: pl('offSeason'),
+      back: l('sightBack'),
+      saving: l('sightSaving'),
+    },
+    offSeason,
+    async (c) => {
+      try {
+        const sid = await logged;
+        await be.updateShot(id, sid, { outcome: c.outcome, game: c.game });
+      } catch (e) {
+        throw new Error(errText(e));
+      }
+    },
+  );
+}
+
+const pokotCtx = (h: Hunt): PokotCtx => ({
+  hunt: h,
+  shots,
+  drives,
+  members: members ?? [],
+  myUid: myUid(),
+  editing: shotEdit,
+  busy,
+  error: pokotError,
+  clock,
+});
+
+let printEl: HTMLElement | null = null;
+let titleBefore = '';
+
+function closePokotPrint() {
+  if (!printEl) return;
+  printEl.remove();
+  printEl = null;
+  document.body.classList.remove('pp-printing');
+  document.title = titleBefore;
+}
+
+/** Full-screen preview of the printable pokot; its button opens the print dialog (Save as PDF). */
+function openPokotPrint() {
+  const h = hunt;
+  if (!h) return;
+  closePokotPrint();
+  const el = document.createElement('div');
+  el.id = 'pp-root';
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-modal', 'true');
+  el.setAttribute('aria-label', pl('pTitle'));
+  el.innerHTML = renderPokotPrint(pokotCtx(h), (d) => fmtDate(d));
+  el.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-pp]');
+    if (b?.dataset.pp === 'print') window.print();
+    else if (b?.dataset.pp === 'close') closePokotPrint();
+  });
+  document.body.append(el);
+  document.body.classList.add('pp-printing');
+  printEl = el;
+  // Browsers suggest the PDF file name from the page title.
+  titleBefore = document.title;
+  document.title = `${h.date} pokot ${h.name}`;
+}
+
+function pokotRun(task: (be: HuntBackend) => Promise<void>, after?: () => void) {
+  if (conn.s !== 'ready' || busy) return;
+  const be = conn.be;
+  busy = true;
+  pokotError = '';
+  rerender();
+  task(be).then(
+    () => after?.(),
+    (e) => (pokotError = errText(e)),
+  ).finally(() => {
+    busy = false;
+    rerender();
+  });
+}
+
 const driveViews = (): DriveView[] => drives.map((d) => ({ id: d.id, name: d.name, area: d.area, state: driveState(d) }));
 
 function onAreaChange(a: Area) {
@@ -673,6 +866,7 @@ export function mountHuntMap() {
   }
   drawPositions();
   drawSightings();
+  drawShots();
   if (showTracks) m.setTracks(lastTracks, people());
   updateLiveText();
 }
@@ -1088,12 +1282,15 @@ function renderLive(h: Hunt, me: Participant): string {
   const iShare = !!sharer?.active && sharer.huntId === h.id;
   const t =
     toast && Date.now() < toast.until
-      ? `<div class="hd-toast" role="alert"><span>${esc(toast.text)}</span>${toast.undo ? `<button type="button" class="btn small" data-hunt="sightUndo" data-sid="${esc(toast.undo)}">${l('sightUndo')}</button>` : ''}</div>`
+      ? `<div class="hd-toast" role="alert"><span>${esc(toast.text)}</span>${toast.undo ? `<button type="button" class="btn small" data-hunt="${toast.undoKind === 'shot' ? 'shotUndo' : 'sightUndo'}" data-sid="${esc(toast.undo)}">${l('sightUndo')}</button>` : ''}</div>`
       : '';
   const drawing = !!driveEdit && h.leaderUid === myUid();
+  const canShoot = me.role !== 'beater';
   const report =
     h.status === 'live' && !drawing
-      ? `<button type="button" class="btn hs-report" data-hunt="sightOpen" aria-label="${esc(l('sightReportHint'))}">${speciesIcon('boar', 28)} ${l('sightReport')}</button>`
+      ? `<div class="hs-actions${canShoot ? ' hs-two' : ''}"><button type="button" class="btn hs-report" data-hunt="sightOpen" aria-label="${esc(l('sightReportHint'))}">${speciesIcon('boar', 28)} ${l('sightReport')}</button>${
+          canShoot ? `<button type="button" class="btn hs-report hp-fire" data-hunt="shotFire" aria-label="${esc(l('shotHint'))}"><span class="hp-fire-icon" aria-hidden="true">✛</span> ${l('shot')}</button>` : ''
+        }</div>`
       : '';
   return `<h3>${l('mapTitle')}</h3>${t}${report}${share}${renderDrives(h, h.leaderUid === myUid())}
     <div class="hm-bar"${drawing ? ' hidden' : ''}><div class="hm-counts">${liveCounts()}</div>
@@ -1104,7 +1301,7 @@ function renderLive(h: Hunt, me: Participant): string {
         <button type="button" class="btn small ghost" data-hunt="gpx">${l('exportGpx')}</button>
       </div></div>
     <div class="hm-slot"></div>
-    ${drawing ? '' : `<h4>${l('sightings')}</h4><div class="hs-list">${sightListHtml()}</div>`}`;
+    ${drawing ? '' : `<h4>${l('sightings')}</h4><div class="hs-list">${sightListHtml()}</div>${renderPokot(pokotCtx(h))}`}`;
 }
 
 const clock = (ms: number) => new Date(ms).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
@@ -1389,6 +1586,47 @@ export function handleHuntClick(el: HTMLElement): boolean {
     case 'sightOpen':
       openSightReport();
       return true;
+    case 'shotFire':
+      fireShot();
+      return true;
+    case 'shotUndo':
+      if (id && el.dataset.sid) {
+        toast = null;
+        closeShotSheet();
+        pokotRun((be) => be.deleteShot(id, el.dataset.sid!));
+      }
+      return true;
+    case 'shotEdit':
+      shotEdit = el.dataset.sid ?? null;
+      pokotError = '';
+      break;
+    case 'pokotAdd':
+      shotEdit = 'new';
+      pokotError = '';
+      break;
+    case 'shotCancel':
+      shotEdit = null;
+      pokotError = '';
+      break;
+    case 'askShotDelete':
+      shotEdit = `del:${el.dataset.sid}`;
+      break;
+    case 'shotDelete':
+      if (id && el.dataset.sid) pokotRun((be) => be.deleteShot(id, el.dataset.sid!), () => (shotEdit = null));
+      return true;
+    case 'pokotLock':
+    case 'pokotUnlock':
+      if (id) pokotRun((be) => be.lockPokot(id, action === 'pokotLock'));
+      return true;
+    case 'pokotTitles':
+      if (id && hunt) {
+        const on = !hunt.pokotTitles;
+        pokotRun((be) => be.setPokotTitles(id, on));
+      }
+      return true;
+    case 'pokotPdf':
+      openPokotPrint();
+      return true;
     case 'sightUndo':
       if (id && el.dataset.sid) {
         toast = null;
@@ -1591,6 +1829,21 @@ export function handleHuntSubmit(form: HTMLFormElement): boolean {
       if (driveEdit === edit) driveEdit = null;
       clearDraft('drive');
     });
+  } else if (kind === 'shot' && watched) {
+    const id = watched;
+    const sid = form.dataset.sid || null;
+    const outcome = (OUTCOMES.includes(v('outcome') as Outcome) ? v('outcome') : 'unknown') as Outcome;
+    const game = GAMES.some((x) => x.key === v('game')) && outcome !== 'miss' ? v('game') : null;
+    const isLead = hunt?.leaderUid === myUid();
+    const lead = isLead ? { uid: v('uid') || NO_SHOOTER, driveId: v('driveId') || null } : {};
+    const patch = { outcome, game, note: v('note'), ...lead };
+    pokotRun(
+      (be) =>
+        sid
+          ? be.updateShot(id, sid, patch)
+          : be.addShotFor(id, v('uid') || NO_SHOOTER, { outcome, game, note: v('note'), driveId: v('driveId') || null }).then(() => {}),
+      () => (shotEdit = null),
+    );
   } else if (kind === 'join' && watched) {
     const id = watched;
     const role = (form.querySelector<HTMLInputElement>('input[name="role"]:checked')?.value ?? 'hunter') as 'hunter' | 'beater';
