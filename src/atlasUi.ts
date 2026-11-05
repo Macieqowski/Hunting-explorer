@@ -3,9 +3,10 @@
 
 import { getLang, tt } from './i18n';
 import { SPECIES, GROUPS, speciesBySlug, seasonsFor, type Species, type Tx } from './atlas';
-import { hoofSvg } from './atlasTracks';
+import { trackSvg } from './atlasTracks';
 import { isOpen, effective, formatRanges } from './seasons';
 import photoCredits from './atlasPhotos.json';
+import { speciesQuestionCount } from './examUi';
 
 interface Credit {
   src: string;
@@ -29,13 +30,10 @@ const L = {
   },
   search: { pl: 'Szukaj gatunku', en: 'Search species' },
   none: { pl: 'Brak gatunku o tej nazwie.', en: 'No species with that name.' },
-  soon: {
-    pl: 'Drapieżniki, zwierzyna drobna i ptactwo pojawią się w kolejnej wersji.',
-    en: 'Predators, small game and birds come in the next version.',
-  },
   back: { pl: '← Wszystkie gatunki', en: '← All species' },
   facts: { pl: 'W skrócie', en: 'At a glance' },
   terms: { pl: 'Nazwy łowieckie', en: 'Hunting terms' },
+  identify: { pl: 'Jak rozpoznać gatunek', en: 'Telling the species' },
   sex: { pl: 'Jak rozpoznać płeć', en: 'Telling the sex' },
   age: { pl: 'Jak ocenić wiek', en: 'Telling the age' },
   track: { pl: 'Trop', en: 'Track' },
@@ -52,6 +50,11 @@ const L = {
     en: 'Some voivodeships have different dates – pick yours in the Seasons tab.',
   },
   sources: { pl: 'Źródła', en: 'Sources' },
+  exam: { pl: 'Pytania egzaminacyjne', en: 'Exam questions' },
+  examCount: { pl: 'Pytań o ten gatunek w bazie egzaminacyjnej:', en: 'Questions about this species in the exam bank:' },
+  examNone: { pl: 'W bazie egzaminacyjnej nie ma pytań o ten gatunek.', en: 'The exam bank has no questions about this species.' },
+  examLoading: { pl: 'Wczytywanie pytań…', en: 'Loading questions…' },
+  drill: { pl: 'Ćwicz pytania o ten gatunek', en: 'Practise questions about this species' },
   review: {
     pl: 'Opisy przygotowane dla aplikacji na podstawie podanych źródeł. Przed polowaniem sprawdź aktualne przepisy i zasady selekcji w swoim okręgu.',
     en: 'Texts written for this app from the sources listed. Check the current law and your region’s selection rules before hunting.',
@@ -78,7 +81,10 @@ const fold = (s: string) =>
 
 let query = '';
 
-export function renderAtlas(slug: string | null): string {
+let rerender: () => void = () => {};
+
+export function renderAtlas(slug: string | null, onChange: () => void): string {
+  rerender = onChange;
   if (slug === 'zdjecia') return renderCredits();
   const sp = slug ? speciesBySlug(slug) : undefined;
   return sp ? renderSpecies(sp) : renderList();
@@ -105,7 +111,6 @@ function renderList(): string {
     <p class="small">${tl(L.intro)}</p>
     <div class="searchbar"><input type="search" class="atlas-search" data-atlas-input="q" value="${esc(query)}" placeholder="${tl(L.search)}" aria-label="${tl(L.search)}"></div>
     ${groups || `<p class="muted">${tl(L.none)}</p>`}
-    <p class="muted small">${tl(L.soon)}</p>
     <p class="muted small"><a href="#/atlas/zdjecia" data-atlas="go" data-slug="zdjecia">${tl(L.photos)}</a></p>
   </div>`;
 }
@@ -180,19 +185,33 @@ function renderSpecies(sp: Species): string {
       </section>
       ${renderSeason(sp, seasonVoiv)}
     </div>
+    ${sp.identify?.length ? `<section class="atlas-sec"><h3>${tl(L.identify)}</h3>${list(sp.identify)}</section>` : ''}
     <section class="atlas-sec"><h3>${tl(L.sex)}</h3>${list(sp.sex)}</section>
-    <section class="atlas-sec"><h3>${tl(L.age)}</h3>${list(sp.age)}</section>
+    ${sp.age?.length ? `<section class="atlas-sec"><h3>${tl(L.age)}</h3>${list(sp.age)}</section>` : ''}
     <section class="atlas-sec atlas-trackbox"><h3>${tl(L.track)}</h3>
-      <figure>${hoofSvg(p, tl(L.trackLabel))}
-        <figcaption class="muted small">${tl(L.trackLabel)} · ${p.dew === 'always' ? tl(L.dewAlways) : tl(L.dewSoft)}</figcaption></figure>
+      <figure>${trackSvg(p, tl(L.trackLabel))}
+        <figcaption class="muted small">${tl(L.trackLabel)}${!p.kind || p.kind === 'hoof' ? ` · ${p.dew === 'always' ? tl(L.dewAlways) : tl(L.dewSoft)}` : ''}</figcaption></figure>
       ${list(sp.track.text)}
     </section>
     <section class="atlas-sec"><h3>${tl(L.signs)}</h3>${list(sp.signs)}</section>
+    ${renderExamBox(sp)}
     <section class="atlas-sec"><h3>${tl(L.sources)}</h3>
       <ul class="atlas-sources">${sp.sources.map((s) => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.label)} ↗</a></li>`).join('')}</ul>
       <p class="muted small">${tl(L.review)}</p>
     </section>
   </article>`;
+}
+
+function renderExamBox(sp: Species): string {
+  const n = speciesQuestionCount(sp.slug, rerender);
+  const body =
+    n === null
+      ? `<p class="muted small">${tl(L.examLoading)}</p>`
+      : n === 0
+        ? `<p class="muted small">${tl(L.examNone)}</p>`
+        : `<p class="small">${tl(L.examCount)} <b>${n}</b></p>
+          <button type="button" class="btn" data-atlas="drill" data-slug="${sp.slug}">${tl(L.drill)}</button>`;
+  return `<section class="atlas-sec"><h3>${tl(L.exam)}</h3>${body}</section>`;
 }
 
 function renderCredits(): string {
@@ -212,7 +231,16 @@ function renderCredits(): string {
 }
 
 /** Click handler for [data-atlas] elements. Returns true when handled. */
-export function handleAtlasClick(el: HTMLElement, go: (slug: string | null) => void, toSeasons: () => void): boolean {
+export function handleAtlasClick(
+  el: HTMLElement,
+  go: (slug: string | null) => void,
+  toSeasons: () => void,
+  drill: (slug: string) => void,
+): boolean {
+  if (el.dataset.atlas === 'drill') {
+    drill(el.dataset.slug!);
+    return true;
+  }
   if (el.dataset.atlas === 'go') {
     go(el.dataset.slug || null);
     return true;

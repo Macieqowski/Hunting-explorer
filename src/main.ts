@@ -15,7 +15,7 @@ import {
 import { createMap, type MapApi } from './map';
 import { t, tt, getLang, setLang, fmtHa, fmtKm2, fmtNum, type Key } from './i18n';
 import { SEASONS, isOpen, effective, formatRanges, yearFrac, openOnlyIn, type Season } from './seasons';
-import { renderExams, handleExamClick, handleExamChange } from './examUi';
+import { renderExams, handleExamClick, handleExamChange, drillSpecies } from './examUi';
 import { renderWeather, handleWeatherClick, handleWeatherInput, handleWeatherSubmit, showWeatherAt } from './weatherUi';
 import { renderBallistics, handleBallisticsClick, handleBallisticsChange, handleBallisticsSubmit } from './ballisticsUi';
 import { renderHunts, handleHuntClick, handleHuntInput, handleHuntSubmit, leaveHunts, mountHuntMap } from './huntUi';
@@ -254,7 +254,7 @@ function render() {
   if (v.kind === 'atlas') {
     setAtlasVoivodeship(state.seasonVoiv);
     leaveHunts();
-    content.innerHTML = renderAtlas(v.slug);
+    content.innerHTML = renderAtlas(v.slug, render);
     return;
   }
   if (v.kind === 'hunt' || (v.kind === 'tab' && v.tab === 'hunt')) return renderHuntSection(v.kind === 'hunt' ? v.id : null);
@@ -553,8 +553,10 @@ const VOIVODESHIPS = [
 ];
 
 function atlasLink(s: Season) {
-  const sp = speciesForSeason(s);
-  return sp ? ` <a class="atlas-link" href="#/atlas/${sp.slug}" data-atlas="go" data-slug="${sp.slug}">${t('inAtlas')}</a>` : '';
+  const sps = speciesForSeason(s);
+  const link = (slug: string, label: string) => `<a class="atlas-link" href="#/atlas/${slug}" data-atlas="go" data-slug="${slug}">${esc(label)}</a>`;
+  if (sps.length === 1) return ' ' + link(sps[0].slug, t('inAtlas'));
+  return sps.length ? ` <span class="atlas-link">${t('inAtlas')}:</span> ${sps.map((sp) => link(sp.slug, tt(sp.name).toLocaleLowerCase(getLang()))).join(', ')}` : '';
 }
 
 function seasonRow(s: Season, voiv: string, now: Date) {
@@ -718,6 +720,10 @@ content.addEventListener('click', (e) => {
       at,
       (slug) => navigate({ kind: 'atlas', slug }),
       () => navigate({ kind: 'tab', tab: 'seasons' }),
+      (slug) => {
+        drillSpecies(slug, render);
+        navigate({ kind: 'tab', tab: 'exams' });
+      },
     );
     if (handled) {
       content.scrollTop = 0;

@@ -1,7 +1,9 @@
-import { drawExam, isCorrect, scoreExam, shuffle, shuffleAnswers, answerText, answerImage, type Answer, type Bank, type DrawnQuestion, type ExamResult, type Question } from './exam';
+import { drawExam, weightedSample, isCorrect, scoreExam, shuffle, shuffleAnswers, answerText, answerImage, type Answer, type Bank, type DrawnQuestion, type ExamResult, type Question } from './exam';
 import { recordAnswer, weightOf, dueQuestions, summarize, mostMissed, parseProgress, mergeProgress, type Progress, type Counts } from './examProgress';
 import { seasonQuestions, SEASON_TOPIC } from './seasonQuestions';
 import { getLang, tt, fmtNum } from './i18n';
+import { speciesIn } from './atlasMatch';
+import { speciesBySlug } from './atlas';
 
 const BANK_IDS = ['mysliwy', 'selekcjoner'] as const;
 type BankId = (typeof BANK_IDS)[number];
@@ -18,6 +20,8 @@ const L = {
   },
   examMode: { pl: 'Egzamin', en: 'Exam' },
   examModeHint: { pl: 'z limitem czasu, wynik na końcu', en: 'timed, score at the end' },
+  inAtlas: { pl: 'W atlasie', en: 'In the atlas' },
+  speciesDrill: { pl: 'Pytania o gatunek', en: 'Questions about' },
   learnMode: { pl: 'Nauka', en: 'Learning' },
   learnModeHint: { pl: 'odpowiedź od razu, częściej słabe pytania', en: 'answer right away, weak questions more often' },
   reviewMode: { pl: 'Powtórka', en: 'Review' },
@@ -128,7 +132,9 @@ const answersInline = (d: DrawnQuestion, idx: number[]) =>
   idx.map((c) => `<span class="ans-inline">${answerHtml(d.answers[c])}</span>`).join(', ');
 let loadState: 'idle' | 'loading' | 'done' | 'error' = 'idle';
 let attempt: Attempt | null = null;
-let setup = { bank: 'mysliwy' as BankId, mode: 'exam' as Mode, count: 0, topic: '' };
+let setup = { bank: 'mysliwy' as BankId, mode: 'exam' as Mode, count: 0, topic: '', species: '' };
+/** Questions per species drill run. */
+const DRILL_COUNT = 20;
 let resetArmed = false;
 let toolNote = '';
 let timer: ReturnType<typeof setInterval> | undefined;
@@ -227,6 +233,7 @@ async function loadBanks() {
       banks.set(id, b);
     }
     loadState = 'done';
+    if (setup.species && !attempt) startAttempt();
   } catch {
     loadState = 'error';
   }
@@ -235,6 +242,9 @@ async function loadBanks() {
 
 const topicsOf = (b: Bank) => [...new Set(b.questions.map((q) => q.topic))].sort((a, c) => a.localeCompare(c, 'pl'));
 
+/** Questions of a bank that are about an atlas species (matched on the question text). */
+const aboutSpecies = (b: Bank, slug: string) => b.questions.filter((q) => speciesIn(q.q).includes(slug));
+
 function startAttempt() {
   const b = banks.get(setup.bank)!;
   const count = setup.count || b.count;
@@ -242,7 +252,11 @@ function startAttempt() {
   const progress = readProgress();
   const now = Date.now();
   let drawn: DrawnQuestion[];
-  if (setup.mode === 'review') {
+  if (setup.species) {
+    // Both banks: the hunter and selekcjoner questions about one species belong together.
+    const pool = BANK_IDS.flatMap((id) => aboutSpecies(banks.get(id)!, setup.species));
+    drawn = weightedSample(pool, Math.min(DRILL_COUNT, pool.length), (q) => weightOf(progress[q.id], now)).map((q) => shuffleAnswers(q));
+  } else if (setup.mode === 'review') {
     const due = dueQuestions(b.questions, progress, now).filter((q) => !topics || topics.includes(q.topic));
     drawn = shuffle(due.slice(0, count)).map((q) => shuffleAnswers(q));
     if (!drawn.length) {
@@ -461,7 +475,7 @@ function renderQuestion(a: Attempt) {
       ${a.deadline ? `<span id="exam-timer" class="timer">${fmtTime(a.deadline - Date.now())}</span>` : ''}
     </div>
     <div class="progress"><span style="width:${((a.mode === 'exam' ? answered : a.index + (reveal ? 1 : 0)) / a.drawn.length) * 100}%"></span></div>
-    <p class="eyebrow exam-topic">${esc(d.question.topic)}</p>
+    <p class="eyebrow exam-topic">${esc(d.question.topic)}${setup.species ? ` · ${l('speciesDrill')}: ${esc(tt(speciesBySlug(setup.species)?.name ?? { pl: '', en: '' }))}` : ''}</p>
     <h2 class="exam-q">${esc(d.question.q)}</h2>
     ${img(d.question.image, 'q-img')}
     <div class="answers" role="${multi ? 'group' : 'radiogroup'}">${d.answers
@@ -475,7 +489,7 @@ function renderQuestion(a: Attempt) {
     ${
       reveal
         ? `<div class="feedback ${isCorrect(d, chosen) ? 'ok' : 'bad'}"><strong>${isCorrect(d, chosen) ? l('correctAns') : `${l('wrongAns')} ${answersInline(d, d.correct)}`}</strong>
-          ${d.question.explanation ? `<p>${esc(d.question.explanation)}</p>` : ''}${sourceLink(d)}</div>`
+          ${d.question.explanation ? `<p>${esc(d.question.explanation)}</p>` : ''}${sourceLink(d)}${atlasChips(d)}</div>`
         : ''
     }
     <div class="actions exam-nav">
@@ -485,6 +499,17 @@ function renderQuestion(a: Attempt) {
       <button type="button" class="btn ghost" data-exam="quit">${l('quit')}</button>
     </div>
     ${a.mode === 'exam' ? `<div class="dots">${a.drawn.map((_, i) => `<button type="button" data-exam="goto" data-i="${i}" class="${i === a.index ? 'cur' : ''}${a.answers[i]?.length ? ' done' : ''}" aria-label="${i + 1}">${i + 1}</button>`).join('')}</div>` : ''}`;
+}
+
+/** Links to the atlas pages of the species a question is about. */
+function atlasChips(d: DrawnQuestion) {
+  const sps = speciesIn(d.question.q)
+    .map((slug) => speciesBySlug(slug))
+    .filter((sp) => !!sp);
+  if (!sps.length) return '';
+  return `<p class="small atlas-chips">${l('inAtlas')}: ${sps
+    .map((sp) => `<a href="#/atlas/${sp.slug}" data-atlas="go" data-slug="${sp.slug}">${esc(tt(sp.name))}</a>`)
+    .join(', ')}</p>`;
 }
 
 function sourceLink(d: DrawnQuestion) {
@@ -529,7 +554,7 @@ function renderResult(a: Attempt) {
       <p class="eyebrow">${i + 1}. ${esc(d.question.topic)}</p><p><strong>${esc(d.question.q)}</strong></p>${img(d.question.image, 'q-img small-img')}
       <p class="small bad-text">${l('yourAnswer')}: ${a.answers[i]?.length ? answersInline(d, a.answers[i]!) : l('none')}</p>
       <p class="small ok-text">✓ ${answersInline(d, d.correct)}</p>
-      ${d.question.explanation ? `<p class="small">${esc(d.question.explanation)}</p>` : ''}${sourceLink(d)}</article>`,
+      ${d.question.explanation ? `<p class="small">${esc(d.question.explanation)}</p>` : ''}${sourceLink(d)}${atlasChips(d)}</article>`,
           )
           .join('')
   }`;
@@ -545,11 +570,12 @@ export function handleExamClick(el: HTMLElement): boolean {
   toolNote = '';
   switch (action) {
     case 'drill':
-      setup = { ...setup, mode: 'learn', topic: el.dataset.topic ?? '' };
+      setup = { ...setup, mode: 'learn', topic: el.dataset.topic ?? '', species: '' };
       startAttempt();
       break;
     case 'learnNew':
       setup.mode = 'learn';
+      setup.species = '';
       startAttempt();
       break;
     case 'export':
@@ -569,10 +595,11 @@ export function handleExamClick(el: HTMLElement): boolean {
       rerender();
       return true;
     case 'pick':
-      setup = { ...setup, bank: el.dataset.bank as BankId, count: 0, topic: '' };
+      setup = { ...setup, bank: el.dataset.bank as BankId, count: 0, topic: '', species: '' };
       break;
     case 'mode':
       setup.mode = el.dataset.mode as Mode;
+      setup.species = '';
       break;
     case 'start':
     case 'again':
@@ -604,6 +631,7 @@ export function handleExamClick(el: HTMLElement): boolean {
       finish();
       break;
     case 'quit':
+      setup.species = '';
       clearInterval(timer);
       attempt = null;
       break;
@@ -626,4 +654,26 @@ export function handleExamChange(el: HTMLSelectElement | HTMLInputElement): bool
   if (f === 'topic') setup.topic = el.value;
   rerender();
   return true;
+}
+
+// ------------------------------------------------------------------ atlas links
+
+/** Starts a learning run with the questions about one atlas species (loads the banks if needed). */
+export function drillSpecies(slug: string, onChange: () => void) {
+  rerender = onChange;
+  clearInterval(timer);
+  attempt = null;
+  setup = { ...setup, mode: 'learn', topic: '', species: slug };
+  if (loadState === 'done') startAttempt();
+  else if (loadState === 'idle') loadBanks();
+}
+
+/** Number of exam questions about a species in both banks, or null while the banks load. */
+export function speciesQuestionCount(slug: string, onChange: () => void): number | null {
+  if (loadState === 'idle') {
+    rerender = onChange;
+    loadBanks();
+  }
+  if (loadState !== 'done') return null;
+  return BANK_IDS.reduce((n, id) => n + aboutSpecies(banks.get(id)!, slug).length, 0);
 }
