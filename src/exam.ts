@@ -129,8 +129,17 @@ export function shuffleAnswers(q: Question, rng: Rng = Math.random): DrawnQuesti
  * (largest-remainder rounding), then shuffles question order and answer order.
  * With `sections`, the count is first split across the sections by their `count`s and the
  * sections are kept in order (questions are shuffled only within a section).
+ * With `weight`, questions within each topic are picked by weight (higher = more likely)
+ * instead of uniformly; the topic and section proportions stay the same.
  */
-export function drawExam(questions: Question[], count: number, rng: Rng = Math.random, topics?: string[], sections?: Section[]): DrawnQuestion[] {
+export function drawExam(
+  questions: Question[],
+  count: number,
+  rng: Rng = Math.random,
+  topics?: string[],
+  sections?: Section[],
+  weight?: (q: Question) => number,
+): DrawnQuestion[] {
   const pool = topics?.length ? questions.filter((q) => topics.includes(q.topic)) : questions;
   const n = Math.min(count, pool.length);
   const parts = sections?.length ? sections.map((_, i) => pool.filter((q) => sectionOf(q, sections) === i)) : [pool];
@@ -142,10 +151,19 @@ export function drawExam(questions: Question[], count: number, rng: Rng = Math.r
         rng,
       )
     : [n];
-  return parts.flatMap((part, i) => shuffle(drawByTopic(part, partTake[i], rng), rng)).map((q) => shuffleAnswers(q, rng));
+  return parts.flatMap((part, i) => shuffle(drawByTopic(part, partTake[i], rng, weight), rng)).map((q) => shuffleAnswers(q, rng));
 }
 
-function drawByTopic(pool: Question[], n: number, rng: Rng): Question[] {
+/** Picks `n` items without replacement, each with probability proportional to its weight (Efraimidis–Spirakis). */
+export function weightedSample<T>(xs: readonly T[], n: number, weight: (x: T) => number, rng: Rng = Math.random): T[] {
+  return xs
+    .map((x) => ({ x, key: Math.pow(rng(), 1 / Math.max(1e-6, weight(x))) }))
+    .sort((a, b) => b.key - a.key)
+    .slice(0, n)
+    .map((e) => e.x);
+}
+
+function drawByTopic(pool: Question[], n: number, rng: Rng, weight?: (q: Question) => number): Question[] {
   const byTopic = new Map<string, Question[]>();
   for (const q of pool) {
     const arr = byTopic.get(q.topic);
@@ -159,7 +177,7 @@ function drawByTopic(pool: Question[], n: number, rng: Rng): Question[] {
     n,
     rng,
   );
-  return groups.flatMap((g, i) => shuffle(g, rng).slice(0, take[i]));
+  return groups.flatMap((g, i) => (weight ? weightedSample(g, take[i], weight, rng) : shuffle(g, rng).slice(0, take[i])));
 }
 
 export function isCorrect(d: DrawnQuestion, chosen: number[] | undefined): boolean {
