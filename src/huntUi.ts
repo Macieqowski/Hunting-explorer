@@ -771,9 +771,13 @@ const pokotCtx = (h: Hunt): PokotCtx => ({
 
 let printEl: HTMLElement | null = null;
 let titleBefore = '';
+const printKey = (e: KeyboardEvent) => {
+  if (e.key === 'Escape') closePokotPrint();
+};
 
 function closePokotPrint() {
   if (!printEl) return;
+  document.removeEventListener('keydown', printKey);
   printEl.remove();
   printEl = null;
   document.body.classList.remove('pp-printing');
@@ -798,6 +802,7 @@ function openPokotPrint() {
   });
   document.body.append(el);
   document.body.classList.add('pp-printing');
+  document.addEventListener('keydown', printKey);
   printEl = el;
   // Browsers suggest the PDF file name from the page title.
   titleBefore = document.title;
