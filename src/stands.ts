@@ -164,3 +164,26 @@ export function parseStands(v: unknown): Stand[] {
 /** Natural order for a list: "2" before "10", "9" before "9A", names after numbers. */
 export const sortStands = <T extends Pick<Stand, 'name'>>(ss: T[]): T[] =>
   [...ss].sort((a, b) => a.name.localeCompare(b.name, 'pl', { numeric: true }));
+
+/** "54.0123, 18.5843" (as Google Maps copies it), also with spaces, semicolons or decimal commas and spaces. */
+export function parseLatLng(s: string): { lat: number; lng: number } | null {
+  const t = s.trim();
+  const m = t.match(/^(-?\d+(?:[.,]\d+)?)\s*[,;\s]\s*(-?\d+(?:[.,]\d+)?)$/) ?? t.match(/^(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/);
+  if (!m) return null;
+  const lat = +m[1].replace(',', '.');
+  const lng = +m[2].replace(',', '.');
+  if (!isNum(lat) || !isNum(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  return { lat: +lat.toFixed(6), lng: +lng.toFixed(6) };
+}
+
+export const fmtLatLng = (s: Pick<Stand, 'lat' | 'lng'>) => `${s.lat.toFixed(6)}, ${s.lng.toFixed(6)}`;
+
+/** A name for a new seat: one more than the highest number in use ("24" → "25"). */
+export function nextStandName(ss: Pick<Stand, 'name'>[]): string {
+  let max = 0;
+  for (const s of ss) {
+    const m = s.name.match(/^(\d+)/);
+    if (m) max = Math.max(max, +m[1]);
+  }
+  return String(max + 1);
+}

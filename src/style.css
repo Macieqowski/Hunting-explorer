@@ -451,7 +451,7 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; text-transform: uppercase; le
 .h-form { display: grid; gap: 12px; }
 .h-form h3 { margin: 0; }
 .h-field { display: grid; gap: 4px; font-size: 0.85rem; font-weight: 600; min-width: 0; }
-.h-field input, .h-field textarea {
+.h-field input, .h-field textarea, .h-field select {
   font: inherit; font-weight: 400; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
   padding: 8px 10px; width: 100%; min-width: 0;
 }
@@ -876,3 +876,14 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; text-transform: uppercase; le
 .hst-unlock-row { display: flex; align-items: flex-end; gap: 8px; max-width: 26rem; }
 .hst-unlock-row .h-field { flex: 1; margin: 0; }
 .hst-unlock-row .btn { width: auto; flex: none; }
+.hm-stand-editing .hst-marker .hm-label { display: block; }
+.hm-stand-editing .leaflet-container, .hm-stand-editing.leaflet-container { cursor: crosshair; }
+.hst-sel svg { outline: 3px solid #facc15; outline-offset: 1px; border-radius: 7px; }
+.hst-sel .hm-label { background: #facc15; color: #111; }
+.hst-edit { margin: 4px 0 8px; display: grid; gap: 8px; }
+.hst-edit .hst-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+.hst-edit .h-field { flex: 1 1 9rem; margin: 0; }
+.hst-edit .h-check { display: inline-flex; align-items: center; gap: 6px; padding-bottom: 8px; }
+.hst-edit [aria-invalid='true'] { border-color: #dc2626; }
+.hst-seat { border-left: 3px solid #facc15; padding-left: 10px; display: grid; gap: 8px; }
+.hst-names button.hst-on span { background: #facc15; border-radius: 3px; padding: 0 3px; }
