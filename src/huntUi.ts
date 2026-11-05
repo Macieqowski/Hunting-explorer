@@ -36,6 +36,7 @@ import {
   sightLook,
   compassPoint,
   distanceM,
+  windFocusTime,
 } from './hunt';
 import type { District } from './bdl';
 import { fetchDistrictsAtPoint } from './bdl';
@@ -236,6 +237,7 @@ const L = {
   lSat: { pl: 'Satelitarna', en: 'Satellite' },
   lDistricts: { pl: 'Obwody łowieckie', en: 'Hunting districts' },
   lCompartments: { pl: 'Oddziały leśne', en: 'Forest compartments' },
+  lWindArrows: { pl: 'Strzałki wiatru', en: 'Wind arrows' },
   drives: { pl: 'Mioty', en: 'Drives' },
   noDrives: { pl: 'Prowadzący nie dodał jeszcze miotów.', en: 'The leader has not added any drives yet.' },
   noDrivesLeader: {
@@ -843,7 +845,7 @@ function ensureMap(): HuntMap {
       ago,
       accuracy: l('accuracy'),
       distance: l('distanceFromYou'),
-      layers: { osm: l('lOsm'), topo: l('lTopo'), sat: l('lSat'), districts: l('lDistricts'), compartments: l('lCompartments') },
+      layers: { osm: l('lOsm'), topo: l('lTopo'), sat: l('lSat'), districts: l('lDistricts'), compartments: l('lCompartments'), wind: l('lWindArrows') },
     });
   }
   return hmap;
@@ -858,6 +860,8 @@ export function mountHuntMap() {
   m.invalidate();
   m.setDistrict(hunt?.district?.id ?? null);
   m.setDrives(driveViews());
+  // Wind for when it matters: the next planned drive, or now while one runs.
+  m.setWindTime(hunt && hunt.status !== 'ended' ? windFocusTime(hunt, drives, now()) : null);
   if (driveEdit) m.startDraw(driveEdit.area, onAreaChange, driveEdit.id);
   else m.stopDraw();
   if (scrollToDriveForm) {
