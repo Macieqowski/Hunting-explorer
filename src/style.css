@@ -758,3 +758,50 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; text-transform: uppercase; le
 :root[data-theme='dark'] .wind-scent { color: #c4b5fd; }
 .wind-ctl.leaflet-bar a { display: inline; width: auto; height: auto; line-height: inherit; border: 0; background: none; color: var(--accent); text-decoration: underline; }
 .wind-hour .small { font-size: 0.72rem; }
+
+/* Ballistics */
+:root { --ball-ok: #166534; --ball-ok-bg: #dcfce7; --ball-mid: #92400e; --ball-mid-bg: #fef3c7; --ball-bad: #991b1b; --ball-bad-bg: #fee2e2; --ball-line: #166534; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) { --ball-ok: #86efac; --ball-ok-bg: #14361f; --ball-mid: #fcd34d; --ball-mid-bg: #3a2a0a; --ball-bad: #fca5a5; --ball-bad-bg: #3b1212; --ball-line: #4ade80; }
+}
+.ball .card h2 { margin-bottom: 10px; }
+.ball-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px 12px; margin: 6px 0; }
+.ball-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 0.82rem; color: var(--muted); }
+.ball-field.wide { grid-column: 1 / -1; }
+.ball-field input, .ball-field select, .ball-name input {
+  font: inherit; font-size: 0.95rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 10px; width: 100%; min-width: 0;
+}
+.ball-field input:focus, .ball-field select:focus, .ball-name input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ball-inline { flex-direction: row; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.ball-inline select { width: auto; max-width: 100%; }
+.ball-check { display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; margin: 4px 0; cursor: pointer; }
+.ball-facts { overflow-wrap: anywhere; }
+.ball-rifle-actions { margin: 0 0 10px; }
+.ball-name { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.ball-name input { flex: 1 1 200px; }
+.ball-e100 { margin: 0 0 8px; font-size: 1.05rem; }
+.ball-legal td:first-child { width: 60%; }
+.ball-min { display: block; }
+.ball-v { display: inline-block; font-size: 0.78rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+.ball-ok { background: var(--ball-ok-bg); color: var(--ball-ok); }
+.ball-borderline { background: var(--ball-mid-bg); color: var(--ball-mid); }
+.ball-below { background: var(--ball-bad-bg); color: var(--ball-bad); }
+.ball-chart { width: 100%; height: auto; display: block; }
+.ball-chart .ball-grid-line { stroke: var(--border); stroke-width: 1; }
+.ball-chart .ball-los { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 4 3; }
+.ball-chart .ball-axis { fill: var(--muted); font-size: 12px; }
+.ball-chart .ball-path { fill: none; stroke: var(--ball-line); stroke-width: 2.5; stroke-linejoin: round; }
+.ball-chart .ball-dot { fill: var(--surface); stroke: var(--ball-line); stroke-width: 2; }
+.ball-chart .ball-lbl { fill: var(--text); font-size: 12px; font-weight: 600; }
+.ball-tblwrap { overflow-x: auto; margin: 0 -4px; }
+.ball-table { min-width: 520px; }
+.ball-table td { white-space: nowrap; }
+.ball-table tr.ball-weak td { background: var(--ball-bad-bg); color: var(--ball-bad); }
+.ball-table tr.ball-weak td .muted { color: inherit; opacity: 0.8; }
+.ball-legal { min-width: 0; }
+@media (max-width: 420px) {
+  .ball .card { padding: 12px 10px; }
+  .ball-legal th, .ball-legal td { padding: 6px 3px; }
+  .ball-legal .ball-v { padding: 2px 6px; }
+}
