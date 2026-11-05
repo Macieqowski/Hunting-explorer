@@ -4,7 +4,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, connectAuthEmulator } from 'firebase/auth';
 import { getDatabase, ref, child, push, get, update, onValue, serverTimestamp, connectDatabaseEmulator } from 'firebase/database';
-import { parseHunt, parseParticipants, parsePositions, parseTracks, parseDrives, encodeArea, shouldPurge, cleanText, cleanNotes, LIMITS, DRIVE_LIMITS, type Hunt, type HuntInput } from './hunt';
+import { parseHunt, parseParticipants, parsePositions, parseTracks, parseDrives, parseSightings, encodeArea, shouldPurge, cleanText, cleanNotes, LIMITS, DRIVE_LIMITS, type Hunt, type HuntInput } from './hunt';
 import { HuntError, type FirebaseConfig, type HuntBackend } from './huntBackend';
 
 function wrap(e: unknown): HuntError {
@@ -50,7 +50,7 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
   const root = ref(db);
   let offset = 0;
   onValue(ref(db, '.info/serverTimeOffset'), (s) => (offset = Number(s.val()) || 0));
-  const purge = (id: string) => update(root, { [`positions/${id}`]: null, [`tracks/${id}`]: null });
+  const purge = (id: string) => update(root, { [`positions/${id}`]: null, [`tracks/${id}`]: null, [`sightings/${id}`]: null });
 
   return {
     uid,
@@ -85,6 +85,7 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
           [`positions/${id}`]: null,
           [`tracks/${id}`]: null,
           [`drives/${id}`]: null,
+          [`sightings/${id}`]: null,
           [`joins/${id}/${uid}`]: null,
           // Other people's "my hunts" entries are cleaned up by their own browsers (see myHunts).
           [`userHunts/${uid}/${id}`]: null,
@@ -213,6 +214,33 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
           [`drives/${id}/${driveId}/endedAt`]: null,
         }),
       ),
+
+    watchSightings(id, cb, onDenied) {
+      return onValue(
+        child(root, `sightings/${id}`),
+        (s) => cb(parseSightings(s.val())),
+        () => onDenied(),
+      );
+    },
+
+    async addSighting(id, s) {
+      const key = push(child(root, `sightings/${id}`)).key!;
+      const rec: Record<string, unknown> = {
+        uid,
+        species: s.species,
+        count: s.count,
+        lat: s.lat,
+        lng: s.lng,
+        heading: Math.round(s.heading) % 360,
+        src: s.src,
+        ts: serverTimestamp(),
+      };
+      if (s.driveId) rec.driveId = s.driveId;
+      await guard(update(child(root, `sightings/${id}/${key}`), rec));
+      return key;
+    },
+
+    deleteSighting: (id, sid) => guard(update(root, { [`sightings/${id}/${sid}`]: null })),
 
     endDrive: (id, driveId) => guard(update(root, { [`drives/${id}/${driveId}/endedAt`]: serverTimestamp() })),
   };

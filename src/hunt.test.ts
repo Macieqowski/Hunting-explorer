@@ -1,4 +1,4 @@
-import { toGpx, gpxFileName, freshness, distanceM, sendDecision, shouldPurge, parsePositions, parseTracks, STALE_MS, LOST_MS, HEARTBEAT_MS, RETENTION_MS, validateHunt, huntWindow, sortHunts, sortParticipants, countRoles, parseHunt, parseParticipants, cleanText, validPersonName, nextStatuses, validateDrive, encodeArea, decodeArea, sortDrives, driveState, activeDrive, nextDriveDefaults, parseDrives, splitByDrive, type Hunt } from './hunt';
+import { toGpx, gpxFileName, freshness, distanceM, sendDecision, shouldPurge, parsePositions, parseTracks, STALE_MS, LOST_MS, HEARTBEAT_MS, RETENTION_MS, validateHunt, huntWindow, sortHunts, sortParticipants, countRoles, parseHunt, parseParticipants, cleanText, validPersonName, nextStatuses, validateDrive, encodeArea, decodeArea, sortDrives, driveState, activeDrive, nextDriveDefaults, parseDrives, splitByDrive, parseSightings, compassPoint, bearing, angleDiff, offsetPoint, headingToward, sightLook, headingFromOrientation, declination, type Hunt } from './hunt';
 
 const base: Hunt = {
   id: 'x',
@@ -181,5 +181,55 @@ describe('drives', () => {
     expect(gpx).toContain('<trk><name>Miot 1</name><type>drive</type>');
     expect(gpx).toContain('<name>Jan (Myśliwy) · Miot 2</name>');
     expect(gpx.match(/<trk>/g)).toHaveLength(7); // 2 areas + 5 track parts
+  });
+});
+
+describe('sightings', () => {
+  it('parses stored sightings, newest first', () => {
+    const ss = parseSightings({
+      a: { uid: 'u', species: 'boar', count: '3-6', lat: 52, lng: 21, heading: 370, src: 'compass', ts: 1 },
+      b: { uid: 'u', species: 'deer', count: '6+', lat: 52, lng: 21, heading: 90, src: 'buttons', driveId: 'd1', ts: 2 },
+      c: { uid: 'u', species: 'bear', count: '1-3', lat: 52, lng: 21, heading: 0, ts: 3 },
+    });
+    expect(ss.map((s) => [s.id, s.heading, s.driveId])).toEqual([['b', 90, 'd1'], ['a', 10, null]]);
+  });
+  it('names compass points and bearings', () => {
+    expect([0, 44, 46, 90, 180, 225, 315, 359].map(compassPoint)).toEqual(['N', 'NE', 'NE', 'E', 'S', 'SW', 'NW', 'N']);
+    expect(Math.round(bearing({ lat: 52, lng: 21 }, { lat: 52.01, lng: 21 }))).toBe(0);
+    expect(Math.round(bearing({ lat: 52, lng: 21 }, { lat: 52, lng: 21.01 }))).toBe(90);
+    expect(angleDiff(350, 10)).toBe(20);
+    const p = offsetPoint({ lat: 52, lng: 21 }, 90, 150);
+    expect(Math.round(distanceM({ lat: 52, lng: 21 }, p))).toBe(150);
+  });
+  it('alerts hunters the game is heading toward', () => {
+    const s = { lat: 52, lng: 21, heading: 90 }; // going east
+    expect(headingToward(s, offsetPoint(s, 90, 300))).toBe(true);
+    expect(headingToward(s, offsetPoint(s, 115, 300))).toBe(true);
+    expect(headingToward(s, offsetPoint(s, 135, 300))).toBe(false); // 45° off
+    expect(headingToward(s, offsetPoint(s, 90, 700))).toBe(false); // too far
+    expect(headingToward(s, offsetPoint(s, 270, 20))).toBe(true); // right next to it
+  });
+  it('fades after 5 minutes and hides when the drive ends', () => {
+    const t = 10 * 60e3;
+    expect(sightLook({ ts: t - 60e3, driveId: 'd1' }, t, null)).toBe('bright');
+    expect(sightLook({ ts: t - 6 * 60e3, driveId: 'd1' }, t, 'd1')).toBe('faded');
+    expect(sightLook({ ts: t - 6 * 60e3, driveId: 'd1' }, t, 'd2')).toBe('old');
+    expect(sightLook({ ts: t - 6 * 60e3, driveId: null }, t, null)).toBe('faded');
+    expect(sightLook({ ts: t - 31 * 60e3, driveId: null }, t + 0, null)).toBe('old');
+  });
+  it('reads the compass from phone orientation, upright and flat', () => {
+    const r = (v: number | null) => (v == null ? null : Math.round(v));
+    expect(r(headingFromOrientation(0, 0, 0))).toBe(0); // flat, top edge north
+    expect(r(headingFromOrientation(90, 0, 0))).toBe(270); // flat, turned left: west
+    expect(r(headingFromOrientation(0, 90, 0))).toBe(0); // upright, back camera north
+    expect(r(headingFromOrientation(270, 80, 0))).toBe(90); // upright, facing east
+    expect(r(headingFromOrientation(0, 180 - 0.01, 0))).not.toBeNull();
+    expect(declination(14)).toBe(5);
+    expect(declination(24)).toBe(7.5);
+  });
+  it('adds sightings to the GPX as waypoints', () => {
+    const [s] = parseSightings({ a: { uid: 'u', species: 'boar', count: '3-6', lat: 52, lng: 21, heading: 42, src: 'compass', ts: 1 } });
+    const gpx = toGpx('T', new Map(), [], new Map(), () => '', [], [{ s, label: 'Dziki 3–6 → 42°' }]);
+    expect(gpx).toContain('<name>Dziki 3–6 → 42°</name><type>boar</type>');
   });
 });

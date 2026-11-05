@@ -180,6 +180,46 @@
         }
       }
     },
+    "sightings": {
+      "$h": {
+        ".read": "auth != null && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed'",
+        ".write": "auth != null && !newData.exists() && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid",
+        "$s": {
+          ".write": "auth != null && ((!data.exists() && newData.child('uid').val() === auth.uid && root.child('hunts/' + $h + '/status').val() === 'live' && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed') || (data.exists() && !newData.exists() && (data.child('uid').val() === auth.uid || root.child('hunts/' + $h + '/leaderUid').val() === auth.uid)))",
+          ".validate": "newData.hasChildren(['uid', 'species', 'count', 'lat', 'lng', 'heading', 'src', 'ts'])",
+          "uid": {
+            ".validate": "newData.val() === auth.uid"
+          },
+          "species": {
+            ".validate": "newData.isString() && newData.val().matches(/^(deer|boar|roe|predator)$/)"
+          },
+          "count": {
+            ".validate": "newData.isString() && newData.val().matches(/^(1-3|3-6|6[+])$/)"
+          },
+          "lat": {
+            ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
+          },
+          "lng": {
+            ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180"
+          },
+          "heading": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 360"
+          },
+          "src": {
+            ".validate": "newData.isString() && newData.val().matches(/^(compass|buttons)$/)"
+          },
+          "driveId": {
+            ".validate": "newData.isString() && newData.val().length <= 40"
+          },
+          "ts": {
+            ".validate": "newData.val() === now"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
     "userHunts": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
