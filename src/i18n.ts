@@ -14,6 +14,7 @@ const dict = {
   tabExams: { pl: 'Egzaminy', en: 'Exams' },
   tabWeather: { pl: 'Pogoda', en: 'Weather' },
   tabHunt: { pl: 'Polowanie zbiorowe', en: 'Group hunts' },
+  tabBallistics: { pl: 'Balistyka', en: 'Ballistics' },
   weatherHere: { pl: 'Pogoda w tym miejscu', en: 'Weather at this point' },
   tabAbout: { pl: 'O danych', en: 'About' },
   tabOffline: { pl: 'Offline', en: 'Offline' },

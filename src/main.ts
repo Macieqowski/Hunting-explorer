@@ -17,6 +17,7 @@ import { t, tt, getLang, setLang, fmtHa, fmtKm2, fmtNum, type Key } from './i18n
 import { SEASONS, isOpen, effective, formatRanges, yearFrac, openOnlyIn, type Season } from './seasons';
 import { renderExams, handleExamClick, handleExamChange } from './examUi';
 import { renderWeather, handleWeatherClick, handleWeatherInput, handleWeatherSubmit, showWeatherAt } from './weatherUi';
+import { renderBallistics, handleBallisticsClick, handleBallisticsChange, handleBallisticsSubmit } from './ballisticsUi';
 import { renderHunts, handleHuntClick, handleHuntInput, handleHuntSubmit, leaveHunts, mountHuntMap } from './huntUi';
 import { renderAtlas, handleAtlasClick, handleAtlasInput, setAtlasVoivodeship } from './atlasUi';
 import { speciesForSeason } from './atlas';
@@ -32,7 +33,7 @@ const $ = <T extends HTMLElement = HTMLElement>(sel: string, root: ParentNode = 
 const typeKey = (h: HolderType) => `type_${h}` as Key;
 const cap = (s: string | null) => (s ? s.charAt(0).toLocaleUpperCase('pl') + s.slice(1) : '—');
 
-type Tab = 'clubs' | 'districts' | 'stats' | 'offline' | 'seasons' | 'exams' | 'weather' | 'hunt' | 'about';
+type Tab = 'clubs' | 'districts' | 'stats' | 'offline' | 'seasons' | 'exams' | 'weather' | 'hunt' | 'ballistics' | 'about';
 type View =
   | { kind: 'tab'; tab: Tab }
   | { kind: 'district'; slug: string }
@@ -103,7 +104,7 @@ const mapApi: MapApi = createMap($('#map'), (lat, lng) => navigate({ kind: 'poin
 
 // Top-level sections. The map section holds the panel tabs; every other section is a
 // full-width page without the map (add new features here).
-type Section = 'map' | 'seasons' | 'atlas' | 'exams' | 'weather' | 'hunt';
+type Section = 'map' | 'seasons' | 'atlas' | 'exams' | 'weather' | 'hunt' | 'ballistics';
 const SECTIONS: [Section, Key][] = [
   ['map', 'sectionMap'],
   ['seasons', 'tabSeasons'],
@@ -111,8 +112,9 @@ const SECTIONS: [Section, Key][] = [
   ['exams', 'tabExams'],
   ['weather', 'tabWeather'],
   ['hunt', 'tabHunt'],
+  ['ballistics', 'tabBallistics'],
 ];
-const PAGE_SECTIONS: Tab[] = ['seasons', 'exams', 'weather', 'hunt'];
+const PAGE_SECTIONS: Tab[] = ['seasons', 'exams', 'weather', 'hunt', 'ballistics'];
 const sectionOf = (v: View): Section =>
   v.kind === 'hunt' ? 'hunt' : v.kind === 'atlas' ? 'atlas' : v.kind === 'tab' && PAGE_SECTIONS.includes(v.tab) ? (v.tab as Section) : 'map';
 let lastSection: Section = 'map';
@@ -147,7 +149,7 @@ function hashToView(h: string): View {
     const [lat, lng] = arg.split(',').map(Number);
     if (isFinite(lat) && isFinite(lng)) return { kind: 'point', lat, lng };
   }
-  if (['districts', 'stats', 'offline', 'seasons', 'exams', 'weather', 'about'].includes(kind)) return { kind: 'tab', tab: kind as Tab };
+  if (['districts', 'stats', 'offline', 'seasons', 'exams', 'weather', 'ballistics', 'about'].includes(kind)) return { kind: 'tab', tab: kind as Tab };
   return { kind: 'tab', tab: 'clubs' };
 }
 
@@ -248,6 +250,7 @@ function render() {
   if (v.kind === 'point') return void (content.innerHTML = renderPoint());
   if (v.kind === 'tab' && v.tab === 'exams') return void (content.innerHTML = renderExams(render));
   if (v.kind === 'tab' && v.tab === 'weather') return void (content.innerHTML = renderWeather(render));
+  if (v.kind === 'tab' && v.tab === 'ballistics') return void (content.innerHTML = renderBallistics(render));
   if (v.kind === 'atlas') {
     setAtlasVoivodeship(state.seasonVoiv);
     leaveHunts();
@@ -724,6 +727,8 @@ content.addEventListener('click', (e) => {
   }
   const wx = (e.target as HTMLElement).closest<HTMLElement>('[data-weather]');
   if (wx && handleWeatherClick(wx)) return;
+  const ba = (e.target as HTMLElement).closest<HTMLElement>('[data-ball]');
+  if (ba && handleBallisticsClick(ba)) return;
   const hu = (e.target as HTMLElement).closest<HTMLElement>('[data-hunt]');
   if (hu) {
     e.preventDefault();
@@ -803,6 +808,7 @@ content.addEventListener('input', (e) => {
 content.addEventListener('change', (e) => {
   const el = e.target as HTMLSelectElement;
   if (handleExamChange(el)) return;
+  if (handleBallisticsChange(el)) return;
   const f = el.dataset.filter;
   if (!f) return;
   if (f === 'voiv') {
@@ -824,6 +830,7 @@ content.addEventListener('change', (e) => {
 
 content.addEventListener('submit', (e) => {
   if (handleWeatherSubmit(e.target as HTMLFormElement)) e.preventDefault();
+  else if (handleBallisticsSubmit(e.target as HTMLFormElement)) e.preventDefault();
   else if (handleHuntSubmit(e.target as HTMLFormElement)) e.preventDefault();
 });
 
