@@ -9,6 +9,8 @@ const dict = {
   tabDistricts: { pl: 'Obwody', en: 'Districts' },
   tabStats: { pl: 'Statystyki', en: 'Statistics' },
   tabSeasons: { pl: 'Okresy polowań', en: 'Seasons' },
+  tabAtlas: { pl: 'Atlas zwierzyny', en: 'Game atlas' },
+  inAtlas: { pl: 'w atlasie', en: 'in the atlas' },
   tabExams: { pl: 'Egzaminy', en: 'Exams' },
   tabWeather: { pl: 'Pogoda', en: 'Weather' },
   tabHunt: { pl: 'Polowanie zbiorowe', en: 'Group hunts' },
