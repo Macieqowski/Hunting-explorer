@@ -72,6 +72,7 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
       await guard(
         update(root, {
           [`joins/${id}/${uid}`]: passphrase.trim(),
+          [`club/members/${uid}`]: passphrase.trim(),
           [`hunts/${id}`]: { ...cleanInput(input), leaderUid: uid, leaderName: name, status: 'open', createdAt: serverTimestamp() },
           [`participants/${id}/${uid}`]: { name, role: 'leader', status: 'confirmed', joinedAt: serverTimestamp() },
           [`userHunts/${uid}/${id}`]: true,
@@ -128,6 +129,7 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
       guard(
         update(root, {
           [`joins/${id}/${uid}`]: passphrase.trim(),
+          [`club/members/${uid}`]: passphrase.trim(),
           [`participants/${id}/${uid}`]: { name: cleanText(name, LIMITS.name), role, status: 'registered', joinedAt: serverTimestamp() },
           [`userHunts/${uid}/${id}`]: true,
         }),
@@ -240,6 +242,18 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
     },
 
     saveStands: (id, ss) => guard(set(child(root, `stands/${id}`), ss.length ? encodeStands(ss) : null)),
+
+    watchClubStands(cb, onDenied) {
+      return onValue(
+        child(root, 'club/stands'),
+        (s) => cb(parseStands(s.val())),
+        () => onDenied(),
+      );
+    },
+
+    saveClubStands: (ss) => guard(set(child(root, 'club/stands'), ss.length ? encodeStands(ss) : null)),
+
+    joinClub: (passphrase) => guard(set(child(root, `club/members/${uid}`), passphrase.trim())),
 
     watchSightings(id, cb, onDenied) {
       return onValue(

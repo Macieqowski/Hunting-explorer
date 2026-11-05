@@ -101,6 +101,7 @@ const L = {
   join: { pl: 'Zapisz się', en: 'Sign up' },
   errFields: { pl: 'Uzupełnij zaznaczone pola.', en: 'Fill in the highlighted fields.' },
   errPersonName: { pl: 'Podaj imię i nazwisko (co najmniej 2 znaki).', en: 'Enter your name (at least 2 characters).' },
+  errWrongPass: { pl: 'Nieprawidłowe hasło.', en: 'Wrong passphrase.' },
   errPass: { pl: 'Podaj hasło koła.', en: 'Enter the club passphrase.' },
   errDeniedCreate: { pl: 'Nieprawidłowe hasło koła.', en: 'Wrong club passphrase.' },
   errDeniedJoin: {
@@ -250,6 +251,14 @@ const L = {
     pl: 'Wczytaj plik KMZ lub KML z zwyżkami i ambonami koła (np. z Google Earth lub Moich Map). Zobaczą je tylko potwierdzeni uczestnicy tego polowania.',
     en: "Load a KMZ or KML file with the club's high seats (e.g. from Google Earth or My Maps). Only confirmed participants of this hunt will see them.",
   },
+  stClubNote: { pl: 'Stałe zwyżki koła', en: "The club's permanent seats" },
+  stHuntNote: { pl: 'Wczytane tylko do tego polowania', en: 'Loaded for this hunt only' },
+  stOther: { pl: '⤒ Inne dla tego polowania', en: '⤒ Other seats for this hunt' },
+  stSaveClub: { pl: 'Zapisz jako zwyżki koła', en: "Save as the club's seats" },
+  stSaveClubSure: { pl: 'Zastąpić zwyżki koła tymi?', en: "Replace the club's seats with these?" },
+  stClubSaved: { pl: 'Zapisano zwyżki koła:', en: "Club's seats saved:" },
+  stLocked: { pl: 'Zwyżki koła są ukryte na tym urządzeniu. Wpisz hasło koła, aby je pokazać.', en: "The club's seats are hidden on this device. Enter the hunt passphrase to show them." },
+  stUnlock: { pl: 'Pokaż', en: 'Show' },
   stLoad: { pl: '⤒ Wczytaj z pliku KMZ/KML', en: '⤒ Load from a KMZ/KML file' },
   stReplace: { pl: '⤒ Zastąp z pliku', en: '⤒ Replace from a file' },
   stReuse: { pl: 'Wczytaj ponownie', en: 'Load again' },
@@ -392,6 +401,29 @@ let locatingDrive = false;
 let driveListOpen: boolean | null = null;
 let stands: Stand[] = [];
 let standsUnsub: Unsubscribe | null = null;
+/** The club's permanent seats; a hunt's own seats (stands) replace them. */
+let clubStands: Stand[] = [];
+let clubUnsub: Unsubscribe | null = null;
+/** This device never gave the passphrase, so the club's seats are unreadable. */
+let clubDenied = false;
+const shownStands = () => (stands.length ? stands : clubStands);
+function watchClub() {
+  if (conn.s !== 'ready') return;
+  clubUnsub?.();
+  clubDenied = false;
+  clubUnsub = conn.be.watchClubStands(
+    (ss) => {
+      clubStands = ss;
+      hmap?.setStands(shownStands());
+      rerender();
+    },
+    () => {
+      clubUnsub = null;
+      clubDenied = true;
+      rerender();
+    },
+  );
+}
 let standListOpen: boolean | null = null;
 const STANDS_KEY = 'huntStandsLast';
 /** The leader's last loaded file, offered again in the next hunt. */
@@ -473,6 +505,10 @@ function stopLive() {
   standsUnsub?.();
   standsUnsub = null;
   stands = [];
+  clubUnsub?.();
+  clubUnsub = null;
+  clubStands = [];
+  clubDenied = false;
   standListOpen = null;
   sightUnsub?.();
   sightUnsub = null;
@@ -536,11 +572,12 @@ function syncLive() {
       id!,
       (ss) => {
         stands = ss;
-        hmap?.setStands(ss);
+        hmap?.setStands(shownStands());
         rerender();
       },
       () => (standsUnsub = null),
     );
+    watchClub();
     sightUnsub = conn.be.watchSightings(id!, onSightings, () => (sightUnsub = null));
     shotsUnsub = conn.be.watchShots(id!, onShots, () => (shotsUnsub = null));
     spotsUnsub = conn.be.watchShotSpots(
@@ -925,7 +962,7 @@ export function mountHuntMap() {
   m.invalidate();
   m.setDistrict(hunt?.district?.id ?? null);
   m.setDrives(driveViews());
-  m.setStands(stands);
+  m.setStands(shownStands());
   // Wind for when it matters: the next planned drive, or now while one runs.
   m.setWindTime(hunt && hunt.status !== 'ended' ? windFocusTime(hunt, drives, now()) : null);
   if (driveEdit) m.startDraw(driveEdit.area, onAreaChange, driveEdit.id);
@@ -1426,35 +1463,55 @@ function renderDrives(h: Hunt, isLeader: boolean): string {
 }
 
 function renderStands(isLeader: boolean): string {
-  if (!isLeader && !stands.length) return '';
+  const shown = shownStands();
+  const own = stands.length > 0;
+  const locked = clubDenied && !own;
+  if (!isLeader && !shown.length && !locked) return '';
   const kindName = (s: Stand) => `${l(s.kind === 'ambona' ? 'stAmbona' : 'stZwyzka')}${s.broken ? `, ${l('stBroken')}` : ''}`;
-  const list = stands.length
-    ? `<ul class="hst-names">${sortStands(stands)
+  const note = own ? l('stHuntNote') : clubStands.length ? l('stClubNote') : '';
+  const list = shown.length
+    ? `${note ? `<p class="muted small">${note}</p>` : ''}<ul class="hst-names">${sortStands(shown)
         .map(
           (s) =>
             `<li><button type="button" data-hunt="standShow" data-lat="${s.lat}" data-lng="${s.lng}" title="${esc(kindName(s))}">${standIcon(s.kind, s.broken, 18)}<span>${esc(s.name)}</span></button></li>`,
         )
         .join('')}</ul>`
-    : `<p class="muted small">${isLeader ? l('stNoneLeader') : l('stNone')}</p>`;
+    : locked
+      ? ''
+      : `<p class="muted small">${isLeader ? l('stNoneLeader') : l('stNone')}</p>`;
+  const unlock = locked
+    ? `<form class="h-form hst-unlock" data-hunt-form="club" novalidate><p class="small">${l('stLocked')}</p>
+        <div class="hst-unlock-row">${field('club', 'pass', l('fPass'), '', { req: true, auto: 'off' })}
+        <button type="submit" class="btn"${btnBusy()}>${l('stUnlock')}</button></div></form>`
+    : '';
   let ctl = '';
   if (isLeader) {
     const last = lastStands();
-    const file = `<label class="btn small${stands.length ? ' ghost' : ''}"><input type="file" class="hst-file" accept=".kmz,.kml,application/vnd.google-earth.kmz,application/vnd.google-earth.kml+xml" data-stands-file${busy ? ' disabled' : ''}>${stands.length ? l('stReplace') : l('stLoad')}</label>`;
+    const label = own ? l('stReplace') : clubStands.length ? l('stOther') : l('stLoad');
+    const file = `<label class="btn small${shown.length ? ' ghost' : ''}"><input type="file" class="hst-file" accept=".kmz,.kml,application/vnd.google-earth.kmz,application/vnd.google-earth.kml+xml" data-stands-file${busy ? ' disabled' : ''}>${label}</label>`;
     const reuse =
-      !stands.length && last
+      !shown.length && last
         ? `<button type="button" class="btn small ghost" data-hunt="standsReuse"${btnBusy()}>${l('stReuse')}: ${esc(last.file)} (${last.stands.length})</button>`
         : '';
-    const clear = !stands.length
+    const sure = (action: string, text: string) =>
+      `<button type="button" class="btn small danger" data-hunt="${action}"${btnBusy()}>${text}</button>
+       <button type="button" class="btn small ghost" data-hunt="unconfirm">${l('cancel')}</button>`;
+    const saveClub =
+      own && !clubDenied
+        ? confirming === 'club'
+          ? sure('clubSave', l('stSaveClubSure'))
+          : `<button type="button" class="btn small" data-hunt="${clubStands.length ? 'askClubSave' : 'clubSave'}"${btnBusy()}>${l('stSaveClub')}</button>`
+        : '';
+    const clear = !own
       ? ''
       : confirming === 'stands'
-        ? `<button type="button" class="btn small danger" data-hunt="standsClear"${btnBusy()}>${l('stClearSure')}</button>
-           <button type="button" class="btn small ghost" data-hunt="unconfirm">${l('cancel')}</button>`
+        ? sure('standsClear', l('stClearSure'))
         : `<button type="button" class="btn small ghost" data-hunt="askStandsClear">${l('stClear')}</button>`;
-    ctl = `<div class="hst-actions">${file}${reuse}${clear}</div>${errorBox()}`;
+    ctl = `<div class="hst-actions">${saveClub}${file}${reuse}${clear}</div>`;
   }
-  const open = standListOpen ?? (isLeader && !stands.length);
-  return `<details class="hd-box hst-box"${open ? ' open' : ''}><summary data-hunt="standList" data-open="${open}"><strong class="hst-summary">${standIcon('zwyzka', false, 18)} ${l('stands')}</strong> <span class="muted">(${stands.length})</span></summary>
-    ${list}${ctl}</details>`;
+  const open = standListOpen ?? ((isLeader && !shown.length) || locked);
+  return `<details class="hd-box hst-box"${open ? ' open' : ''}><summary data-hunt="standList" data-open="${open}"><strong class="hst-summary">${standIcon('zwyzka', false, 18)} ${l('stands')}</strong> <span class="muted">(${shown.length})</span></summary>
+    ${list}${unlock}${ctl}${isLeader || locked ? errorBox() : ''}</details>`;
 }
 
 /** The leader picked a KMZ/KML file: read it and put its points into this hunt. */
@@ -1799,6 +1856,16 @@ export function handleHuntClick(el: HTMLElement): boolean {
       if (id && last) saveStands(id, last.stands);
       return true;
     }
+    case 'askClubSave':
+      confirming = 'club';
+      break;
+    case 'clubSave':
+      confirming = null;
+      run(async (be) => {
+        await be.saveClubStands(stands);
+        showToast(`${l('stClubSaved')} ${Math.min(stands.length, STAND_LIMITS.stands)}`);
+      });
+      return true;
     case 'askStandsClear':
       confirming = 'stands';
       break;
@@ -2006,6 +2073,18 @@ export function handleHuntSubmit(form: HTMLFormElement): boolean {
           : be.addShotFor(id, v('uid') || NO_SHOOTER, { outcome, game, note: v('note'), driveId: v('driveId') || null }).then(() => {}),
       () => (shotEdit = null),
     );
+  } else if (kind === 'club') {
+    if (!v('pass').trim()) {
+      badFields.add('pass');
+      formError = l('errPass');
+      rerender();
+      return true;
+    }
+    run(async (be) => {
+      await be.joinClub(v('pass'));
+      clearDraft('club');
+      watchClub();
+    }, 'errWrongPass');
   } else if (kind === 'join' && watched) {
     const id = watched;
     const role = (form.querySelector<HTMLInputElement>('input[name="role"]:checked')?.value ?? 'hunter') as 'hunter' | 'beater';
