@@ -75,6 +75,8 @@ export const PL = {
   pPeople: { pl: 'Uczestnicy', en: 'Participants' },
   pHunters: { pl: 'myśliwych', en: 'hunters' },
   pBeaters: { pl: 'naganiaczy', en: 'beaters' },
+  pHunter1: { pl: 'myśliwy', en: 'hunter' },
+  pBeater1: { pl: 'naganiacz', en: 'beater' },
   pTotal: { pl: 'Razem', en: 'Total' },
   pNo: { pl: 'Lp.', en: 'No.' },
   pTime: { pl: 'Godz.', en: 'Time' },
@@ -278,7 +280,7 @@ export function renderPokotPrint(c: PokotCtx, fmtDate: (d: string) => string): s
       ${h.place ? `<dt>${pl('pPlace')}</dt><dd>${esc(h.place)}</dd>` : ''}
       ${h.district ? `<dt>${pl('pDistrict')}</dt><dd>${esc(h.district.label)}</dd>` : ''}
       <dt>${pl('pLeader')}</dt><dd>${esc(h.leaderName)}</dd>
-      <dt>${pl('pPeople')}</dt><dd>${nH} ${pl('pHunters')}, ${nB} ${pl('pBeaters')}</dd>
+      <dt>${pl('pPeople')}</dt><dd>${nH} ${pl(nH === 1 ? 'pHunter1' : 'pHunters')}, ${nB} ${pl(nB === 1 ? 'pBeater1' : 'pBeaters')}</dd>
       ${h.pokotLockedAt != null ? `<dt>${pl('pLockedAt')}</dt><dd>${c.clock(h.pokotLockedAt)}</dd>` : ''}
     </dl>
     <h2>${pl('bag')}</h2>
