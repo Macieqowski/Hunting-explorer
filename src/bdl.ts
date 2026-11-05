@@ -128,7 +128,9 @@ function jsonp<T>(url: string, timeoutMs = 45000): Promise<T> {
 }
 
 type Transport = (url: string) => Promise<unknown>;
-let transport: Transport = (url) => jsonp(url);
+/** The plain network transport (JSONP), for wrappers such as the offline cache. */
+export const networkTransport: Transport = (url) => jsonp(url);
+let transport: Transport = networkTransport;
 
 /** Replace the network transport (used by tests / offline demo). */
 export function setTransport(t: Transport): void {
@@ -252,8 +254,28 @@ function toDistrictWithGeometry(f: EsriFeature): DistrictWithGeometry {
 
 const GEOMETRY_PARAMS = { returnGeometry: true, outSR: 4326 };
 
+/** Answers from data kept on the device, used when the BDL server cannot be reached. */
+export interface OfflineDistricts {
+  atPoint(lat: number, lng: number): DistrictWithGeometry[] | null;
+  inBounds(south: number, west: number, north: number, east: number): DistrictOutline[] | null;
+}
+let offline: OfflineDistricts | null = null;
+export function setOfflineDistricts(o: OfflineDistricts | null): void {
+  offline = o;
+}
+
 /** Districts intersecting a point (normally exactly one). */
 export async function fetchDistrictsAtPoint(lat: number, lng: number): Promise<DistrictWithGeometry[]> {
+  try {
+    return await fetchDistrictsAtPointOnline(lat, lng);
+  } catch (e) {
+    const local = offline?.atPoint(lat, lng);
+    if (local) return local;
+    throw e;
+  }
+}
+
+async function fetchDistrictsAtPointOnline(lat: number, lng: number): Promise<DistrictWithGeometry[]> {
   const res = await query({
     geometry: `${lng},${lat}`,
     geometryType: 'esriGeometryPoint',
@@ -299,6 +321,23 @@ export async function fetchOutlinesInBounds(
   east: number,
   simplify: number,
   maxPages = 4,
+): Promise<DistrictOutline[]> {
+  try {
+    return await fetchOutlinesOnline(south, west, north, east, simplify, maxPages);
+  } catch (e) {
+    const local = offline?.inBounds(south, west, north, east);
+    if (local) return local;
+    throw e;
+  }
+}
+
+async function fetchOutlinesOnline(
+  south: number,
+  west: number,
+  north: number,
+  east: number,
+  simplify: number,
+  maxPages: number,
 ): Promise<DistrictOutline[]> {
   const out: DistrictOutline[] = [];
   let last = -1;

@@ -304,6 +304,8 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; text-transform: uppercase; le
 @media (max-width: 760px) {
   .topbar { flex-wrap: wrap; }
   .brand p { display: none; }
+  .brand { flex: 1 1 0; }
+  .brand h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sections { order: 3; width: 100%; margin-left: 0; overflow-x: auto; scrollbar-width: none; }
   .sections::-webkit-scrollbar { display: none; }
   .sections button { flex: 1 0 auto; }
@@ -579,3 +581,22 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; text-transform: uppercase; le
   display: flex; align-items: center; justify-content: center; font-size: 1.6rem; cursor: grab; transition: transform 0.2s; touch-action: none;
 }
 .pocket-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; padding: 0; }
+
+/* ---------------------------------------------------------------- offline maps */
+.netbadge {
+  flex: none; font-size: 0.75rem; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+  background: var(--warn); color: #fff; letter-spacing: 0.02em;
+}
+.netbadge[hidden] { display: none; }
+.off-net { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.off-net.on span { color: var(--accent); }
+.off-net.off span { color: var(--warn); }
+.off-draft { margin: 12px 0; }
+.off-draft h3 { text-transform: none; letter-spacing: 0; color: var(--text); font-size: 1.05rem; margin: 0.2rem 0; }
+.off-detail { border: 0; padding: 0; margin: 10px 0; display: grid; gap: 6px; }
+.off-detail legend { font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; }
+.off-opt { display: flex; gap: 8px; align-items: flex-start; font-size: 0.9rem; cursor: pointer; }
+.off-opt input { margin-top: 3px; accent-color: var(--accent); }
+.off-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.off-list .card { margin: 0; }
+.off-list .progress { margin: 6px 0; }

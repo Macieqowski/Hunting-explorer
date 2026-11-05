@@ -18,6 +18,9 @@ import { SEASONS, isOpen, effective, formatRanges, yearFrac, openOnlyIn, type Se
 import { renderExams, handleExamClick, handleExamChange } from './examUi';
 import { renderWeather, handleWeatherClick, handleWeatherInput, handleWeatherSubmit, showWeatherAt } from './weatherUi';
 import { renderHunts, handleHuntClick, handleHuntInput, handleHuntSubmit, leaveHunts, mountHuntMap } from './huntUi';
+import { initOffline, onOfflineChange } from './offline';
+import { initOfflineUi, renderOffline, handleOfflineEvent, startDraft } from './offlineUi';
+import type { AreaTarget } from './offline';
 
 // ---------------------------------------------------------------- helpers
 
@@ -27,7 +30,7 @@ const $ = <T extends HTMLElement = HTMLElement>(sel: string, root: ParentNode = 
 const typeKey = (h: HolderType) => `type_${h}` as Key;
 const cap = (s: string | null) => (s ? s.charAt(0).toLocaleUpperCase('pl') + s.slice(1) : '—');
 
-type Tab = 'clubs' | 'districts' | 'stats' | 'seasons' | 'exams' | 'weather' | 'hunt' | 'about';
+type Tab = 'clubs' | 'districts' | 'stats' | 'offline' | 'seasons' | 'exams' | 'weather' | 'hunt' | 'about';
 type View =
   | { kind: 'tab'; tab: Tab }
   | { kind: 'district'; slug: string }
@@ -71,6 +74,7 @@ app.innerHTML = `
       <div><h1 data-t="title"></h1><p data-t="subtitle"></p></div>
     </div>
     <nav class="sections" id="sections" aria-label="Sections"></nav>
+    <span class="netbadge" id="netbadge" hidden></span>
     <button class="lang" id="lang" type="button" aria-label="Language"></button>
   </header>
   <main class="layout">
@@ -132,7 +136,7 @@ function hashToView(h: string): View {
     const [lat, lng] = arg.split(',').map(Number);
     if (isFinite(lat) && isFinite(lng)) return { kind: 'point', lat, lng };
   }
-  if (['districts', 'stats', 'seasons', 'exams', 'weather', 'about'].includes(kind)) return { kind: 'tab', tab: kind as Tab };
+  if (['districts', 'stats', 'offline', 'seasons', 'exams', 'weather', 'about'].includes(kind)) return { kind: 'tab', tab: kind as Tab };
   return { kind: 'tab', tab: 'clubs' };
 }
 
@@ -193,6 +197,9 @@ function renderStatic() {
   document.querySelectorAll<HTMLElement>('[data-t]').forEach((el) => (el.textContent = t(el.dataset.t as Key)));
   $('#lang').textContent = getLang() === 'pl' ? 'EN' : 'PL';
   $('#locate').textContent = '◎ ' + t('locate');
+  const nb = $('#netbadge');
+  nb.hidden = navigator.onLine;
+  nb.textContent = t('offlineBadge');
   document.title = t('title');
   const section = sectionOf(state.view);
   $('#sections').innerHTML = SECTIONS.map(
@@ -218,6 +225,7 @@ function renderStatic() {
     ['clubs', 'tabClubs'],
     ['districts', 'tabDistricts'],
     ['stats', 'tabStats'],
+    ['offline', 'tabOffline'],
     ['about', 'tabAbout'],
   ];
   $('#tabs').innerHTML = tabs
@@ -236,6 +244,7 @@ function render() {
   if (v.kind === 'tab' && v.tab === 'weather') return void (content.innerHTML = renderWeather(render));
   if (v.kind === 'hunt' || (v.kind === 'tab' && v.tab === 'hunt')) return renderHuntSection(v.kind === 'hunt' ? v.id : null);
   leaveHunts();
+  if (v.kind === 'tab' && v.tab === 'offline') return void (content.innerHTML = renderOffline());
   if (v.kind === 'tab' && (v.tab === 'seasons' || v.tab === 'about')) {
     content.innerHTML = v.tab === 'seasons' ? renderSeasons() : renderAbout();
     return;
@@ -268,6 +277,7 @@ function renderHuntSection(id: string | null) {
     onChange: render,
     go: goTo,
     districts: () => ({ list: state.loaded ? state.districts : null, error: state.error }),
+    saveOffline: (d) => saveOffline({ kind: 'hunt', name: d.label, ids: [d.id] }),
   });
   mountHuntMap();
   if (focusName) {
@@ -426,7 +436,8 @@ function districtCard(d: District, withHolderLink = true) {
 
 function renderDistrict(d: District) {
   return `${backButton()}${districtCard(d)}
-    <div class="actions"><button type="button" class="btn ghost" data-action="copy">${t('copyLink')}</button></div>
+    <div class="actions"><button type="button" class="btn ghost" data-action="copy">${t('copyLink')}</button>
+      <button type="button" class="btn ghost" data-action="saveOffline">⤓ ${t('saveOffline')}</button></div>
     ${openSeasonsFor(d.county_name)}`;
 }
 
@@ -459,6 +470,7 @@ function renderClub(c: Club) {
     <div class="actions">
       <a class="btn ghost" target="_blank" rel="noopener" href="https://www.google.com/search?q=${encodeURIComponent(c.name + ' koło łowieckie')}">${t('searchWeb')} ↗</a>
       <button type="button" class="btn ghost" data-action="copy">${t('copyLink')}</button>
+      <button type="button" class="btn ghost" data-action="saveOffline">⤓ ${t('saveOffline')}</button>
     </div>
   </article>
   <h3>${t('districtsCap')}</h3>
@@ -659,6 +671,8 @@ $('#tabs').addEventListener('click', (e) => {
 });
 
 content.addEventListener('click', (e) => {
+  const off = (e.target as HTMLElement).closest<HTMLElement>('[data-offline]');
+  if (off && handleOfflineEvent(off)) return;
   const ex = (e.target as HTMLElement).closest<HTMLElement>('[data-exam]');
   if (ex && handleExamClick(ex)) return;
   const wx = (e.target as HTMLElement).closest<HTMLElement>('[data-weather]');
@@ -698,6 +712,17 @@ content.addEventListener('click', (e) => {
         navigate({ kind: 'tab', tab: 'weather' });
       }
       break;
+    case 'saveOffline': {
+      const v = state.view;
+      if (v.kind === 'district') {
+        const d = findBySlug(state.districts, v.slug);
+        if (d) saveOffline({ kind: 'district', name: `${t('districtNo')} ${d.hunt_dist_nr} · ${d.lease_holder_name ?? cap(d.county_name)}`, ids: [d.objectid] });
+      } else if (v.kind === 'club') {
+        const c = state.clubsByKey.get(v.key);
+        if (c) saveOffline({ kind: 'club', name: c.name, ids: c.districts.map((d) => d.objectid) });
+      }
+      break;
+    }
     case 'copy':
       navigator.clipboard?.writeText(location.href).then(() => toast(t('copied')), () => toast(location.href));
       break;
@@ -790,5 +815,59 @@ async function load() {
   }
 }
 
+// ---------------------------------------------------------------- offline
+
+function saveOffline(target: AreaTarget) {
+  startDraft(target);
+  navigate({ kind: 'tab', tab: 'offline' });
+  $('#panel').scrollTop = 0;
+  content.scrollTop = 0;
+}
+
+initOfflineUi({
+  rerender: () => {
+    if (state.view.kind === 'tab' && state.view.tab === 'offline') render();
+  },
+  mapBox: () => {
+    if (sectionOf(state.view) !== 'map') return null;
+    const b = mapApi.map.getBounds();
+    return [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()];
+  },
+  showBoxes: (boxes) => {
+    let s = 90, w = 180, n = -90, e = -180;
+    for (const b of boxes) {
+      s = Math.min(s, b[0]); w = Math.min(w, b[1]); n = Math.max(n, b[2]); e = Math.max(e, b[3]);
+    }
+    if (s < n) mapApi.map.flyToBounds([[s, w], [n, e]], { duration: 0.6 });
+  },
+});
+let offlineRenderTimer: ReturnType<typeof setTimeout> | undefined;
+onOfflineChange(() => {
+  // Progress arrives often; redraw at most a few times a second.
+  if (offlineRenderTimer) return;
+  offlineRenderTimer = setTimeout(() => {
+    offlineRenderTimer = undefined;
+    if (state.view.kind === 'tab' && state.view.tab === 'offline') render();
+    else renderStatic();
+  }, 300);
+});
+mapApi.map.on('moveend', () => {
+  if (state.view.kind === 'tab' && state.view.tab === 'offline') render();
+});
+window.addEventListener('online', () => {
+  renderStatic();
+  if (!state.loaded) load();
+});
+window.addEventListener('offline', () => renderStatic());
+
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {
+      /* the app still works online */
+    });
+  });
+}
+
+void initOffline();
 navigate(hashToView(location.hash), false);
 load();

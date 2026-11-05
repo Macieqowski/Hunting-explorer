@@ -226,11 +226,13 @@ const L = {
   pocketUnlock: { pl: 'Przesuń, aby wrócić', en: 'Slide to go back' },
   pocketStopped: { pl: 'Udostępnianie zatrzymane', en: 'Sharing has stopped' },
   pocketStoppedDetail: { pl: 'Odblokuj ekran, żeby sprawdzić.', en: 'Unlock the screen to check.' },
+  saveOffline: { pl: 'Zapisz mapę offline', en: 'Save map offline' },
   exportGpx: { pl: '⤓ Pobierz ślady (GPX)', en: '⤓ Download tracks (GPX)' },
   exportEmpty: { pl: 'Brak śladów do pobrania.', en: 'No tracks to download.' },
   lOsm: { pl: 'Mapa (OSM)', en: 'Map (OSM)' },
-  lTopo: { pl: 'Topograficzna', en: 'Topographic' },
-  lSat: { pl: 'Satelitarna', en: 'Satellite' },
+  lTopo: { pl: 'Topograficzna (OpenTopoMap)', en: 'Topographic (OpenTopoMap)' },
+  lGeoTopo: { pl: 'Topograficzna (Geoportal, offline)', en: 'Topographic (Geoportal, offline)' },
+  lSat: { pl: 'Ortofotomapa (Geoportal, offline)', en: 'Aerial photo (Geoportal, offline)' },
   lDistricts: { pl: 'Obwody łowieckie', en: 'Hunting districts' },
   lCompartments: { pl: 'Oddziały leśne', en: 'Forest compartments' },
   drives: { pl: 'Mioty', en: 'Drives' },
@@ -324,7 +326,10 @@ export interface HuntContext {
   onChange: () => void;
   go: (id: string | null) => void;
   districts: () => { list: District[] | null; error: string };
+  /** Opens "Save for offline" for the hunt's district. */
+  saveOffline?: (d: HuntDistrict) => void;
 }
+let saveOfflineCb: HuntContext['saveOffline'];
 let districtsOf: HuntContext['districts'] = () => ({ list: null, error: '' });
 let locatingDistrict = false;
 
@@ -650,7 +655,7 @@ function ensureMap(): HuntMap {
       ago,
       accuracy: l('accuracy'),
       distance: l('distanceFromYou'),
-      layers: { osm: l('lOsm'), topo: l('lTopo'), sat: l('lSat'), districts: l('lDistricts'), compartments: l('lCompartments') },
+      layers: { osm: l('lOsm'), topo: l('lTopo'), geotopo: l('lGeoTopo'), sat: l('lSat'), districts: l('lDistricts'), compartments: l('lCompartments') },
     });
   }
   return hmap;
@@ -936,6 +941,7 @@ export function renderHunts(id: string | null, ctx: HuntContext): string {
   rerender = ctx.onChange;
   go = ctx.go;
   districtsOf = ctx.districts;
+  saveOfflineCb = ctx.saveOffline;
   if (!firebaseConfig()) return `<div class="hunts"><h2>${tt({ pl: 'Polowanie zbiorowe', en: 'Group hunts' })}</h2><div class="notice">${l('notConfigured')}</div></div>`;
   setRoute(id);
   connect();
@@ -1102,6 +1108,7 @@ function renderLive(h: Hunt, me: Participant): string {
         <button type="button" class="btn small ghost" data-hunt="fitAll">${l('fitAll')}</button>
         <button type="button" class="btn small ghost" data-hunt="tracks" aria-pressed="${showTracks}">${showTracks ? l('hideTracks') : l('showTracks')}</button>
         <button type="button" class="btn small ghost" data-hunt="gpx">${l('exportGpx')}</button>
+        ${h.district && saveOfflineCb ? `<button type="button" class="btn small ghost" data-hunt="saveOffline">⤓ ${l('saveOffline')}</button>` : ''}
       </div></div>
     <div class="hm-slot"></div>
     ${drawing ? '' : `<h4>${l('sightings')}</h4><div class="hs-list">${sightListHtml()}</div>`}`;
@@ -1292,6 +1299,9 @@ export function handleHuntClick(el: HTMLElement): boolean {
   const id = watched;
   const uid = el.dataset.uid ?? '';
   switch (action) {
+    case 'saveOffline':
+      if (hunt?.district) saveOfflineCb?.(hunt.district);
+      break;
     case 'reconnect':
       conn = { s: 'idle' };
       connect();
