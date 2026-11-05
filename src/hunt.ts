@@ -571,3 +571,27 @@ export function headingFromOrientation(alpha: number, beta: number, gamma: numbe
   if (Math.hypot(v[0], v[1]) < 0.2) return null;
   return normDeg(Math.atan2(v[0], v[1]) / r);
 }
+
+/** A drive's planned start as epoch ms, on the hunt's day (or the next one, past midnight). */
+export function driveStartMs(h: Pick<HuntInput, 'date' | 'start' | 'end'>, d: Pick<DriveInput, 'start'>): number {
+  return huntWindow(h).start + sinceStart(d.start, h.start) * 60_000;
+}
+
+/**
+ * The moment the wind on the hunt map should show: now while a drive runs or nothing
+ * is planned, otherwise the next planned drive's start (or the hunt's start before any).
+ * Returns null for "now".
+ */
+export function windFocusTime(h: Pick<HuntInput, 'date' | 'start' | 'end'>, ds: (DriveInput & Pick<Drive, 'startedAt' | 'endedAt'>)[], now: number): number | null {
+  if (activeDrive(ds)) return null;
+  const hw = huntWindow(h);
+  if (now >= hw.end) return null;
+  const next = sortDrives(
+    ds.filter((d) => driveState(d) === 'planned'),
+    h.start,
+  )
+    .map((d) => driveStartMs(h, d))
+    .find((t) => t > now);
+  const t = next ?? (hw.start > now ? hw.start : null);
+  return t;
+}

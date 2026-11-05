@@ -5,6 +5,7 @@
 import L from 'leaflet';
 import { fetchDistrictsByIds, BDL_WMS_DISTRICTS, BDL_WMS_FORESTS } from './bdl';
 import { baseLayers, POLAND_BOUNDS } from './map';
+import { createWind } from './windLayer';
 import { roleIcon, ROLE_COLOR, speciesIcon, SPECIES_COLOR } from './huntIcons';
 import { freshness, distanceM, offsetPoint, type Area, type DriveState, type Position, type Role, type TrackPoint, type Species, type SightLook } from './hunt';
 
@@ -37,7 +38,7 @@ export interface HuntMapText {
   ago: (ms: number) => string;
   accuracy: string;
   distance: string;
-  layers: { osm: string; topo: string; sat: string; districts: string; compartments: string };
+  layers: { osm: string; topo: string; sat: string; districts: string; compartments: string; wind: string };
 }
 
 export interface HuntMap {
@@ -56,6 +57,8 @@ export interface HuntMap {
   undoCorner(): void;
   showPoint(lat: number, lng: number): void;
   stopDraw(): void;
+  /** The moment the wind badge shows by default (the next drive); null = now. */
+  setWindTime(t: number | null): void;
   invalidate(): void;
   destroy(): void;
 }
@@ -89,10 +92,11 @@ export function createHuntMap(text: HuntMapText): HuntMap {
     opacity: 0.7,
     attribution: '&copy; Bank Danych o Lasach',
   } as L.WMSOptions);
+  const wind = createWind(map);
   L.control
     .layers(
       { [text.layers.osm]: osm, [text.layers.topo]: topo, [text.layers.sat]: sat },
-      { [text.layers.districts]: districtsWms, [text.layers.compartments]: compartments },
+      { [text.layers.districts]: districtsWms, [text.layers.compartments]: compartments, [text.layers.wind]: wind.arrows },
       { position: 'topright' },
     )
     .addTo(map);
@@ -160,7 +164,14 @@ export function createHuntMap(text: HuntMapText): HuntMap {
     planned: { color: '#7c2d12', weight: 2, dashArray: '6 6', fillOpacity: 0.03 },
     done: { color: '#6b7280', weight: 2, fillColor: '#6b7280', fillOpacity: 0.06 },
   };
+  /** Colour drive edges by the wind: the one being drawn, else the running drive, else the planned ones. */
+  const windDrives = () => {
+    if (draw) return wind.setDrives(draw.area.length >= 3 ? [draw.area] : []);
+    const active = drives.find((d) => d.state === 'active');
+    wind.setDrives((active ? [active] : drives.filter((d) => d.state === 'planned')).map((d) => d.area));
+  };
   const drawDrives = () => {
+    windDrives();
     driveLayer.clearLayers();
     labelLayer.clearLayers();
     for (const d of drives) {
@@ -191,8 +202,12 @@ export function createHuntMap(text: HuntMapText): HuntMap {
         const shape = drawLayer.getLayers().find((x) => x instanceof L.Polyline) as L.Polyline | undefined;
         shape?.setLatLngs(a);
       });
-      m.on('dragend', () => draw?.onChange([...a]));
+      m.on('dragend', () => {
+        windDrives();
+        draw?.onChange([...a]);
+      });
     });
+    windDrives();
   };
   map.on('click', (e: L.LeafletMouseEvent) => {
     if (!draw) return;
@@ -277,6 +292,9 @@ export function createHuntMap(text: HuntMapText): HuntMap {
           markers.delete(uid);
         }
       if (markers.size > before) autoFit();
+      // Your own scent cone, so you can see whether game in front of you will wind you.
+      const mine = markers.get(me);
+      wind.setScentOrigin(mine && freshness(mine.pos.ts, now) !== 'lost' ? { lat: mine.pos.lat, lng: mine.pos.lng } : null);
     },
 
     setTracks(tracks, people) {
@@ -405,6 +423,10 @@ export function createHuntMap(text: HuntMapText): HuntMap {
       drawDrives();
     },
 
+    setWindTime: (t) => {
+      wind.setTime(t);
+      wind.refresh();
+    },
     invalidate: () => map.invalidateSize(),
     destroy: () => map.remove(),
   };
