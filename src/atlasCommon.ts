@@ -25,8 +25,12 @@ export interface Species {
   latin: string;
   /** Hunting terms (gwara łowiecka) for sexes and young. */
   terms: Tx;
-  /** Polish name of the matching SEASONS rows (exact match or "<name> – …" prefix). */
-  season: string;
+  /** Polish name of the matching SEASONS rows (exact match or "<name> – …" prefix). Not set for protected species. */
+  season?: string;
+  /** Protected species (no hunting): strict or partial protection. */
+  protection?: 'strict' | 'partial';
+  /** For a protected species: slugs of the game species it is mistaken for. */
+  lookalikes?: string[];
   facts: [Tx, Tx][];
   /** How to tell the species from look-alikes. */
   identify?: Tx[];
@@ -44,6 +48,7 @@ export const GROUPS = {
   pred: { id: 'pred', name: { pl: 'Drapieżniki', en: 'Predators' } },
   small: { id: 'small', name: { pl: 'Zwierzyna drobna', en: 'Small game' } },
   birds: { id: 'birds', name: { pl: 'Ptactwo', en: 'Game birds' } },
+  protected: { id: 'protected', name: { pl: 'Gatunki chronione mylone ze zwierzyną', en: 'Protected species mistaken for game' } },
 } satisfies Record<string, AtlasGroup>;
 
 export const F = {
@@ -62,6 +67,10 @@ export const F = {
 };
 
 export const SEJM_SEASONS = { label: 'Dz.U. 2023 poz. 99 – okresy polowań', url: 'https://api.sejm.gov.pl/eli/acts/DU/2023/99/text.html' };
+export const PROTECTION_ACT = {
+  label: 'Dz.U. 2022 poz. 2380 – ochrona gatunkowa zwierząt',
+  url: 'https://api.sejm.gov.pl/eli/acts/DU/2022/2380/text.pdf',
+};
 export const wiki = (pl: string, en: string) => [
   { label: `Wikipedia: ${pl}`, url: `https://pl.wikipedia.org/wiki/${encodeURIComponent(pl.replace(/ /g, '_'))}` },
   { label: `Wikipedia (EN): ${en}`, url: `https://en.wikipedia.org/wiki/${encodeURIComponent(en.replace(/ /g, '_'))}` },

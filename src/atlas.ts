@@ -8,20 +8,27 @@
 import { SEASONS, type Season } from './seasons';
 import { BIG_GAME } from './atlasBigGame';
 import { SMALL_GAME } from './atlasSmallGame';
+import { PROTECTED } from './atlasProtected';
 import type { Species } from './atlasCommon';
 
 export * from './atlasCommon';
 
-export const SPECIES: Species[] = [...BIG_GAME, ...SMALL_GAME];
+export const SPECIES: Species[] = [...BIG_GAME, ...SMALL_GAME, ...PROTECTED];
 
 export const speciesBySlug = (slug: string) => SPECIES.find((s) => s.slug === slug);
 
 /** SEASONS rows that belong to a species (exact name or "<name> – …"). */
 export function seasonsFor(sp: Species): Season[] {
+  if (!sp.season) return [];
   return SEASONS.filter((s) => s.name.pl === sp.season || s.name.pl.startsWith(sp.season + ' –'));
 }
 
 /** Atlas species for a SEASONS row (several when one row covers several species). */
 export function speciesForSeason(season: Season): Species[] {
-  return SPECIES.filter((sp) => season.name.pl === sp.season || season.name.pl.startsWith(sp.season + ' –'));
+  return SPECIES.filter((sp) => sp.season && (season.name.pl === sp.season || season.name.pl.startsWith(sp.season + ' –')));
+}
+
+/** Protected species that are mistaken for this game species. */
+export function protectedLookalikes(sp: Species): Species[] {
+  return SPECIES.filter((p) => p.lookalikes?.includes(sp.slug));
 }

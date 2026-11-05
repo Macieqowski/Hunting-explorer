@@ -2,7 +2,7 @@
 // sections; main.ts routes #/atlas and #/atlas/<slug> here and forwards [data-atlas] clicks.
 
 import { getLang, tt } from './i18n';
-import { SPECIES, GROUPS, speciesBySlug, seasonsFor, type Species, type Tx } from './atlas';
+import { SPECIES, GROUPS, speciesBySlug, seasonsFor, protectedLookalikes, type Species, type Tx } from './atlas';
 import { trackSvg } from './atlasTracks';
 import { isOpen, effective, formatRanges } from './seasons';
 import photoCredits from './atlasPhotos.json';
@@ -25,8 +25,8 @@ const esc = (s: unknown) =>
 const L = {
   title: { pl: 'Atlas zwierzyny', en: 'Game atlas' },
   intro: {
-    pl: 'Gatunki łowne: jak rozpoznać płeć i wiek, tropy, ślady bytowania i aktualny okres polowań.',
-    en: 'Game species: telling sex and age, tracks, signs and the current hunting season.',
+    pl: 'Gatunki łowne: jak rozpoznać płeć i wiek, tropy, ślady bytowania i aktualny okres polowań. Na końcu gatunki chronione, z którymi łatwo je pomylić.',
+    en: 'Game species: telling sex and age, tracks, signs and the current hunting season. At the end, protected species that are easy to mistake for game.',
   },
   search: { pl: 'Szukaj gatunku', en: 'Search species' },
   none: { pl: 'Brak gatunku o tej nazwie.', en: 'No species with that name.' },
@@ -50,6 +50,20 @@ const L = {
     en: 'Some voivodeships have different dates – pick yours in the Seasons tab.',
   },
   sources: { pl: 'Źródła', en: 'Sources' },
+  protStrict: { pl: 'Gatunek pod ochroną ścisłą', en: 'Strictly protected species' },
+  protPartial: { pl: 'Gatunek pod ochroną częściową', en: 'Partially protected species' },
+  protNo: { pl: 'Polowanie zabronione', en: 'No hunting' },
+  protBody: {
+    pl: 'Nie wolno do niego strzelać ani go płoszyć. Strzelaj tylko wtedy, gdy masz pewność, że widzisz gatunek łowny.',
+    en: 'It must not be shot or disturbed. Only shoot when you are certain you are looking at a game species.',
+  },
+  mistakenFor: { pl: 'Mylony z gatunkami łownymi:', en: 'Mistaken for these game species:' },
+  lookalikes: { pl: 'Nie pomyl z gatunkiem chronionym', en: 'Do not mistake it for a protected species' },
+  lookalikesHint: {
+    pl: 'Te gatunki są pod ochroną. Ich strony opisują, jak je odróżnić.',
+    en: 'These species are protected. Their pages explain how to tell them apart.',
+  },
+  protBadge: { pl: 'chroniony', en: 'protected' },
   exam: { pl: 'Pytania egzaminacyjne', en: 'Exam questions' },
   examCount: { pl: 'Pytań o ten gatunek w bazie egzaminacyjnej:', en: 'Questions about this species in the exam bank:' },
   examNone: { pl: 'W bazie egzaminacyjnej nie ma pytań o ten gatunek.', en: 'The exam bank has no questions about this species.' },
@@ -122,6 +136,7 @@ function card(sp: Species): string {
     ${url ? `<img src="${esc(url)}" alt="" loading="lazy">` : '<span class="atlas-noimg"></span>'}
     <span class="atlas-card-name">${esc(tl(sp.name))}</span>
     <span class="atlas-card-latin">${esc(sp.latin)}</span>
+    ${sp.protection ? `<span class="atlas-pill prot">${tl(L.protBadge)}</span>` : ''}
   </a></li>`;
 }
 
@@ -162,6 +177,24 @@ function renderSeason(sp: Species, voiv: string): string {
     <p class="small"><a href="#/seasons" data-atlas="seasons">${tl(L.allSeasons)} →</a></p></section>`;
 }
 
+function renderProtection(sp: Species): string {
+  const games = (sp.lookalikes ?? []).map((slug) => speciesBySlug(slug)).filter((g): g is Species => !!g);
+  return `<section class="atlas-sec atlas-protected"><h3>${tl(sp.protection === 'partial' ? L.protPartial : L.protStrict)}</h3>
+    <p><span class="atlas-pill prot">${tl(L.protNo)}</span></p>
+    <p class="small">${tl(L.protBody)}</p>
+    ${games.length ? `<p class="small">${tl(L.mistakenFor)} ${games.map(link).join(', ')}</p>` : ''}</section>`;
+}
+
+const link = (sp: Species) => `<a href="#/atlas/${sp.slug}" data-atlas="go" data-slug="${sp.slug}">${esc(tl(sp.name))}</a>`;
+
+function renderLookalikes(sp: Species): string {
+  const prot = protectedLookalikes(sp);
+  if (!prot.length) return '';
+  return `<section class="atlas-sec"><h3>${tl(L.lookalikes)}</h3>
+    <ul class="atlas-grid atlas-grid-small">${prot.map(card).join('')}</ul>
+    <p class="muted small">${tl(L.lookalikesHint)}</p></section>`;
+}
+
 function list(items: Tx[]): string {
   return `<ul class="atlas-list">${items.map((x) => `<li>${rich(x)}</li>`).join('')}</ul>`;
 }
@@ -183,9 +216,10 @@ function renderSpecies(sp: Species): string {
       <section class="atlas-sec"><h3>${tl(L.facts)}</h3>
         <dl class="atlas-facts">${sp.facts.map(([k, v]) => `<dt>${esc(tl(k))}</dt><dd>${rich(v)}</dd>`).join('')}</dl>
       </section>
-      ${renderSeason(sp, seasonVoiv)}
+      ${sp.protection ? renderProtection(sp) : renderSeason(sp, seasonVoiv)}
     </div>
     ${sp.identify?.length ? `<section class="atlas-sec"><h3>${tl(L.identify)}</h3>${list(sp.identify)}</section>` : ''}
+    ${renderLookalikes(sp)}
     <section class="atlas-sec"><h3>${tl(L.sex)}</h3>${list(sp.sex)}</section>
     ${sp.age?.length ? `<section class="atlas-sec"><h3>${tl(L.age)}</h3>${list(sp.age)}</section>` : ''}
     <section class="atlas-sec atlas-trackbox"><h3>${tl(L.track)}</h3>

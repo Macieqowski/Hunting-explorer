@@ -385,5 +385,113 @@
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
     "page": "https://commons.wikimedia.org/wiki/File:Waldschnepfe_(scolopax_rusticola)_-_Spiekeroog,_Nationalpark_Nieders%C3%A4chsisches_Wattenmeer.jpg"
+  },
+  "Eurasian wolf 2.jpg": {
+    "src": "atlas/img/c5ab6eba1da1.jpg",
+    "width": 800,
+    "height": 620,
+    "author": "User:Mas3cf",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Eurasian_wolf_2.jpg"
+  },
+  "Lynx Nationalpark Bayerischer Wald 01.jpg": {
+    "src": "atlas/img/fcd80247346b.jpg",
+    "width": 800,
+    "height": 536,
+    "author": "Aconcagua (talk)",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Lynx_Nationalpark_Bayerischer_Wald_01.jpg"
+  },
+  "Fischotter, Lutra Lutra.JPG": {
+    "src": "atlas/img/c99c13561eb5.jpg",
+    "width": 800,
+    "height": 438,
+    "author": "Bernard Landgraf",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+    "page": "https://commons.wikimedia.org/wiki/File:Fischotter,_Lutra_Lutra.JPG"
+  },
+  "Eurasian Otter (Lutra lutra) (2).jpg": {
+    "src": "atlas/img/e796897ff4ac.jpg",
+    "width": 800,
+    "height": 450,
+    "author": "Ken Billington",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Eurasian_Otter_(Lutra_lutra)_(2).jpg"
+  },
+  "Lesser White-fronted Goose (19324016712).jpg": {
+    "src": "atlas/img/592ba29c5cdc.jpg",
+    "width": 800,
+    "height": 600,
+    "author": "Mike Prince from Bangalore, India",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Lesser_White-fronted_Goose_(19324016712).jpg"
+  },
+  "Garganey ( Anas querquedula ) Drake ... South Yorkshire (53695451967).jpg": {
+    "src": "atlas/img/5f14a15f6fab.jpg",
+    "width": 800,
+    "height": 457,
+    "author": "peterichman",
+    "license": "CC BY-SA 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Garganey_(_Anas_querquedula_)_Drake_..._South_Yorkshire_(53695451967).jpg"
+  },
+  "Anas strepera pair.jpg": {
+    "src": "atlas/img/690b687732ce.jpg",
+    "width": 800,
+    "height": 892,
+    "author": "unknown",
+    "license": "CC BY-SA 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Anas_strepera_pair.jpg"
+  },
+  "Ferruginous Pochard Aythya nyroca Male by Dr. Raju Kasambe DSCN2746 (12).jpg": {
+    "src": "atlas/img/4f9d51f1b18d.jpg",
+    "width": 800,
+    "height": 641,
+    "author": "Dr. Raju Kasambe",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Ferruginous_Pochard_Aythya_nyroca_Male_by_Dr._Raju_Kasambe_DSCN2746_(12).jpg"
+  },
+  "2017-03-24 Aythya marila, male, Killingworth Lake, Northumberland 20.jpg": {
+    "src": "atlas/img/e0bff5296677.jpg",
+    "width": 800,
+    "height": 600,
+    "author": "MPF",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:2017-03-24_Aythya_marila,_male,_Killingworth_Lake,_Northumberland_20.jpg"
+  },
+  "Gallinago gallinago a1.JPG": {
+    "src": "atlas/img/1b1ffdb1ac65.jpg",
+    "width": 800,
+    "height": 750,
+    "author": "Alpsdake",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Gallinago_gallinago_a1.JPG"
+  },
+  "2025-03-24 Columba oenas, Jesmond Dene 6.jpg": {
+    "src": "atlas/img/46a70ab53158.jpg",
+    "width": 800,
+    "height": 600,
+    "author": "MPF",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:2025-03-24_Columba_oenas,_Jesmond_Dene_6.jpg"
+  },
+  "Coturnix coturnix, Fraunberg, Bayern, Deutschland 2, Ausschnitt.jpg": {
+    "src": "atlas/img/2f9304a3db5a.jpg",
+    "width": 800,
+    "height": 564,
+    "author": "christoph_moning",
+    "license": "CC BY 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Coturnix_coturnix,_Fraunberg,_Bayern,_Deutschland_2,_Ausschnitt.jpg"
   }
 }

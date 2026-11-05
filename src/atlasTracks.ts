@@ -18,12 +18,15 @@ export interface HoofPrint {
   gap?: number;
 }
 
-/** Paw of a carnivore: canid (4 toes, oval), mustelid (5 toes in an arc), badger (5 toes in a row, long claws). */
+/**
+ * Paw of a carnivore: canid (4 toes, oval), felid (4 round toes, no claws), mustelid (5 toes in
+ * an arc), badger (5 toes in a row, long claws).
+ */
 export interface PawPrint {
   kind: 'paw';
   len: number;
   width: number;
-  style: 'canid' | 'mustelid' | 'badger';
+  style: 'canid' | 'felid' | 'mustelid' | 'badger';
 }
 
 /** Hare or rabbit hind foot: long, hairy, without clear pads. */
@@ -116,6 +119,14 @@ function pawSvg(p: PawPrint, label: string): string {
       claw(cx - W * 0.42, ty + L * 0.02, -15, L * 0.1),
       claw(cx + W * 0.42, ty + L * 0.02, 15, L * 0.1),
     );
+  } else if (p.style === 'felid') {
+    // Wide sole pad with three lobes at the back, four round toes in an arc, no claw marks.
+    const py = base - L * 0.2;
+    parts.push(ell(cx, py, W * 0.3, L * 0.19));
+    for (const k of [-0.19, 0, 0.19]) parts.push(ell(cx + W * k, py + L * 0.11, W * 0.11, L * 0.09));
+    const ty = base - L * 0.74;
+    const toe = (x: number, y: number) => ell(x, y, W * 0.13, L * 0.14);
+    parts.push(toe(cx - W * 0.14, ty), toe(cx + W * 0.15, ty - L * 0.03), toe(cx - W * 0.39, ty + L * 0.24), toe(cx + W * 0.4, ty + L * 0.2));
   } else if (p.style === 'mustelid') {
     parts.push(ell(cx, base - L * 0.2, W * 0.32, L * 0.2));
     const r = W * 0.42;

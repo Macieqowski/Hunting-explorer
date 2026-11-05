@@ -19,6 +19,13 @@ describe('speciesIn', () => {
     ['Kuny polują nocą', ['kuna-lesna', 'kuna-domowa']],
     ['Odstrzał gęsi zbożowej', ['ges-zbozowa']],
     ['Uprawy zbożowe', []],
+    ['Ryś euroazjatycki w Polsce jest:', ['rys']],
+    ['Na rysunku przedstawiono trop', []],
+    ['Wilk jest gatunkiem chronionym', ['wilk']],
+    ['Gęś mała od gęsi białoczelnej różni się:', ['ges-bialoczelna', 'ges-mala']],
+    ['Kszyk i słonka', ['slonka', 'kszyk']],
+    ['Podgorzałka to:', ['podgorzalka']],
+    ['Ogorzałka to:', ['ogorzalka']],
   ])('%s', (text, slugs) => {
     expect(speciesIn(text)).toEqual(slugs);
   });
