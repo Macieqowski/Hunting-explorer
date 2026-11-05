@@ -3,6 +3,7 @@
 // so they read in sunlight and for colour-blind users.
 
 import type { Role, Species } from './hunt';
+import type { StandKind } from './stands';
 
 export const ROLE_COLOR: Record<Role, string> = { leader: '#166534', hunter: '#b91c1c', beater: '#ea580c' };
 
@@ -40,4 +41,20 @@ export function speciesIcon(sp: Species, size = 24): string {
     predator: '<path d="M6 6l3 5h6l3-5M9 11l3 7 3-7"/>',
   };
   return `<svg class="h-icon hs-icon-${sp}" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="${SPECIES_COLOR[sp]}" stroke="#fff" stroke-width="1.5"/><g fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${marks[sp]}</g></svg>`;
+}
+
+export const STAND_COLOR = '#0369a1';
+
+/**
+ * A high seat: a rounded square (people are discs) with a white drawing — an open
+ * seat on splayed ladder legs for a zwyżka, a roofed hut on legs for an ambona.
+ * Fallen or damaged seats are grey with a slash.
+ */
+export function standIcon(kind: StandKind, broken = false, size = 22): string {
+  const marks: Record<StandKind, string> = {
+    zwyzka: '<path d="M7.5 7h9M8 4.5V7M16 4.5V7M9 7l-3 12M15 7l3 12M7.3 12.5h9.4M6.5 16.5h11"/>',
+    ambona: '<path d="M5 9.5 12 4l7 5.5M7 9v5.5h10V9M10.5 11.5h3M8.5 14.5 6.5 20M15.5 14.5l2 5.5"/>',
+  };
+  const fill = broken ? '#6b7280' : STAND_COLOR;
+  return `<svg class="h-icon hst-icon" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="${fill}" stroke="#fff" stroke-width="1.5"/><g fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${marks[kind]}${broken ? '<path stroke="#fecaca" stroke-width="2.2" d="M4 20 20 4"/>' : ''}</g></svg>`;
 }

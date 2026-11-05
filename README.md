@@ -46,7 +46,7 @@ Stack: Vite + TypeScript + Leaflet, no framework. Code layout:
 - `src/data.ts` – grouping districts into clubs, statistics
 - `src/seasons.ts` – hunting season data and logic
 - `src/map.ts` – Leaflet map and layers
-- `src/hunt.ts`, `src/huntUi.ts`, `src/huntMap.ts`, `src/huntShare.ts`, `src/huntSighting.ts`, `src/huntIcons.ts` – group hunts: logic, pages, live map, location sharing, game reporting with the compass, role and species icons; `src/huntBackend.ts` (interface) + `src/huntFirebase.ts` (Firebase, loaded only when the section opens); rules in `database.rules.json`, tested in `rules/`
+- `src/hunt.ts`, `src/huntUi.ts`, `src/huntMap.ts`, `src/huntShare.ts`, `src/huntSighting.ts`, `src/huntIcons.ts`, `src/stands.ts` – group hunts: logic, pages, live map, location sharing, game reporting with the compass, role, species and high-seat icons, high seats (zwyżki, ambony) read from a KMZ/KML file; `src/huntBackend.ts` (interface) + `src/huntFirebase.ts` (Firebase, loaded only when the section opens); rules in `database.rules.json`, tested in `rules/`
 - `src/main.ts` – UI, routing, rendering
 - `src/i18n.ts` – Polish/English strings
 
