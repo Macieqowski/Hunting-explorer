@@ -14,6 +14,8 @@ export interface Fix {
 export interface SharerOptions {
   /** Send a fix; `track` = also add a track point. Rejecting with { stop: true } ends sharing. */
   publish(fix: Fix, track: boolean): Promise<void>;
+  /** How long to wait before re-sending an unchanged position (depends on my role). */
+  heartbeatMs(): number;
   /** Remove my position after stopping. */
   clear(): Promise<void>;
   onChange(): void;
@@ -87,7 +89,7 @@ export class Sharer {
   private async onFix(fix: Fix) {
     this.lastFix = fix;
     const now = Date.now();
-    const d = sendDecision(this.last, fix, now);
+    const d = sendDecision(this.last, fix, now, this.opts.heartbeatMs());
     if (this.state === 'starting') this.set('on');
     if (!d.send || this.sending) return;
     this.sending = true;

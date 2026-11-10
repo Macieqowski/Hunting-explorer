@@ -214,6 +214,13 @@ describe('positions and tracks', () => {
     await assertSucceeds(share('b', 'beater'));
     await assertSucceeds(share('lead', 'leader'));
   });
+  it('accept the slim record without a role', async () => {
+    await update(ref(db('lead'), 'hunts/h1'), { status: 'live' });
+    await assertSucceeds(set(ref(db('a'), 'positions/h1/a'), { lat: 52.12346, lng: 21.98765, acc: 8, ts: serverTimestamp() }));
+    await assertSucceeds(set(ref(db('a'), 'positions/h1/a'), { lat: 52.12346, lng: 21.98765, ts: serverTimestamp() }));
+    await assertFails(set(ref(db('a'), 'positions/h1/a'), { lat: 52.1, ts: serverTimestamp() }));
+    await assertFails(set(ref(db('c'), 'positions/h1/c'), { lat: 52.1, lng: 21.2, ts: serverTimestamp() })); // not confirmed
+  });
   it('track points cannot be rewritten', async () => {
     await update(ref(db('lead'), 'hunts/h1'), { status: 'live' });
     await share('a');

@@ -76,7 +76,6 @@ export interface Position {
   lng: number;
   acc: number | null; // metres
   ts: number; // server time, ms
-  role: Role;
 }
 
 export interface TrackPoint {
@@ -219,8 +218,9 @@ export function parsePositions(v: unknown): Position[] {
   for (const [uid, raw] of Object.entries(v as Record<string, unknown>)) {
     if (!raw || typeof raw !== 'object') continue;
     const o = raw as Record<string, unknown>;
-    if (!isNum(o.lat) || !isNum(o.lng) || !isNum(o.ts) || !ROLES.includes(o.role as Role)) continue;
-    out.push({ uid, lat: o.lat, lng: o.lng, acc: isNum(o.acc) ? o.acc : null, ts: o.ts, role: o.role as Role });
+    // The role is not stored with the position (it is in the participant list); older apps still send it.
+    if (!isNum(o.lat) || !isNum(o.lng) || !isNum(o.ts)) continue;
+    out.push({ uid, lat: o.lat, lng: o.lng, acc: isNum(o.acc) ? o.acc : null, ts: o.ts });
   }
   return out;
 }
@@ -243,12 +243,20 @@ export function parseTracks(v: unknown): Map<string, TrackPoint[]> {
 
 // ---------------------------------------------------------------- location sharing
 
-/** Positions older than this look faded on the map; older than LOST_MS they are drawn hollow. */
-export const STALE_MS = 2 * 60e3;
+/** Positions older than this look faded on the map; older than LOST_MS they are drawn hollow.
+ * Longer than the hunters' heartbeat, plus slack for irregular GPS fixes. */
+export const STALE_MS = 3 * 60e3;
 export const LOST_MS = 10 * 60e3;
-/** A new position is sent after moving this far, or after HEARTBEAT_MS without moving. */
+/** A new position is sent after moving this far, or after the role's heartbeat without moving. */
 export const MIN_MOVE_M = 20;
+/** Beaters walk and are watched closely, so they keep a short heartbeat. */
 export const HEARTBEAT_MS = 30e3;
+/** Hunters and leaders mostly sit on a stand: a slower heartbeat saves most of the database traffic. */
+export const HUNTER_HEARTBEAT_MS = 90e3;
+export const heartbeatFor = (role: Role): number => (role === 'beater' ? HEARTBEAT_MS : HUNTER_HEARTBEAT_MS);
+
+/** Coordinates are stored rounded to 5 decimals (about 1 m), which keeps each update small. */
+export const roundCoord = (v: number): number => Math.round(v * 1e5) / 1e5;
 /** Positions and tracks are deleted this long after the hunt ends. */
 export const RETENTION_MS = 7 * 24 * 3600e3;
 
@@ -267,18 +275,19 @@ export function distanceM(a: { lat: number; lng: number }, b: { lat: number; lng
 
 /**
  * Whether a new GPS fix should be sent: always the first one, after MIN_MOVE_M of movement
- * (also adds a track point), or after HEARTBEAT_MS so others see the position is still current.
+ * (also adds a track point), or after `heartbeatMs` so others see the position is still current.
  * Fixes much less accurate than the movement threshold don't count as movement.
  */
 export function sendDecision(
   last: { lat: number; lng: number; at: number } | null,
   fix: { lat: number; lng: number; acc: number | null },
   now: number,
+  heartbeatMs = HEARTBEAT_MS,
 ): { send: boolean; track: boolean } {
   if (!last) return { send: true, track: true };
   const moved = distanceM(last, fix) >= Math.max(MIN_MOVE_M, Math.min(fix.acc ?? 0, 100));
   if (moved) return { send: true, track: true };
-  return { send: now - last.at >= HEARTBEAT_MS, track: false };
+  return { send: now - last.at >= heartbeatMs, track: false };
 }
 
 /** True when the leader's app should delete the hunt's positions and tracks. */

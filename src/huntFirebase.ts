@@ -4,7 +4,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, connectAuthEmulator } from 'firebase/auth';
 import { getDatabase, ref, child, push, get, set, update, onValue, serverTimestamp, connectDatabaseEmulator } from 'firebase/database';
-import { isLeader, parseHunt, parseParticipants, parsePositions, parseTracks, parseDrives, parseSightings, encodeArea, shouldPurge, cleanText, cleanNotes, LIMITS, DRIVE_LIMITS, type Hunt, type HuntInput } from './hunt';
+import { isLeader, parseHunt, parseParticipants, parsePositions, parseTracks, parseDrives, parseSightings, encodeArea, roundCoord, shouldPurge, cleanText, cleanNotes, LIMITS, DRIVE_LIMITS, type Hunt, type HuntInput } from './hunt';
 import { parseShots, parseShotSpots, NOTE_MAX, type ShotInput } from './pokot';
 import { parseStands, encodeStands } from './stands';
 import { newInviteToken, inviteExpiry, parseInvites, PAIR_MS } from './invite';
@@ -304,11 +304,14 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
 
     serverNow: () => Date.now() + offset,
 
-    publishPosition(id, fix, role, track) {
-      const pos: Record<string, unknown> = { lat: fix.lat, lng: fix.lng, ts: serverTimestamp(), role };
+    publishPosition(id, fix, track) {
+      // Kept small: every update is sent to everyone in the hunt. The role comes from the participant list.
+      const lat = roundCoord(fix.lat);
+      const lng = roundCoord(fix.lng);
+      const pos: Record<string, unknown> = { lat, lng, ts: serverTimestamp() };
       if (fix.acc != null && isFinite(fix.acc)) pos.acc = Math.round(fix.acc);
       const upd: Record<string, unknown> = { [`positions/${id}/${uid}`]: pos };
-      if (track) upd[`tracks/${id}/${uid}/${push(child(root, `tracks/${id}/${uid}`)).key}`] = { lat: fix.lat, lng: fix.lng, ts: serverTimestamp() };
+      if (track) upd[`tracks/${id}/${uid}/${push(child(root, `tracks/${id}/${uid}`)).key}`] = { lat, lng, ts: serverTimestamp() };
       return guard(update(root, upd));
     },
 

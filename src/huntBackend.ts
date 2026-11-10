@@ -55,7 +55,7 @@ export interface HuntBackend {
   /** Server clock estimate (ms), for judging how old a position is. */
   serverNow(): number;
   /** Send my position; `track` also appends it to my track. */
-  publishPosition(id: string, fix: { lat: number; lng: number; acc: number | null }, role: Role, track: boolean): Promise<void>;
+  publishPosition(id: string, fix: { lat: number; lng: number; acc: number | null }, track: boolean): Promise<void>;
   clearPosition(id: string): Promise<void>;
   /** Readable by confirmed participants; onDenied for anyone else. */
   watchPositions(id: string, cb: (ps: Position[]) => void, onDenied: () => void): Unsubscribe;
