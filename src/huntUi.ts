@@ -102,8 +102,8 @@ const L = {
     en: 'Organise a group hunt or sign up for one as a hunter or beater. The hunt leader creates the hunt and sends the link to participants.',
   },
   notConfigured: {
-    pl: 'Polowania zbiorowe nie są jeszcze skonfigurowane na tej stronie (brak ustawień Firebase).',
-    en: 'Group hunts are not set up on this site yet (Firebase settings are missing).',
+    pl: 'Polowania zbiorowe są w tej chwili niedostępne. Pozostałe części aplikacji działają normalnie.',
+    en: 'Group hunts are not available right now. The rest of the app works as usual.',
   },
   connecting: { pl: 'Łączenie…', en: 'Connecting…' },
   connectError: { pl: 'Nie udało się połączyć z serwerem polowań.', en: 'Could not connect to the hunt server.' },
@@ -156,7 +156,7 @@ const L = {
     pl: 'Nie znaleziono polowania. Link może być błędny albo prowadzący usunął polowanie.',
     en: 'Hunt not found. The link may be wrong, or the leader deleted the hunt.',
   },
-  allHunts: { pl: '← Wszystkie polowania', en: '← All hunts' },
+  allHunts: { pl: 'Wszystkie polowania', en: 'All hunts' },
   leader: { pl: 'Prowadzący', en: 'Hunt leader' },
   when: { pl: 'Kiedy', en: 'When' },
   where: { pl: 'Zbiórka', en: 'Meeting point' },
@@ -2255,7 +2255,7 @@ function renderDriveForm(): string {
 }
 
 function renderHunt(): string {
-  const back = `<button type="button" class="btn ghost back" data-hunt="list">${l('allHunts')}</button>`;
+  const back = `<button type="button" class="btn ghost back" data-hunt="list">${ic('back', 18)} ${l('allHunts')}</button>`;
   if (hunt === undefined) return `${back}<p class="muted">${l('loading')}</p>`;
   if (hunt === null) return `${back}<div class="notice">${l('notFound')}${huntError ? `<p class="muted small">${esc(huntError)}</p>` : ''}</div>`;
   const h = hunt;

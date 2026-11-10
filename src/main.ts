@@ -398,11 +398,11 @@ function openSeasonsFor(voiv: string | null) {
   const now = new Date();
   const open = SEASONS.filter((s) => isOpen(s, now, voiv));
   return `<h3>${t('openToday')}</h3><div class="chips">${open.map((s) => `<span class="chip">${esc(tt(s.name))}</span>`).join('')}</div>
-    <p class="small"><a href="#/seasons" data-nav="tab" data-tab="seasons">${t('allSeasons')} →</a></p>`;
+    <p class="small"><a href="#/seasons" data-nav="tab" data-tab="seasons">${t('allSeasons')} ${ic('chevron', 14)}</a></p>`;
 }
 
 function backButton() {
-  return `<button type="button" class="btn ghost back" data-action="back">${t('back')}</button>`;
+  return `<button type="button" class="btn ghost back" data-action="back">${ic('back', 18)} ${t('back')}</button>`;
 }
 
 function districtCard(d: District, withHolderLink = true) {

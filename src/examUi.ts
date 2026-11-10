@@ -75,8 +75,8 @@ const L = {
   official: { pl: 'Oficjalny test PZŁ „Sprawdź wiedzę” ↗', en: 'Official PZŁ “Sprawdź wiedzę” quiz ↗' },
   questionOf: { pl: 'Pytanie', en: 'Question' },
   of: { pl: 'z', en: 'of' },
-  prev: { pl: '← Poprzednie', en: '← Previous' },
-  next: { pl: 'Następne →', en: 'Next →' },
+  prev: { pl: 'Poprzednie', en: 'Previous' },
+  next: { pl: 'Następne', en: 'Next' },
   finish: { pl: 'Zakończ i sprawdź', en: 'Finish and check' },
   quit: { pl: 'Przerwij', en: 'Quit' },
   confirmFinish: { pl: 'Bez odpowiedzi', en: 'Unanswered' },
@@ -488,8 +488,8 @@ function renderQuestion(a: Attempt) {
         : ''
     }
     <div class="actions exam-nav">
-      ${a.mode === 'exam' && a.index > 0 ? `<button type="button" class="btn ghost" data-exam="prev">${l('prev')}</button>` : ''}
-      ${!last ? `<button type="button" class="btn${a.mode !== 'exam' && !reveal ? ' ghost' : ''}" data-exam="next">${l('next')}</button>` : ''}
+      ${a.mode === 'exam' && a.index > 0 ? `<button type="button" class="btn ghost" data-exam="prev">${ic('back', 18)} ${l('prev')}</button>` : ''}
+      ${!last ? `<button type="button" class="btn${a.mode !== 'exam' && !reveal ? ' ghost' : ''}" data-exam="next">${l('next')} ${ic('chevron', 18)}</button>` : ''}
       ${last || a.mode === 'exam' ? `<button type="button" class="btn${last ? '' : ' ghost'}" data-exam="finish">${l('finish')}${a.mode === 'exam' && answered < a.drawn.length ? ` <span class="muted small">(${l('confirmFinish')}: ${a.drawn.length - answered})</span>` : ''}</button>` : ''}
       <button type="button" class="btn ghost" data-exam="quit">${l('quit')}</button>
     </div>
