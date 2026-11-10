@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "org.polowanie.app",
+      "sha256_cert_fingerprints": ["C8:D4:A8:ED:87:3C:A9:7A:A6:AE:69:90:54:B4:D8:C4:4D:3E:D6:6B:DC:1F:30:A9:D8:BE:71:A0:5E:FD:B5:1A"]
+    }
+  }
+]

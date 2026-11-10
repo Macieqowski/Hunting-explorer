@@ -1,0 +1,168 @@
+name: Android app
+
+# Builds the Android app (APK) from the same code as the website.
+# - Pull requests that touch the app: build + start it in an emulator and check the page loads.
+# - "Run workflow" with a version (e.g. 0.2.0), or a pushed tag android-v0.2.0: signed APK
+#   published as a GitHub release; the website's download link and the app's update check use it.
+#
+# Signing needs these repository secrets (Settings → Secrets and variables → Actions → Secrets):
+#   ANDROID_KEYSTORE_BASE64   the .p12 keystore, base64-encoded
+#   ANDROID_KEYSTORE_PASSWORD keystore password (same as the key password)
+#   ANDROID_KEY_ALIAS         polowanie
+
+on:
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'capacitor.config.ts'
+      - 'src/platform.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/android.yml'
+  push:
+    tags: ['android-v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Wersja aplikacji, np. 0.2.0 (puste = tylko testowe APK, bez wydania)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      release: ${{ steps.ver.outputs.release }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Version
+        id: ver
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          v="$INPUT_VERSION"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then v="${GITHUB_REF_NAME#android-v}"; fi
+          release=true
+          if [ -z "$v" ]; then v="0.0.${GITHUB_RUN_NUMBER}-test"; release=false; fi
+          if ! echo "$v" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-test)?$'; then echo "::error::Wersja musi mieć postać 1.2.3"; exit 1; fi
+          IFS=. read -r ma mi pa <<< "${v%-test}"
+          code=$(( ma * 10000 + mi * 100 + pa ))
+          if [ "$release" = false ]; then code=1; fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+          echo "Wersja $v (kod $code), wydanie: $release"
+
+      - run: npm ci
+      - name: Build the web app
+        run: npm run build
+        env:
+          VITE_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_DATABASE_URL: ${{ vars.FIREBASE_DATABASE_URL }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID }}
+      - run: npx cap sync android
+
+      - name: Signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.p12"
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.p12" >> "$GITHUB_ENV"
+          elif [ "${{ steps.ver.outputs.release }}" = true ]; then
+            echo "::error::Brak sekretu ANDROID_KEYSTORE_BASE64 – wydanie musi być podpisane kluczem aplikacji."; exit 1
+          else
+            echo "::warning::Brak klucza podpisu: budowane jest tylko APK testowe (debug)."
+          fi
+
+      - name: Build APK
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          task=assembleRelease; dir=release; file=app-release.apk
+          if [ -z "$ANDROID_KEYSTORE_PATH" ]; then task=assembleDebug; dir=debug; file=app-debug.apk; fi
+          ./gradlew "$task" -PappVersionName="${{ steps.ver.outputs.version }}" -PappVersionCode="${{ steps.ver.outputs.code }}"
+          mkdir -p ../out && cp "app/build/outputs/apk/$dir/$file" ../out/polowanie.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: polowanie-apk
+          path: out/polowanie.apk
+
+      - name: Publish release
+        if: steps.ver.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.ver.outputs.version }}
+        run: |
+          gh release create "android-v$V" out/polowanie.apk \
+            --target "$GITHUB_SHA" \
+            --title "Polowanie – aplikacja Android $V" \
+            --notes "Plik do zainstalowania: polowanie.apk (Android 9 lub nowszy). Instrukcja: https://www.polowanie.org/#/about"
+
+  # Starts the APK in an Android emulator and fails if the page does not load or logs a JS error.
+  smoke-test:
+    needs: build
+    if: github.event_name == 'pull_request' || needs.build.outputs.release != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: polowanie-apk
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      # Ignored on purpose: "Error injecting safe area CSS" is Capacitor's own SystemBars script, run
+      # (and caught) before the page has a document; the app pads for the system bars natively.
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: |
+            adb install -r polowanie.apk
+            adb logcat -c
+            adb shell monkey -p org.polowanie.app -c android.intent.category.LAUNCHER 1
+            sleep 45
+            adb exec-out screencap -p > screen-start.png
+            adb shell am start -a android.intent.action.VIEW -d "https://www.polowanie.org/#/about" org.polowanie.app
+            sleep 15
+            adb exec-out screencap -p > screen-about.png
+            adb logcat -d -s Capacitor/Console:* Capacitor:* chromium:* > logcat.txt || true
+            cat logcat.txt | tail -200
+            if grep -E "Uncaught|TypeError|ReferenceError|SyntaxError" logcat.txt | grep -v "Error injecting safe area CSS"; then echo "::error::Błąd JavaScript w aplikacji"; exit 1; fi
+            grep -q "Polowanie\|Loading app\|Capacitor" logcat.txt || echo "::warning::Brak logów Capacitora"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: emulator-screenshots
+          path: |
+            screen-*.png
+            logcat.txt

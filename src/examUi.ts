@@ -4,6 +4,7 @@ import { seasonQuestions, SEASON_TOPIC } from './seasonQuestions';
 import { getLang, tt, fmtNum } from './i18n';
 import { speciesIn } from './atlasMatch';
 import { speciesBySlug } from './atlas';
+import { saveTextFile } from './platform';
 
 const BANK_IDS = ['mysliwy', 'selekcjoner'] as const;
 type BankId = (typeof BANK_IDS)[number];
@@ -191,14 +192,7 @@ const revealed = (a: Attempt, i: number) => {
 
 function exportProgress() {
   const data = { app: 'hunting-explorer', kind: 'examProgress', version: 1, exported: new Date().toISOString(), progress: readProgress(), history: readHistory() };
-  const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `postepy-egzamin-${new Date().toISOString().slice(0, 10)}.json`;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  void saveTextFile(`postepy-egzamin-${new Date().toISOString().slice(0, 10)}.json`, 'application/json', JSON.stringify(data)).catch(() => {});
 }
 
 async function importProgress(file: File) {

@@ -983,3 +983,13 @@ form.hr-seatcard { display: grid; }
 .h-lead { margin: 12px 0; }
 .h-lead > summary { cursor: pointer; }
 .h-lead h4 { margin: 12px 0 4px; }
+
+/* Android app: "new version" bar and the about-page box */
+.app-update {
+  position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 2100; display: flex; align-items: center; gap: 10px;
+  background: var(--text); color: var(--bg); padding: 10px 12px; border-radius: 10px; box-shadow: var(--shadow); font-size: 0.9rem;
+}
+.app-update span { flex: 1; }
+.app-update .btn.ghost { color: var(--bg); border-color: transparent; }
+.app-box { border: 1px solid var(--border); border-radius: 10px; padding: 4px 14px 10px; margin-bottom: 1rem; }
+.app-box h2 { margin-top: 0.6rem; }
