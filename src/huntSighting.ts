@@ -4,6 +4,8 @@
 
 import { SPECIES, HERDS, compassPoint, declination, headingFromOrientation, normDeg, type Species, type Herd, type HeadingSource } from './hunt';
 import { speciesIcon } from './huntIcons';
+import { isApp } from './platform';
+import { listenNativeCompass } from './native';
 
 export interface ReportText {
   title: string; // "What did you see?"
@@ -54,17 +56,41 @@ export function askPermission(): Promise<boolean> {
  * sensor asks for calibration. Returns a stop function.
  */
 export function listenCompass(cb: (deg: number, needsCalibration: boolean) => void): () => void {
+  if (!isApp()) return listenBrowserCompass(cb);
+  // The app reads the sensor itself, which also tells when it needs calibrating.
+  let stop: (() => void) | null = null;
+  let stopped = false;
+  const smooth = smoother(cb);
+  void listenNativeCompass((h) => {
+    if (h.heading != null) smooth(h.heading, h.calibrate);
+  })
+    .catch(() => null)
+    .then((s) => {
+      if (stopped) s?.();
+      else stop = s ?? listenBrowserCompass(cb);
+    });
+  return () => {
+    stopped = true;
+    stop?.();
+  };
+}
+
+/** Exponential smoothing on the unit circle, so 359° and 1° average to 0°, not 180°. */
+function smoother(cb: (deg: number, needsCalibration: boolean) => void) {
   let x = 0;
   let y = 0;
   let have = false;
-  const feed = (deg: number, cal: boolean) => {
+  return (deg: number, cal: boolean) => {
     const r = (deg * Math.PI) / 180;
-    // Exponential smoothing on the unit circle, so 359° and 1° average to 0°, not 180°.
     x = have ? x * 0.7 + Math.sin(r) * 0.3 : Math.sin(r);
     y = have ? y * 0.7 + Math.cos(r) * 0.3 : Math.cos(r);
     have = true;
     cb(normDeg((Math.atan2(x, y) * 180) / Math.PI), cal);
   };
+}
+
+function listenBrowserCompass(cb: (deg: number, needsCalibration: boolean) => void): () => void {
+  const feed = smoother(cb);
   let absSeen = false;
   const onAbs = (e: DeviceOrientationEvent) => {
     absSeen = true;

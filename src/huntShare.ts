@@ -1,7 +1,9 @@
 // Sharing my location during a hunt: browser geolocation, throttling, keeping the
-// screen awake. Knows nothing about Firebase; huntUi wires it to the backend.
+// screen awake. In the Android app positions come from a foreground service instead, which
+// keeps working with the screen off. Knows nothing about Firebase; huntUi wires it to the backend.
 
 import { sendDecision } from './hunt';
+import { hasBackgroundLocation, watchBackgroundLocation, type BackgroundWatch } from './native';
 
 export type ShareState = 'off' | 'starting' | 'on' | 'denied' | 'unavailable' | 'error';
 
@@ -19,6 +21,12 @@ export interface SharerOptions {
   /** Remove my position after stopping. */
   clear(): Promise<void>;
   onChange(): void;
+  /** Every position, also the ones not sent (for the beater guidance with the screen off). */
+  onFix?(fix: Fix): void;
+  /** App only: texts of the notification shown while sharing in the background. */
+  notification?(): { title: string; text: string; stop: string };
+  /** App only: the person tapped Stop in that notification (sharing has stopped). */
+  onStoppedOutside?(): void;
 }
 
 type WakeLock = { release(): Promise<void> };
@@ -31,6 +39,9 @@ export class Sharer {
   private watchId: number | null = null;
   private last: { lat: number; lng: number; at: number } | null = null;
   private wake: WakeLock | null = null;
+  private native: BackgroundWatch | null = null;
+  /** Changes on every start and stop, so a late answer from an earlier start is recognised. */
+  private gen = 0;
   private sending = false;
 
   constructor(
@@ -49,6 +60,38 @@ export class Sharer {
       return;
     }
     this.set('starting');
+    if (hasBackgroundLocation() && this.opts.notification) this.startBackground();
+    else this.startBrowser();
+  }
+
+  /** The app: a foreground service sends positions with the screen off, so no wake lock. */
+  private startBackground() {
+    const gen = ++this.gen;
+    watchBackgroundLocation(
+      this.opts.notification!(),
+      (f) => this.onFix({ lat: f.lat, lng: f.lng, acc: f.acc ?? null }),
+      () => {
+        this.opts.onStoppedOutside?.();
+        this.stop();
+      },
+    ).then(
+      (w) => {
+        if (gen === this.gen) this.native = w;
+        // Stopped meanwhile: stop the service too, unless a newer start is using it.
+        else if (this.active) w.detach();
+        else w.stop();
+      },
+      (e: { code?: string; message?: string }) => {
+        if (gen !== this.gen) return;
+        if (e.code === 'DENIED') {
+          this.stop(false);
+          this.set('denied');
+        } else this.startBrowser(); // no service on this phone: share while the screen is on
+      },
+    );
+  }
+
+  private startBrowser() {
     this.watchId = navigator.geolocation.watchPosition(
       (p) => this.onFix({ lat: p.coords.latitude, lng: p.coords.longitude, acc: isFinite(p.coords.accuracy) ? p.coords.accuracy : null }),
       (e) => {
@@ -71,6 +114,9 @@ export class Sharer {
   stop(clear = true) {
     if (this.watchId != null) navigator.geolocation.clearWatch(this.watchId);
     this.watchId = null;
+    this.native?.stop();
+    this.native = null;
+    this.gen++;
     this.last = null;
     document.removeEventListener('visibilitychange', this.onVisible);
     this.wake?.release().catch(() => {});
@@ -87,7 +133,9 @@ export class Sharer {
   }
 
   private async onFix(fix: Fix) {
+    if (!this.active) return;
     this.lastFix = fix;
+    this.opts.onFix?.(fix);
     const now = Date.now();
     const d = sendDecision(this.last, fix, now, this.opts.heartbeatMs());
     if (this.state === 'starting') this.set('on');

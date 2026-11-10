@@ -931,6 +931,8 @@ $('#locate').addEventListener('click', () => {
 // ---------------------------------------------------------------- boot
 
 function useDistricts(list: DistrictList) {
+  // Also a check for the app's smoke test (android workflow), which reads the log.
+  console.info(`[polowanie] districts ${list.districts.length} ${list.source} ${list.meta?.date ?? ''}`);
   state.districts = list.districts;
   state.dataMeta = list.meta;
   state.clubs = groupClubs(state.districts);

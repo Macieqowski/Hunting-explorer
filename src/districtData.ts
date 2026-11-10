@@ -30,6 +30,8 @@ export interface DistrictList {
   districts: District[];
   /** null when the list came straight from BDL. */
   meta: SnapshotMeta | null;
+  /** Where it came from: built into the app/site, downloaded later, or BDL itself. */
+  source: 'built-in' | 'update' | 'bdl';
 }
 
 /** Turns the compact file back into districts. Throws on anything unexpected. */
@@ -49,7 +51,7 @@ export function decodeSnapshot(raw: unknown): DistrictList {
     }
     return d as unknown as District;
   });
-  return { districts, meta: { format: s.format, version: s.version, date: s.date, count: s.count } };
+  return { districts, meta: { format: s.format, version: s.version, date: s.date, count: s.count }, source: 'built-in' };
 }
 
 /** Whether `remote` should replace `local`: a different list taken on the same day or later. */
@@ -80,7 +82,7 @@ async function storedList(): Promise<DistrictList | null> {
   if (!isApp()) return null;
   try {
     const raw = await getBdl(STORED_KEY);
-    return raw ? decodeSnapshot(raw) : null;
+    return raw ? { ...decodeSnapshot(raw), source: 'update' } : null;
   } catch {
     return null;
   }
@@ -100,7 +102,7 @@ export async function loadDistrictList(onProgress?: (loaded: number, total: numb
   const stored = await storedList();
   if (stored && isNewerList(stored.meta, built?.meta ?? null)) return stored;
   if (built) return built;
-  return { districts: await fetchAllDistricts(onProgress), meta: null };
+  return { districts: await fetchAllDistricts(onProgress), meta: null, source: 'bdl' };
 }
 
 /**
@@ -126,7 +128,7 @@ export async function checkDistrictUpdate(current: SnapshotMeta | null, force = 
   }
   if (!isNewerList(remote, current)) return null;
   const raw = await getJson(`${REMOTE}districts.json`, 120_000);
-  const list = decodeSnapshot(raw);
+  const list: DistrictList = { ...decodeSnapshot(raw), source: 'update' };
   if (list.meta!.version !== remote.version || list.districts.length < 1000) throw new Error('Niespójne dane obwodów');
   await putBdl(STORED_KEY, raw);
   return list;

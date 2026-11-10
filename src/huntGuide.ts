@@ -5,6 +5,7 @@
 
 import { declination, distanceM, bearing, compassPoint } from './hunt';
 import { guide, buzzFor, arrowAngle, BUZZ, type Guidance, type GuideState, type Pt, type Route } from './huntCrew';
+import { vibrate } from './native';
 import { askPermission, listenCompass } from './huntSighting';
 
 export type GuideTarget =
@@ -131,10 +132,10 @@ function recompute() {
     const now = Date.now();
     const b = buzzFor(lastState, last.state, lastOffBuzz, now);
     if (b) {
-      navigator.vibrate?.([...BUZZ[b]]);
+      vibrate(BUZZ[b], true);
       if (b === 'off') lastOffBuzz = now;
     }
-  } else if (last.state === 'arrived' && lastState !== 'arrived') navigator.vibrate?.([...BUZZ.arrived]);
+  } else if (last.state === 'arrived' && lastState !== 'arrived') vibrate(BUZZ.arrived, true);
   lastState = last.state;
   onUpdate(last, fix);
   paint();
