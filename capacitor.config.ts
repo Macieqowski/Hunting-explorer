@@ -12,6 +12,9 @@ const config: CapacitorConfig = {
     minWebViewVersion: 87,
   },
   server: { errorPath: 'webview-update.html' },
+  // Console messages go to logcat (tag Capacitor/Console) in release builds too: the emulator
+  // smoke test checks them for JS errors and startup lines, and they help debugging on a phone.
+  loggingBehavior: 'production',
 };
 
 export default config;
