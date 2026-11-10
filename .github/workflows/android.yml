@@ -138,6 +138,8 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      # Ignored on purpose: "Error injecting safe area CSS" is Capacitor's own SystemBars script, run
+      # (and caught) before the page has a document; the app pads for the system bars natively.
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -155,7 +157,7 @@ jobs:
             adb exec-out screencap -p > screen-about.png
             adb logcat -d -s Capacitor/Console:* Capacitor:* chromium:* > logcat.txt || true
             cat logcat.txt | tail -200
-            if grep -E "Uncaught|TypeError|ReferenceError|SyntaxError" logcat.txt; then echo "::error::Błąd JavaScript w aplikacji"; exit 1; fi
+            if grep -E "Uncaught|TypeError|ReferenceError|SyntaxError" logcat.txt | grep -v "Error injecting safe area CSS"; then echo "::error::Błąd JavaScript w aplikacji"; exit 1; fi
             grep -q "Polowanie\|Loading app\|Capacitor" logcat.txt || echo "::warning::Brak logów Capacitora"
       - uses: actions/upload-artifact@v4
         if: always()
