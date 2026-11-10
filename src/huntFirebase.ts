@@ -4,10 +4,10 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, connectAuthEmulator } from 'firebase/auth';
 import { getDatabase, ref, child, push, get, set, update, onValue, serverTimestamp, connectDatabaseEmulator } from 'firebase/database';
-import { parseHunt, parseParticipants, parsePositions, parseTracks, parseDrives, parseSightings, encodeArea, shouldPurge, cleanText, cleanNotes, LIMITS, DRIVE_LIMITS, type Hunt, type HuntInput } from './hunt';
+import { isLeader, parseHunt, parseParticipants, parsePositions, parseTracks, parseDrives, parseSightings, encodeArea, shouldPurge, cleanText, cleanNotes, LIMITS, DRIVE_LIMITS, type Hunt, type HuntInput } from './hunt';
 import { parseShots, parseShotSpots, NOTE_MAX, type ShotInput } from './pokot';
 import { parseStands, encodeStands } from './stands';
-import { newInviteToken, inviteExpiry, parseInvites } from './invite';
+import { newInviteToken, inviteExpiry, parseInvites, PAIR_MS } from './invite';
 import { HuntError, type FirebaseConfig, type HuntBackend } from './huntBackend';
 import { encodePt, encodeRoute, parseAllRoutes, parseSeats, parsePhones, parseTransport, parseMessages, parseAcks, parseCarcassMarks, cleanPhone, cleanSeat, cleanMessage, CARCASS_KINDS, CREW_LIMITS } from './huntCrew';
 
@@ -81,6 +81,46 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
       (s) => cb(parse(s.val())),
       () => onDenied(),
     );
+  const val = (path: string) => get(child(root, path)).then((s) => s.val() as unknown, () => null);
+  const obj = (v: unknown) => (v && typeof v === 'object' ? (v as Record<string, unknown>) : {});
+
+  /** This (leader) device becomes the leader in the field; see HuntBackend.takeField. */
+  async function takeField(id: string) {
+    const h = parseHunt(id, await guard(get(child(root, `hunts/${id}`)).then((s) => s.val())));
+    if (!h) throw new HuntError('unknown', 'no such hunt');
+    const old = h.leaderUid;
+    if (old === uid) return;
+    const ps = parseParticipants(await guard(get(child(root, `participants/${id}`)).then((s) => s.val())));
+    const oldRow = ps.find((p) => p.uid === old);
+    const mine = ps.find((p) => p.uid === uid);
+    await guard(
+      update(root, {
+        [`hunts/${id}/leaderUid`]: uid,
+        [`participants/${id}/${uid}`]: { name: oldRow?.name ?? h.leaderName, role: 'leader', status: 'confirmed', joinedAt: mine ? mine.joinedAt : serverTimestamp() },
+        ...(oldRow && oldRow.role === 'leader' ? { [`participants/${id}/${old}`]: null, [`positions/${id}/${old}`]: null } : {}),
+        [`userHunts/${uid}/${id}`]: true,
+      }),
+    );
+    // What hangs on the leader's uid moves along: phone number, stands, transport, shots.
+    const [phones, seats, shots, transport] = await Promise.all(['phones', 'seats', 'shots', 'transport'].map((k) => val(`${k}/${id}`)));
+    const upd: Record<string, unknown> = {};
+    const ph = obj(phones);
+    if (typeof ph[old] === 'string') {
+      if (!ph[uid]) upd[`phones/${id}/${uid}`] = ph[old];
+      upd[`phones/${id}/${old}`] = null;
+    }
+    for (const [d, m] of Object.entries(obj(seats))) {
+      const mm = obj(m);
+      if (typeof mm[old] !== 'string') continue;
+      if (!mm[uid]) upd[`seats/${id}/${d}/${uid}`] = mm[old];
+      upd[`seats/${id}/${d}/${old}`] = null;
+    }
+    for (const k of CARCASS_KINDS) if (obj(obj(transport)[k]).uid === old) upd[`transport/${id}/${k}/uid`] = uid;
+    if (h.pokotLockedAt == null && (h.status === 'live' || h.status === 'ended'))
+      for (const [sid, v] of Object.entries(obj(shots))) if (obj(v).uid === old) upd[`shots/${id}/${sid}/uid`] = uid;
+    if (Object.keys(upd).length) await guard(update(root, upd));
+  }
+
   const phoneRec = (id: string, phone: string | null | undefined) => {
     const p = phone ? cleanPhone(phone) : null;
     return p ? { [`phones/${id}/${uid}`]: p } : {};
@@ -136,6 +176,8 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
           [`carcasses/${id}`]: null,
           [`joins/${id}/${uid}`]: null,
           [`invites/${id}`]: null,
+          [`leaderPair/${id}`]: null,
+          [`leaderPairJoins/${id}`]: null,
           // Other people's "my hunts" entries are cleaned up by their own browsers (see myHunts).
           [`userHunts/${uid}/${id}`]: null,
         }),
@@ -194,11 +236,40 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
 
     revokeInvites: (id) => guard(set(child(root, `invites/${id}`), null)),
 
+    async newLeaderCode(id) {
+      const token = newInviteToken();
+      const exp = Date.now() + offset + PAIR_MS;
+      await guard(update(root, { [`hunts/${id}/leaders/${uid}`]: 'device', [`leaderPair/${id}`]: { [token]: { exp, createdAt: serverTimestamp() } } }));
+      return { token, exp };
+    },
+
+    cancelLeaderCode: (id) => guard(update(root, { [`leaderPair/${id}`]: null })),
+
+    async pairLeader(id, token) {
+      await guard(
+        update(root, {
+          [`leaderPairJoins/${id}/${uid}`]: token,
+          [`hunts/${id}/leaders/${uid}`]: 'device',
+          [`leaderPair/${id}/${token}`]: null,
+          [`userHunts/${uid}/${id}`]: true,
+        }),
+      );
+      await takeField(id);
+    },
+
+    takeField,
+
+    setDeputy: (id, who, on) => guard(update(root, { [`hunts/${id}/leaders/${who}`]: on ? 'deputy' : null })),
+
+    removeLeader: (id, who) => guard(update(root, { [`hunts/${id}/leaders/${who}`]: null })),
+
     rename: (id, name) => guard(update(child(root, `participants/${id}/${uid}`), { name: cleanText(name, LIMITS.name) })),
 
-    withdraw: (id) =>
+    withdraw: async (id) =>
       guard(
         update(root, {
+          // A deputy steps down too (a plain participant may not touch the hunt record).
+          ...((await val(`hunts/${id}/leaders/${uid}`)) ? { [`hunts/${id}/leaders/${uid}`]: null } : {}),
           [`participants/${id}/${uid}`]: null,
           [`positions/${id}/${uid}`]: null,
           [`tracks/${id}/${uid}`]: null,
@@ -212,7 +283,7 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
     setParticipant: (id, who, patch) => guard(update(child(root, `participants/${id}/${who}`), patch)),
 
     removeParticipant: (id, who) =>
-      guard(update(root, { [`participants/${id}/${who}`]: null, [`positions/${id}/${who}`]: null, [`tracks/${id}/${who}`]: null, [`phones/${id}/${who}`]: null })),
+      guard(update(root, { [`participants/${id}/${who}`]: null, [`hunts/${id}/leaders/${who}`]: null, [`positions/${id}/${who}`]: null, [`tracks/${id}/${who}`]: null, [`phones/${id}/${who}`]: null })),
 
     async myHunts() {
       const ids = Object.keys((await guard(get(child(root, `userHunts/${uid}`)))).val() ?? {});
@@ -225,7 +296,7 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
           }
         }),
       );
-      for (const h of hunts) if (h && h.leaderUid === uid && shouldPurge(h, Date.now() + offset)) purge(h.id).catch(() => {});
+      for (const h of hunts) if (h && isLeader(h, uid) && shouldPurge(h, Date.now() + offset)) purge(h.id).catch(() => {});
       const gone = ids.filter((_, i) => !hunts[i]);
       if (gone.length) update(root, Object.fromEntries(gone.map((id) => [`userHunts/${uid}/${id}`, null]))).catch(() => {});
       return hunts.filter((h): h is Hunt => !!h);

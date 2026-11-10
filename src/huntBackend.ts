@@ -30,6 +30,21 @@ export interface HuntBackend {
   newInvite(id: string, exp: number): Promise<string>;
   /** Leader only: make every invitation link of the hunt stop working. */
   revokeInvites(id: string): Promise<void>;
+  /** Leader device: a one-time code (PAIR_MS) that makes another device one of the leader's; replaces older codes. */
+  newLeaderCode(id: string): Promise<{ token: string; exp: number }>;
+  /** Leader device: make the code stop working. */
+  cancelLeaderCode(id: string): Promise<void>;
+  /** On the new device: become one of the leader's devices with the code, then take the leader's place in the field. */
+  pairLeader(id: string, token: string): Promise<void>;
+  /**
+   * Leader device: this device becomes the leader in the field. The leader's row in the
+   * participants list moves here, with the phone number, stands, transport and shots.
+   */
+  takeField(id: string): Promise<void>;
+  /** Leader device: let a confirmed participant lead too (or stop that). */
+  setDeputy(id: string, uid: string, on: boolean): Promise<void>;
+  /** Leader device: remove another of the leader's devices; a deputy can remove themselves. */
+  removeLeader(id: string, uid: string): Promise<void>;
   rename(id: string, name: string): Promise<void>;
   withdraw(id: string): Promise<void>;
   /** Leader only. */

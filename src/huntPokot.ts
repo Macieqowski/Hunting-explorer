@@ -3,8 +3,8 @@
 // Rendering only; state and events live in huntUi.ts.
 
 import { getLang, tt } from './i18n';
-import type { Drive, Hunt, Participant } from './hunt';
-import { GAMES, GAME_GROUPS, NO_SHOOTER, NOTE_MAX, OUTCOMES, bagBySpecies, gameByKey, hunterTotals, huntKing, huntMisser, outOfSeason, shotsByDrive, voivodeshipOf, type GameGroup, type Outcome, type Shot } from './pokot';
+import { isLeader as leads, type Drive, type Hunt, type Participant } from './hunt';
+import { GAMES, GAME_GROUPS, NO_SHOOTER, NOTE_MAX, OUTCOMES, fmtCoords, isBoar, bagBySpecies, gameByKey, hunterTotals, huntKing, huntMisser, outOfSeason, shotsByDrive, voivodeshipOf, type GameGroup, type Outcome, type Shot } from './pokot';
 
 const esc = (s: unknown) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -85,6 +85,21 @@ export const PL = {
   pSign: { pl: 'Podpis prowadzącego polowanie', en: "Hunt leader's signature" },
   pMade: { pl: 'Wygenerowano w aplikacji Polowanie', en: 'Generated with Polowanie' },
   pClose: { pl: 'Zamknij podgląd', en: 'Close preview' },
+  asf: { pl: 'Dziki – miejsca odstrzału (ASF)', en: 'Wild boar – kill sites (ASF)' },
+  asfHint: {
+    pl: 'Współrzędne do dokumentów ASF: miejsce, w którym leży tusza (jeśli zaznaczono je w „Tusze do zabrania”), inaczej miejsce strzału albo stanowisko strzelca. Popraw je przed pobraniem PDF.',
+    en: 'Coordinates for the ASF paperwork: where the carcass lies (if marked under “Carcasses to collect”), else where the shot was fired or the shooter’s stand. Correct them before downloading the PDF.',
+  },
+  asfKeep: {
+    pl: 'Pobierz PDF w ciągu 7 dni po polowaniu: potem miejsca strzałów i tusz są usuwane.',
+    en: 'Download the PDF within 7 days of the hunt: shot and carcass locations are deleted after that.',
+  },
+  cCoords: { pl: 'Współrzędne (WGS84)', en: 'Coordinates (WGS84)' },
+  cSrc: { pl: 'Źródło', en: 'Source' },
+  src_mark: { pl: 'miejsce tuszy', en: 'carcass location' },
+  src_shot: { pl: 'miejsce strzału', en: 'where the shot was fired' },
+  src_seat: { pl: 'stanowisko strzelca', en: "shooter's stand" },
+  src_none: { pl: 'brak – zaznacz miejsce tuszy na mapie', en: 'missing – mark the carcass on the map' },
   pPrint: { pl: 'Drukuj / zapisz PDF', en: 'Print / save PDF' },
 } as const;
 export const pl = (k: keyof typeof PL) => tt(PL[k]);
@@ -107,11 +122,13 @@ export interface PokotCtx {
   busy: boolean;
   error: string;
   clock: (ms: number) => string;
+  /** Where each killed boar lies (shot id → best known position), for the ASF paperwork. */
+  boarAt: Map<string, { at: { lat: number; lng: number } | null; src: 'mark' | 'shot' | 'seat' | null }>;
 }
 
 const shooterName = (c: PokotCtx, uid: string) => (uid === NO_SHOOTER ? pl('noShooter') : c.members.find((p) => p.uid === uid)?.name ?? '?');
 const shooters = (c: PokotCtx) => c.members.filter((p) => p.role !== 'beater');
-const isLeader = (c: PokotCtx) => c.hunt.leaderUid === c.myUid;
+const isLeader = (c: PokotCtx) => leads(c.hunt, c.myUid);
 const locked = (c: PokotCtx) => c.hunt.pokotLockedAt != null;
 const canEdit = (c: PokotCtx, s: Shot) =>
   !locked(c) && (c.hunt.status === 'live' || c.hunt.status === 'ended') && (isLeader(c) || s.uid === c.myUid);
@@ -195,6 +212,38 @@ const bagLine = (c: PokotCtx) => {
   return bag.length ? bag.map(([k, n]) => `<span class="hp-bag-item"><strong>${esc(k)}</strong> ${n}</span>`).join('') : `<span class="muted">${pl('bagEmpty')}</span>`;
 };
 
+/** Killed boar with where they lie, in shot order. */
+const boars = (c: PokotCtx) =>
+  c.shots
+    .filter((s) => s.outcome === 'kill' && isBoar(s.game))
+    .map((s) => ({ s, ...(c.boarAt.get(s.id) ?? { at: null, src: null }) }));
+
+function asfTable(c: PokotCtx, forPrint: boolean): string {
+  const list = boars(c);
+  if (!list.length) return '';
+  const drive = (id: string | null) => c.drives.find((d) => d.id === id)?.name ?? pl('outsideDrive');
+  const rows = list
+    .map(({ s, at, src }, i) => {
+      const xy = at ? fmtCoords(at.lat, at.lng) : null;
+      const where = xy
+        ? `<strong>${xy.dec}</strong><br><small>${xy.dms}</small>`
+        : `<span class="hp-warn">${pl('src_none')}</span>`;
+      return `<tr><td>${i + 1}</td><td>${esc(gameName(s.game))}</td><td>${esc(shooterName(c, s.uid))}</td><td>${esc(drive(s.driveId))}, ${c.clock(s.ts)}</td><td>${where}</td><td>${src ? pl(`src_${src}`) : ''}</td></tr>`;
+    })
+    .join('');
+  if (!forPrint)
+    // On a phone a six-column table does not fit: one line per boar instead.
+    return `<ol class="hp-asf">${list
+      .map(({ s, at, src }) => {
+        const xy = at ? fmtCoords(at.lat, at.lng) : null;
+        return `<li><strong>${esc(gameName(s.game))}</strong> <span class="muted small">· ${esc(shooterName(c, s.uid))} · ${esc(drive(s.driveId))}, ${c.clock(s.ts)}</span><br>${
+          xy ? `<span class="hp-xy">${xy.dec}</span> <span class="muted small">(${pl(`src_${src!}`)})</span><br><small class="muted">${xy.dms}</small>` : `<span class="hp-warn">${pl('src_none')}</span>`
+        }</li>`;
+      })
+      .join('')}</ol>`;
+  return `<table class="pp-table"><thead><tr><th>${pl('pNo')}</th><th>${pl('fGame')}</th><th>${pl('fShooter')}</th><th>${pl('fDrive')}, ${pl('pTime').toLocaleLowerCase()}</th><th>${pl('cCoords')}</th><th>${pl('cSrc')}</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
 const driveTimes = (c: PokotCtx, d: Drive) => (d.startedAt != null ? `${c.clock(d.startedAt)}–${d.endedAt != null ? c.clock(d.endedAt) : '…'}` : `${d.start}–${d.end}`);
 
 /** The panel under the live map. */
@@ -242,6 +291,7 @@ export function renderPokot(c: PokotCtx): string {
     <div class="hp-bag">${bagLine(c)}</div>
     ${list}
     <h4>${pl('hunters')}</h4>${totalsTable(c, false)}
+    ${boars(c).length ? `<h4>${pl('asf')}</h4><p class="small muted">${pl('asfHint')}</p>${asfTable(c, false)}<p class="small">${pl('asfKeep')}</p>` : ''}
     ${leaderCtl}
     <div class="h-actions"><button type="button" class="btn small ghost" data-hunt="pokotPdf">${pl('pdf')}</button></div>
     <p class="muted small">${pl('pdfHint')} ${pl('retention')}</p>
@@ -288,6 +338,7 @@ export function renderPokotPrint(c: PokotCtx, fmtDate: (d: string) => string): s
     ${rows ? `<table class="pp-table"><thead><tr><th>${pl('pNo')}</th><th>${pl('fGame')}</th><th>${pl('fShooter')}</th><th>${pl('pTime')}</th><th>${pl('fNote')}</th></tr></thead><tbody>${rows}</tbody></table>` : ''}
     <h2>${pl('hunters')}</h2>
     ${totalsTable(c, true)}
+    ${boars(c).length ? `<h2>${pl('asf')}</h2>${asfTable(c, true)}` : ''}
     <div class="pp-sign"><span></span>${pl('pSign')}</div>
     <p class="pp-foot">${pl('pMade')} · ${esc(new Date().toLocaleString(getLang() === 'pl' ? 'pl-PL' : 'en-GB'))}</p>
   </article>`;
