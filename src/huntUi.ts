@@ -82,7 +82,7 @@ import {
 import { setGuide, guideCardHtml, guideLine, guideFix, enableCompass, type GuideText, type GuideTarget } from './huntGuide';
 import { Sharer } from './huntShare';
 import { publicBase, canShare, shareLink, copyText, printPage, saveTextFile, isApp } from './platform';
-import { alertUser, vibrate } from './native';
+import { alertUser, vibrate, tick } from './native';
 import { openPocket, updatePocket } from './huntPocket';
 import { roleIcon, speciesIcon, standIcon } from './huntIcons';
 import { standsFromFile, sortStands, parseLatLng, fmtLatLng, nextStandName, STAND_LIMITS, type Stand, type StandKind } from './stands';
@@ -860,6 +860,20 @@ export function huntBack(): boolean {
   else setFieldMode(false);
   rerender();
   return true;
+}
+/**
+ * The phone's back button in the app. True when the hunt page dealt with it: the pocket screen
+ * and a leader's message stay (they are closed on purpose only), a report or shot sheet closes,
+ * then the field-mode list, then field mode.
+ */
+export function huntPhoneBack(): boolean {
+  if (document.querySelector('#pp-root, .hmsg-sheet')) return true;
+  if (document.querySelector('.hs-sheet')) {
+    closeReport();
+    closeShotSheet();
+    return true;
+  }
+  return huntBack();
 }
 /** These actions point at something on the map, so whatever covers it steps aside. */
 const MAP_ACTIONS = new Set(['carcassShow', 'carcassPick', 'carcassGuide', 'sightShow', 'standShow', 'meetPick', 'centerMe', 'fitAll']);
@@ -3046,13 +3060,16 @@ export function handleHuntClick(el: HTMLElement): boolean {
       htab = el.dataset.pane as HTab;
       break;
     case 'fieldOn':
+      tick();
       setFieldMode(true);
       break;
     case 'fieldOff':
+      tick();
       setFieldMode(false);
       htab = 'field';
       break;
     case 'fieldPanel':
+      tick();
       fieldPanel = (el.dataset.panel as FieldPanel) || null;
       fieldPanelScroll = 0;
       break;
@@ -3356,6 +3373,7 @@ export function handleHuntClick(el: HTMLElement): boolean {
       break;
     }
     case 'sightOpen':
+      tick();
       openSightReport();
       return true;
     case 'shotFire':

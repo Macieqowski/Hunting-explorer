@@ -24,6 +24,9 @@ interface AlertsPlugin {
   notify(o: { title: string; text: string }): Promise<void>;
   clear(): Promise<void>;
 }
+interface BarsPlugin {
+  set(o: { color: string; dark: boolean }): Promise<void>;
+}
 export interface NativeHeading {
   heading: number | null;
   accuracy: number | null;
@@ -37,6 +40,7 @@ interface CompassPlugin {
 
 const BackgroundLocation = registerPlugin<BackgroundLocationPlugin>('BackgroundLocation');
 const Alerts = registerPlugin<AlertsPlugin>('Alerts');
+const Bars = registerPlugin<BarsPlugin>('Bars');
 const Compass = registerPlugin<CompassPlugin>('Compass');
 
 // ---------------------------------------------------------------- location with the screen off
@@ -98,6 +102,11 @@ export function vibrate(pattern: number | readonly number[], alarm = false): voi
   }
 }
 
+/** A barely felt tick under the finger for the big field buttons. App only: browsers buzz too long for this. */
+export function tick(): void {
+  if (isApp()) void Alerts.vibrate({ pattern: [12] }).catch(() => {});
+}
+
 /**
  * A hunt alert (message, drive start, game coming): buzzes with `pattern`, and in the app also
  * shows a notification while the app is not on screen, so it reaches a phone in the pocket.
@@ -109,7 +118,7 @@ export function alertUser(title: string, text: string, pattern: readonly number[
 
 if (isApp()) {
   // For the app's smoke test (android workflow), which checks that the plugins are there.
-  console.info(`[polowanie] plugins ${['Printer', 'BackgroundLocation', 'Alerts', 'Compass'].filter((p) => Capacitor.isPluginAvailable(p)).join(',')}`);
+  console.info(`[polowanie] plugins ${['Printer', 'BackgroundLocation', 'Alerts', 'Compass', 'Bars'].filter((p) => Capacitor.isPluginAvailable(p)).join(',')}`);
   document.addEventListener('visibilitychange', () => {
     // Back on screen: the alerts are visible in the app itself.
     if (document.visibilityState === 'visible') void Alerts.clear().catch(() => {});
@@ -136,4 +145,18 @@ export async function listenNativeCompass(cb: (h: NativeHeading) => void): Promi
     void handle.remove();
     void Compass.stop().catch(() => {});
   };
+}
+
+// ---------------------------------------------------------------- system bars
+
+/** Colours of the app's own top and bottom bars (--surface in src/tokens.css). */
+const BAR_COLOR = { light: '#ffffff', dark: '#1a201c' } as const;
+
+/**
+ * App only: the phone's status bar and navigation bar take the colour of the app's bars, with
+ * dark or light system icons to match. The look is chosen in the app, so Android cannot guess it.
+ */
+export function setSystemBars(theme: 'light' | 'dark'): void {
+  if (!isApp() || !Capacitor.isPluginAvailable('Bars')) return;
+  void Bars.set({ color: BAR_COLOR[theme], dark: theme === 'dark' }).catch(() => {});
 }

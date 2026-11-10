@@ -24,14 +24,14 @@ import { SEASONS, isOpen, effective, formatRanges, yearFrac, openOnlyIn, type Se
 import { renderExams, handleExamClick, handleExamChange, drillSpecies } from './examUi';
 import { renderWeather, handleWeatherClick, handleWeatherInput, handleWeatherSubmit, showWeatherAt } from './weatherUi';
 import { renderBallistics, handleBallisticsClick, handleBallisticsChange, handleBallisticsSubmit } from './ballisticsUi';
-import { renderHunts, handleHuntClick, handleHuntInput, handleHuntSubmit, handleHuntChange, leaveHunts, mountHuntMap, huntBack } from './huntUi';
+import { renderHunts, handleHuntClick, handleHuntInput, handleHuntSubmit, handleHuntChange, leaveHunts, mountHuntMap, huntBack, huntPhoneBack } from './huntUi';
 import { renderAtlas, handleAtlasClick, handleAtlasInput, setAtlasVoivodeship } from './atlasUi';
 import { speciesForSeason } from './atlas';
 import { initOffline, onOfflineChange } from './offline';
 import { initOfflineUi, renderOffline, handleOfflineEvent, startDraft } from './offlineUi';
 import type { AreaTarget } from './offline';
 import { loadDistrictList, checkDistrictUpdate, type DistrictList, type SnapshotMeta } from './districtData';
-import { isApp, publicHref, copyText, initDeepLinks, appVersion, checkForAppUpdate, dismissUpdate, APK_URL } from './platform';
+import { isApp, publicHref, copyText, initDeepLinks, appVersion, checkForAppUpdate, dismissUpdate, onBackButton, minimizeApp, APK_URL } from './platform';
 
 // ---------------------------------------------------------------- helpers
 
@@ -1079,6 +1079,14 @@ navigate(hashToView(location.hash), false);
 load();
 // App only: links to www.polowanie.org opened on the phone land here, and new APKs are announced.
 void initDeepLinks((hash) => navigate(hashToView(hash)));
+// App only: the phone's back button closes what is on top, then goes one screen back. On the first
+// screen it puts the app aside instead of closing it, so location sharing on a hunt goes on.
+void onBackButton((canGoBack) => {
+  if (huntPhoneBack()) return;
+  if (sheet.active() && areaOf(state.view) === 'map' && sheet.get() === 'full') return sheet.set('half');
+  if (canGoBack) history.back();
+  else void minimizeApp();
+});
 void appVersion().then((v) => {
   installedVersion = v;
   if (v) void checkForAppUpdate(showUpdateBanner);

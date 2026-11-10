@@ -89,6 +89,23 @@ export async function initDeepLinks(go: (hash: string) => void): Promise<void> {
   open((await App.getLaunchUrl())?.url);
 }
 
+/**
+ * App only: the phone's back button (or back gesture). `onBack` gets whether there is an earlier
+ * screen in the history; with a listener in place Capacitor does nothing by itself.
+ */
+export async function onBackButton(onBack: (canGoBack: boolean) => void): Promise<void> {
+  if (!isApp()) return;
+  const { App } = await import('@capacitor/app');
+  await App.addListener('backButton', (e) => onBack(e.canGoBack));
+}
+
+/** App only: puts the app aside like the home button does. Location sharing goes on. */
+export async function minimizeApp(): Promise<void> {
+  if (!isApp()) return;
+  const { App } = await import('@capacitor/app');
+  await App.minimizeApp();
+}
+
 /** Version of the installed app (e.g. "0.1.0"), or null on the website. */
 export async function appVersion(): Promise<string | null> {
   if (!isApp()) return null;

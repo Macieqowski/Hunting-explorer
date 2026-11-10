@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#166534</color>
+    <!-- Brand green (src/tokens.css, accent of the light look). -->
+    <color name="ic_launcher_background">#1E5A3A</color>
+    <!-- Launch screen: green by day, graphite when the phone is in dark mode (values-night). -->
+    <color name="splash_background">#1E5A3A</color>
 </resources>

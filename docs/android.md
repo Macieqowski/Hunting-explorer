@@ -12,11 +12,14 @@ All of it lives in `src/platform.ts`:
 - No service worker: the files are inside the APK.
 - Once in 12 hours the app asks GitHub for the newest release and shows a bar when there is a newer APK.
 - On a phone whose WebView is older than Chrome 87 it shows `public/webview-update.html`.
+- The phone's back button closes what is on top (a report sheet, the field-mode list, field mode), then goes one screen back; on the first screen it puts the app aside instead of closing it, so location sharing goes on. The pocket screen and a leader's message ignore it.
+- The big field-mode buttons give a short tick under the finger.
 
 Native features (`src/native.ts`, plugins in `android/app/src/main/java/org/polowanie/app/`):
 
 - **Location sharing with the screen off** (`BackgroundLocationPlugin`, `LocationService`): a foreground service with a notification ("Polowanie: udostępniasz położenie" + Stop) sends positions while the phone is locked. It uses Android's own location providers, so it also works without Google Play services. The beater guidance gets these positions too, so it buzzes off-route with the phone in the pocket. Swiping the app away stops sharing.
 - **Alerts** (`AlertsPlugin`): vibration patterns that work without a recent tap and with the screen off (alarm vibrations, so also in silent mode), and a notification for leader messages, drive start/end, game coming your way, wounded game and carcasses to collect while the app is not on screen. No sound.
+- **System bars** (`BarsPlugin`): the status bar and the navigation bar take the colour of the app's own bars and dark or light icons, following the look chosen in the app (which may differ from the phone's dark mode).
 - **Compass** (`CompassPlugin`): Android's rotation-vector sensor, which also says when it needs calibrating (figure-eight hint).
 - **Offline maps**: tiles of saved areas are files in the app's storage (`src/tileFiles.ts`) instead of the WebView's database, which Android may clear when the phone is low on space.
 
@@ -56,3 +59,7 @@ cd android && ./gradlew assembleDebug   # android/app/build/outputs/apk/debug/ap
 For a signed release build set `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` and run `npm run android:apk`. Firebase needs the same `VITE_FIREBASE_*` variables as the website build.
 
 Install on a phone with USB debugging: `adb install -r polowanie.apk`. Logs: `adb logcat -s Capacitor/Console`.
+
+## Icons and launch screen
+
+All icons are drawn from the brand mark (`branding/mark.svg`, a map pin with a spruce) by `node scripts/make-icons.mjs`: the website icons in `public/`, the launcher icons (`mipmap-*`) and the Android 9–11 launch screens (`drawable*/splash.png`). On Android 12+ the launch screen is the icon on brand green, or on graphite when the phone is in dark mode (`values/styles.xml`, `values-night/colors.xml`). The script needs the `playwright` package; the images are committed, so it only runs when the mark changes.
