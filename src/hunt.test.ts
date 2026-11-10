@@ -15,6 +15,7 @@ const base: Hunt = {
   endedAt: null,
   pokotLockedAt: null,
   pokotTitles: false,
+  meet: null,
   district: null,
 };
 
@@ -141,7 +142,7 @@ describe('drives', () => {
     [52.2, 21.1],
     [52.2, 21.2],
   ];
-  const d = (name: string, start: string, end: string, startedAt: number | null = null, endedAt: number | null = null) => ({ id: name, name, start, end, area, startedAt, endedAt });
+  const d = (name: string, start: string, end: string, startedAt: number | null = null, endedAt: number | null = null) => ({ id: name, name, start, end, area, startedAt, endedAt, meet: null });
 
   it('validates name, times and corners', () => {
     expect(validateDrive({ name: 'Miot 1', start: '08:30', end: '09:30', area })).toEqual([]);
@@ -171,8 +172,8 @@ describe('drives', () => {
     expect(nextDriveDefaults([d('Miot 1', '23:00', '23:50')], { start: '22:00' })).toEqual({ name: 'Miot 2', start: '00:05', end: '01:05' });
   });
   it('parses stored drives and ignores broken ones', () => {
-    const ds = parseDrives({ d1: { name: 'Miot 1', start: '08:00', end: '09:00', area: '52,21;52.1,21;52.1,21.1', startedAt: 5 }, d2: { name: 1 }, d3: null });
-    expect(ds).toEqual([{ id: 'd1', name: 'Miot 1', start: '08:00', end: '09:00', area: [[52, 21], [52.1, 21], [52.1, 21.1]], startedAt: 5, endedAt: null }]);
+    const ds = parseDrives({ d1: { name: 'Miot 1', start: '08:00', end: '09:00', area: '52,21;52.1,21;52.1,21.1', startedAt: 5, meet: '52.05,21.02' }, d2: { name: 1 }, d3: null });
+    expect(ds).toEqual([{ id: 'd1', name: 'Miot 1', start: '08:00', end: '09:00', area: [[52, 21], [52.1, 21], [52.1, 21.1]], startedAt: 5, endedAt: null, meet: { lat: 52.05, lng: 21.02 } }]);
   });
   it('splits a track by drive and adds drive areas to the GPX', () => {
     const ds = [d('Miot 1', '08:00', '09:00', 100, 200), d('Miot 2', '09:00', '10:00', 300, 400)];

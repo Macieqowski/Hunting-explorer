@@ -38,6 +38,8 @@ export interface Hunt extends HuntInput {
   pokotLockedAt: number | null;
   /** Show the hunt king and the misser on the pokot. */
   pokotTitles: boolean;
+  /** Meeting point (zbiórka) on the map, set by the leader. */
+  meet: { lat: number; lng: number } | null;
 }
 
 /** Last known position of one participant. */
@@ -165,7 +167,14 @@ export function parseHunt(id: string, v: unknown): Hunt | null {
     pokotLockedAt: typeof o.pokotLockedAt === 'number' ? o.pokotLockedAt : null,
     pokotTitles: o.pokotTitles === true,
     district: parseDistrict(o.district),
+    meet: parseMeet(o.meet),
   };
+}
+
+/** A single point stored as "lat,lng". */
+export function parseMeet(v: unknown): { lat: number; lng: number } | null {
+  const [p] = decodeArea(v);
+  return p ? { lat: p[0], lng: p[1] } : null;
 }
 
 function parseDistrict(v: unknown): HuntDistrict | null {
@@ -353,6 +362,8 @@ export interface Drive extends DriveInput {
   /** Server time when the leader started / ended it; null while planned / running. */
   startedAt: number | null;
   endedAt: number | null;
+  /** Where everyone gathers after this drive (zbiórka po miocie); null = the hunt's meeting point. */
+  meet: { lat: number; lng: number } | null;
 }
 
 export type DriveState = 'planned' | 'active' | 'done';
@@ -429,6 +440,7 @@ export function parseDrives(v: unknown): Drive[] {
       area: decodeArea(o.area),
       startedAt: isNum(o.startedAt) ? o.startedAt : null,
       endedAt: isNum(o.startedAt) && isNum(o.endedAt) ? o.endedAt : null,
+      meet: parseMeet(o.meet),
     });
   }
   return out;

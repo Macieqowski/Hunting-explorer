@@ -9,6 +9,7 @@ import { parseShots, parseShotSpots, NOTE_MAX, type ShotInput } from './pokot';
 import { parseStands, encodeStands } from './stands';
 import { newInviteToken, inviteExpiry, parseInvites } from './invite';
 import { HuntError, type FirebaseConfig, type HuntBackend } from './huntBackend';
+import { encodePt, encodeRoute, parseAllRoutes, parseSeats, parsePhones, parseTransport, parseMessages, parseAcks, parseCarcassMarks, cleanPhone, cleanSeat, cleanMessage, CARCASS_KINDS, CREW_LIMITS } from './huntCrew';
 
 function wrap(e: unknown): HuntError {
   const msg = String((e as Error)?.message ?? e);
@@ -62,7 +63,28 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
   const root = ref(db);
   let offset = 0;
   onValue(ref(db, '.info/serverTimeOffset'), (s) => (offset = Number(s.val()) || 0));
-  const purge = (id: string) => update(root, { [`positions/${id}`]: null, [`tracks/${id}`]: null, [`sightings/${id}`]: null, [`shotSpots/${id}`]: null });
+  // Locations and personal data go RETENTION_MS after the end; the plan (drives, routes, stands) stays with the hunt.
+  const purge = (id: string) =>
+    update(root, {
+      [`positions/${id}`]: null,
+      [`tracks/${id}`]: null,
+      [`sightings/${id}`]: null,
+      [`shotSpots/${id}`]: null,
+      [`phones/${id}`]: null,
+      [`messages/${id}`]: null,
+      [`msgAcks/${id}`]: null,
+      [`carcasses/${id}`]: null,
+    });
+  const watch = <T>(path: string, parse: (v: unknown) => T, cb: (v: T) => void, onDenied: () => void) =>
+    onValue(
+      child(root, path),
+      (s) => cb(parse(s.val())),
+      () => onDenied(),
+    );
+  const phoneRec = (id: string, phone: string | null | undefined) => {
+    const p = phone ? cleanPhone(phone) : null;
+    return p ? { [`phones/${id}/${uid}`]: p } : {};
+  };
 
   return {
     uid,
@@ -105,6 +127,13 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
           [`sightings/${id}`]: null,
           [`shots/${id}`]: null,
           [`shotSpots/${id}`]: null,
+          [`routes/${id}`]: null,
+          [`seats/${id}`]: null,
+          [`phones/${id}`]: null,
+          [`transport/${id}`]: null,
+          [`messages/${id}`]: null,
+          [`msgAcks/${id}`]: null,
+          [`carcasses/${id}`]: null,
           [`joins/${id}/${uid}`]: null,
           [`invites/${id}`]: null,
           // Other people's "my hunts" entries are cleaned up by their own browsers (see myHunts).
@@ -128,22 +157,24 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
       );
     },
 
-    join: (id, name, role, passphrase) =>
+    join: (id, name, role, passphrase, phone) =>
       guard(
         update(root, {
           [`joins/${id}/${uid}`]: passphrase.trim(),
           [`club/members/${uid}`]: passphrase.trim(),
           [`participants/${id}/${uid}`]: { name: cleanText(name, LIMITS.name), role, status: 'registered', joinedAt: serverTimestamp() },
           [`userHunts/${uid}/${id}`]: true,
+          ...phoneRec(id, phone),
         }),
       ),
 
-    joinByInvite: (id, name, role, token) =>
+    joinByInvite: (id, name, role, token, phone) =>
       guard(
         update(root, {
           [`inviteJoins/${id}/${uid}`]: token,
           [`participants/${id}/${uid}`]: { name: cleanText(name, LIMITS.name), role, status: 'registered', joinedAt: serverTimestamp() },
           [`userHunts/${uid}/${id}`]: true,
+          ...phoneRec(id, phone),
         }),
       ),
 
@@ -173,6 +204,7 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
           [`tracks/${id}/${uid}`]: null,
           [`joins/${id}/${uid}`]: null,
           [`inviteJoins/${id}/${uid}`]: null,
+          [`phones/${id}/${uid}`]: null,
           [`userHunts/${uid}/${id}`]: null,
         }),
       ),
@@ -180,7 +212,7 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
     setParticipant: (id, who, patch) => guard(update(child(root, `participants/${id}/${who}`), patch)),
 
     removeParticipant: (id, who) =>
-      guard(update(root, { [`participants/${id}/${who}`]: null, [`positions/${id}/${who}`]: null, [`tracks/${id}/${who}`]: null })),
+      guard(update(root, { [`participants/${id}/${who}`]: null, [`positions/${id}/${who}`]: null, [`tracks/${id}/${who}`]: null, [`phones/${id}/${who}`]: null })),
 
     async myHunts() {
       const ids = Object.keys((await guard(get(child(root, `userHunts/${uid}`)))).val() ?? {});
@@ -251,7 +283,7 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
       return key;
     },
 
-    deleteDrive: (id, driveId) => guard(update(root, { [`drives/${id}/${driveId}`]: null })),
+    deleteDrive: (id, driveId) => guard(update(root, { [`drives/${id}/${driveId}`]: null, [`routes/${id}/${driveId}`]: null, [`seats/${id}/${driveId}`]: null })),
 
     startDrive: (id, driveId, running) =>
       guard(
@@ -353,12 +385,74 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
       return guard(update(child(root, `shots/${id}/${sid}`), upd));
     },
 
-    deleteShot: (id, sid) => guard(update(root, { [`shots/${id}/${sid}`]: null, [`shotSpots/${id}/${sid}`]: null })),
+    deleteShot: (id, sid) => guard(update(root, { [`shots/${id}/${sid}`]: null, [`shotSpots/${id}/${sid}`]: null, [`carcasses/${id}/${sid}`]: null })),
 
     lockPokot: (id, locked) => guard(update(child(root, `hunts/${id}`), { pokotLockedAt: locked ? serverTimestamp() : null })),
 
     setPokotTitles: (id, on) => guard(update(child(root, `hunts/${id}`), { pokotTitles: on })),
 
     endDrive: (id, driveId) => guard(update(root, { [`drives/${id}/${driveId}/endedAt`]: serverTimestamp() })),
+
+    setHuntMeet: (id, at) => guard(update(child(root, `hunts/${id}`), { meet: at ? encodePt(at) : null })),
+
+    setDriveMeet: (id, driveId, at) => guard(update(child(root, `drives/${id}/${driveId}`), { meet: at ? encodePt(at) : null })),
+
+    watchRoutes: (id, cb, onDenied) => watch(`routes/${id}`, parseAllRoutes, cb, onDenied),
+
+    saveRoutes: (id, driveId, routes) =>
+      guard(
+        set(
+          child(root, `routes/${id}/${driveId}`),
+          routes.size ? Object.fromEntries([...routes].filter(([, r]) => r.length >= 2).map(([who, r]) => [who, encodeRoute(r.slice(0, CREW_LIMITS.routePoints))])) : null,
+        ),
+      ),
+
+    watchSeats: (id, cb, onDenied) => watch(`seats/${id}`, parseSeats, cb, onDenied),
+
+    setSeat: (id, driveId, who, seat) => {
+      const v = seat ? cleanSeat(seat) : '';
+      return guard(set(child(root, `seats/${id}/${driveId}/${who}`), v || null));
+    },
+
+    watchPhones: (id, cb, onDenied) => watch(`phones/${id}`, parsePhones, cb, onDenied),
+
+    setPhone: (id, phone) => guard(set(child(root, `phones/${id}/${uid}`), (phone && cleanPhone(phone)) || null)),
+
+    watchTransport: (id, cb, onDenied) => watch(`transport/${id}`, parseTransport, cb, onDenied),
+
+    saveTransport: (id, t) => {
+      const rec: Record<string, unknown> = {};
+      for (const k of CARCASS_KINDS) {
+        const c = t[k];
+        if (!c) continue;
+        if ('uid' in c) rec[k] = { uid: c.uid };
+        else {
+          const phone = cleanPhone(c.phone);
+          const name = cleanText(c.name, CREW_LIMITS.transportName);
+          if (phone && name) rec[k] = { name, phone };
+        }
+      }
+      return guard(set(child(root, `transport/${id}`), Object.keys(rec).length ? rec : null));
+    },
+
+    watchMessages: (id, cb, onDenied) => watch(`messages/${id}`, parseMessages, cb, onDenied),
+
+    async sendMessage(id, text, to) {
+      const key = push(child(root, `messages/${id}`)).key!;
+      await guard(set(child(root, `messages/${id}/${key}`), { text: cleanMessage(text), to, ts: serverTimestamp() }));
+    },
+
+    deleteMessage: (id, msgId) => guard(update(root, { [`messages/${id}/${msgId}`]: null, [`msgAcks/${id}/${msgId}`]: null })),
+
+    watchAcks: (id, cb, onDenied) => watch(`msgAcks/${id}`, parseAcks, cb, onDenied),
+
+    ackMessage: (id, msgId) => guard(set(child(root, `msgAcks/${id}/${msgId}/${uid}`), serverTimestamp())),
+
+    watchCarcasses: (id, cb, onDenied) => watch(`carcasses/${id}`, parseCarcassMarks, cb, onDenied),
+
+    moveCarcass: (id, sid, at) => guard(update(child(root, `carcasses/${id}/${sid}`), { lat: +at.lat.toFixed(6), lng: +at.lng.toFixed(6) })),
+
+    pickCarcass: (id, sid, picked) =>
+      guard(update(child(root, `carcasses/${id}/${sid}`), picked ? { pickedBy: uid, pickedAt: serverTimestamp() } : { pickedBy: null, pickedAt: null })),
   };
 }
