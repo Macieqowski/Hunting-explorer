@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Polowanie – zaktualizuj WebView</title>
+<style>
+  body { margin: 0; padding: 32px 20px; font: 16px/1.5 sans-serif; background: #f6f5f0; color: #1c1f1a; }
+  h1 { font-size: 20px; color: #166534; }
+  a.btn { display: inline-block; margin: 8px 0; padding: 10px 16px; border-radius: 8px; background: #166534; color: #fff; text-decoration: none; }
+  @media (prefers-color-scheme: dark) { body { background: #12140f; color: #e8eae3; } h1 { color: #4ade80; } }
+</style>
+</head>
+<body>
+  <!-- Shown by the Android app when the phone's WebView is too old to run it (capacitor.config.ts → errorPath). -->
+  <h1>Zaktualizuj Android System WebView</h1>
+  <p>Aplikacja Polowanie działa w składniku Androida „Android System WebView”. Na tym telefonie jest on zbyt stary.</p>
+  <p>Zaktualizuj go w Google Play, a potem uruchom aplikację ponownie.</p>
+  <p><a class="btn" href="market://details?id=com.google.android.webview">Otwórz w Google Play</a></p>
+  <p>Jeśli przycisk nie działa: Google Play → wyszukaj „Android System WebView” → Aktualizuj. Warto też zaktualizować Chrome.</p>
+</body>
+</html>

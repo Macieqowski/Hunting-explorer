@@ -81,6 +81,7 @@ import {
 } from './huntCrew';
 import { setGuide, guideCardHtml, guideLine, enableCompass, type GuideText, type GuideTarget } from './huntGuide';
 import { Sharer } from './huntShare';
+import { publicBase, canShare, shareLink, copyText, printPage, saveTextFile } from './platform';
 import { openPocket, updatePocket } from './huntPocket';
 import { roleIcon, speciesIcon, standIcon } from './huntIcons';
 import { standsFromFile, sortStands, parseLatLng, fmtLatLng, nextStandName, STAND_LIMITS, type Stand, type StandKind } from './stands';
@@ -1285,7 +1286,7 @@ function openPokotPrint() {
   el.innerHTML = renderPokotPrint(pokotCtx(h), (d) => fmtDate(d));
   el.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('[data-pp]');
-    if (b?.dataset.pp === 'print') window.print();
+    if (b?.dataset.pp === 'print') printPage();
     else if (b?.dataset.pp === 'close') closePokotPrint();
   });
   document.body.append(el);
@@ -1400,12 +1401,7 @@ function exportGpx() {
       }
       const sights = sightings.map((s) => ({ s, label: `${sightName(s)} → ${Math.round(s.heading)}°` }));
       const gpx = toGpx(h.name, tracks, positions, people(), (r) => l(`r_${r}`), drives, sights);
-      const url = URL.createObjectURL(new Blob([gpx], { type: 'application/gpx+xml' }));
-      const a = Object.assign(document.createElement('a'), { href: url, download: gpxFileName(h) });
-      document.body.append(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      void saveTextFile(gpxFileName(h), 'application/gpx+xml', gpx).catch(() => {});
     },
     () => {},
   );
@@ -2143,7 +2139,7 @@ function renderInvite(h: Hunt): string {
            <button type="button" class="btn small ghost danger-text" data-hunt="askRevoke">${l('inviteRevoke')}</button>`;
     body = `<p class="small muted">${l('inviteHint')}</p>
       <div class="h-invite"><input type="text" readonly value="${esc(url)}" aria-label="${l('invite')}" data-hunt-select />
-        ${'share' in navigator ? `<button type="button" class="btn" data-hunt="share">${l('share')}</button>` : ''}
+        ${canShare() ? `<button type="button" class="btn" data-hunt="share">${l('share')}</button>` : ''}
         ${copyBtn('invite')}
         <button type="button" class="btn ghost" data-hunt="qr" aria-expanded="${qrOpen}">${qrOpen ? l('qrHide') : l('qrShow')}</button></div>
       ${qrOpen ? `<figure class="h-qr">${qr?.url === url ? qr.svg : `<p class="muted small">${l('loading')}</p>`}<figcaption class="small muted">${esc(h.name)} · ${l('qrHint')}</figcaption></figure>` : ''}
@@ -2803,7 +2799,7 @@ function renderMessages(isLeader: boolean, h: Hunt): string {
     ${hist.length ? `<ul class="hmsg-list">${hist.join('')}</ul>` : `<p class="muted small">${l('msgNone')}</p>`}</details>`;
 }
 
-const appBase = () => `${location.origin}${location.pathname}`;
+const appBase = publicBase;
 const inviteUrl = (id: string) => `${appBase()}#/polowanie/${id}`;
 /** The link the share button sends: the invitation if there is one. */
 function shareUrl(id: string): string {
@@ -3322,7 +3318,7 @@ export function handleHuntClick(el: HTMLElement): boolean {
       return true;
     case 'share':
       if (id && hunt)
-        navigator.share?.({ title: hunt.name, text: `${hunt.name} – ${fmtDate(hunt.date)} ${hunt.start}`, url: shareUrl(id) }).catch(() => {});
+        void shareLink({ title: hunt.name, text: `${hunt.name} – ${fmtDate(hunt.date)} ${hunt.start}`, url: shareUrl(id) });
       return true;
     case 'qr':
       qrOpen = !qrOpen;
@@ -3456,14 +3452,14 @@ export function handleHuntClick(el: HTMLElement): boolean {
     case 'copy': {
       const what = el.dataset.what ?? 'invite';
       if (id)
-        navigator.clipboard?.writeText(what === 'club' ? inviteUrl(id) : shareUrl(id)).then(() => {
+        copyText(what === 'club' ? inviteUrl(id) : shareUrl(id)).then(() => {
           copied = what;
           rerender();
           setTimeout(() => {
             copied = null;
             rerender();
           }, 2000);
-        });
+        }, () => {});
       return true;
     }
   }

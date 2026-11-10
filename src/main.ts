@@ -24,6 +24,7 @@ import { speciesForSeason } from './atlas';
 import { initOffline, onOfflineChange } from './offline';
 import { initOfflineUi, renderOffline, handleOfflineEvent, startDraft } from './offlineUi';
 import type { AreaTarget } from './offline';
+import { isApp, publicHref, copyText, initDeepLinks, appVersion, checkForAppUpdate, dismissUpdate, APK_URL } from './platform';
 
 // ---------------------------------------------------------------- helpers
 
@@ -619,9 +620,53 @@ function renderSeasons() {
     <p class="muted small"><a href="https://api.sejm.gov.pl/eli/acts/DU/2023/99/text.html" target="_blank" rel="noopener">Dz.U. 2023 poz. 99 ↗</a></p>`;
 }
 
+let installedVersion: string | null = null;
+
+/** A bar at the bottom: a newer APK is out. Dismissing it hides this version for good. */
+function showUpdateBanner(version: string, url: string) {
+  const pl = getLang() === 'pl';
+  document.getElementById('app-update')?.remove();
+  const el = document.createElement('div');
+  el.id = 'app-update';
+  el.className = 'app-update';
+  el.setAttribute('role', 'status');
+  el.innerHTML = `<span>${pl ? `Jest nowa wersja aplikacji (${esc(version)}).` : `A new version of the app is out (${esc(version)}).`}</span>
+    <a class="btn small" href="${esc(url)}" target="_blank" rel="noopener">${pl ? 'Pobierz' : 'Download'}</a>
+    <button type="button" class="btn small ghost" aria-label="${pl ? 'Zamknij' : 'Close'}">✕</button>`;
+  el.querySelector('button')!.addEventListener('click', () => {
+    dismissUpdate(version);
+    el.remove();
+  });
+  document.body.append(el);
+}
+
+/** About page: the app's version in the app, the APK download with install steps on the website. */
+function renderAppBox(pl: boolean) {
+  if (isApp())
+    return `<section class="app-box"><h2>${pl ? 'Aplikacja' : 'App'}</h2>
+      <p>${pl ? 'Wersja' : 'Version'} ${esc(installedVersion ?? '…')}</p>
+      <p><button type="button" class="btn ghost" data-action="appUpdate">${pl ? 'Sprawdź aktualizację' : 'Check for updates'}</button></p></section>`;
+  return pl
+    ? `<section class="app-box"><h2>Aplikacja na Androida</h2>
+      <p>Ta sama aplikacja do zainstalowania na telefonie z Androidem 9 lub nowszym. Na razie nie ma jej w Google Play, instaluje się ją z pliku.</p>
+      <p><a class="btn" href="${APK_URL}">Pobierz aplikację (APK)</a></p>
+      <ol class="small"><li>Otwórz ten link na telefonie i pobierz plik.</li>
+      <li>Otwórz pobrany plik. Android zapyta, czy przeglądarka może instalować aplikacje: wybierz <b>Ustawienia</b> i włącz <b>Zezwalaj z tego źródła</b>.</li>
+      <li>Wróć i wybierz <b>Zainstaluj</b>. Jeśli Play Protect ostrzeże o nieznanej aplikacji, wybierz <b>Więcej szczegółów → Zainstaluj mimo to</b>.</li>
+      <li>Nowe wersje aplikacja zgłosi sama, na dole ekranu.</li></ol></section>`
+    : `<section class="app-box"><h2>Android app</h2>
+      <p>The same app, installable on Android 9 or newer. It is not in Google Play yet; it installs from a file.</p>
+      <p><a class="btn" href="${APK_URL}">Download the app (APK)</a></p>
+      <ol class="small"><li>Open this link on the phone and download the file.</li>
+      <li>Open the downloaded file. When Android asks whether the browser may install apps, choose <b>Settings</b> and allow it.</li>
+      <li>Go back and tap <b>Install</b>. If Play Protect warns about an unknown app, choose <b>More details → Install anyway</b>.</li>
+      <li>The app announces new versions itself, at the bottom of the screen.</li></ol></section>`;
+}
+
 function renderAbout() {
   const pl = getLang() === 'pl';
   return `<article class="prose">
+    ${renderAppBox(pl)}
     ${
       pl
         ? `<h2>Skąd pochodzą dane?</h2>
@@ -765,6 +810,15 @@ content.addEventListener('click', (e) => {
     case 'retry':
       load();
       break;
+    case 'appUpdate':
+      el.setAttribute('disabled', '');
+      void checkForAppUpdate(showUpdateBanner, true).then((r) => {
+        el.removeAttribute('disabled');
+        const pl = getLang() === 'pl';
+        if (r === 'current') toast(pl ? 'Masz najnowszą wersję aplikacji.' : 'You have the latest version of the app.');
+        if (r === 'error') toast(pl ? 'Nie udało się sprawdzić. Brak internetu?' : 'Could not check. No internet?');
+      });
+      break;
     case 'weatherHere':
       if (state.view.kind === 'point') {
         showWeatherAt(state.view.lat, state.view.lng);
@@ -783,7 +837,7 @@ content.addEventListener('click', (e) => {
       break;
     }
     case 'copy':
-      navigator.clipboard?.writeText(location.href).then(() => toast(t('copied')), () => toast(location.href));
+      copyText(publicHref()).then(() => toast(t('copied')), () => toast(publicHref()));
       break;
     case 'filter':
       e.preventDefault();
@@ -923,7 +977,8 @@ window.addEventListener('online', () => {
 });
 window.addEventListener('offline', () => renderStatic());
 
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+// The app ships its files inside the APK, so only the website needs the service worker.
+if ('serviceWorker' in navigator && import.meta.env.PROD && !isApp()) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').catch(() => {
       /* the app still works online */
@@ -934,3 +989,9 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
 void initOffline();
 navigate(hashToView(location.hash), false);
 load();
+// App only: links to www.polowanie.org opened on the phone land here, and new APKs are announced.
+void initDeepLinks((hash) => navigate(hashToView(hash)));
+void appVersion().then((v) => {
+  installedVersion = v;
+  if (v) void checkForAppUpdate(showUpdateBanner);
+});
