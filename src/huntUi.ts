@@ -91,6 +91,7 @@ import { openShotSheet, closeShotSheet } from './huntShot';
 import { renderPokot, renderPokotPrint, gameName, outcomeName, groupName, pl, type PokotCtx } from './huntPokot';
 import { GAMES, NO_SHOOTER, OUTCOMES, outOfSeason, voivodeshipOf, type Outcome, type Shot, type ShotSpot } from './pokot';
 import { firebaseConfig, getBackend, HuntError, type HuntBackend, type Unsubscribe } from './huntBackend';
+import { ic } from './icons';
 
 const esc = (s: unknown) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -215,8 +216,8 @@ const L = {
   leadCodeValid: { pl: 'Kod jednorazowy, ważny do', en: 'One-time code, valid until' },
   leadCodeExpired: { pl: 'Kod wygasł.', en: 'The code has expired.' },
   leadCodeCancel: { pl: 'Anuluj kod', en: 'Cancel the code' },
-  leadPaired: { pl: '✓ Telefon sparowany. Prowadzi polowanie w terenie, a to urządzenie zachowało prawa.', en: '✓ Phone paired. It now leads in the field; this device kept its rights.' },
-  leadMoved: { pl: '✓ To urządzenie jest teraz prowadzącym w terenie.', en: '✓ This device is now the leader in the field.' },
+  leadPaired: { pl: 'Telefon sparowany. Prowadzi polowanie w terenie, a to urządzenie zachowało prawa.', en: 'Phone paired. It now leads in the field; this device kept its rights.' },
+  leadMoved: { pl: 'To urządzenie jest teraz prowadzącym w terenie.', en: 'This device is now the leader in the field.' },
   leadDevices: { pl: 'Urządzenia prowadzącego', en: 'Leader’s devices' },
   leadThis: { pl: 'To urządzenie', en: 'This device' },
   leadOther: { pl: 'Inne urządzenie', en: 'Another device' },
@@ -271,7 +272,7 @@ const L = {
   districtLoading: { pl: 'Wczytywanie listy obwodów…', en: 'Loading the district list…' },
   districtUnavailable: { pl: 'Lista obwodów jest niedostępna.', en: 'The district list is unavailable.' },
   districtNone: { pl: 'Nie znaleziono obwodu.', en: 'No district found.' },
-  districtHere: { pl: '◎ Obwód, w którym jestem', en: '◎ District I am in' },
+  districtHere: { pl: 'Obwód, w którym jestem', en: 'District I am in' },
   districtHereNone: { pl: 'W tym miejscu nie ma obwodu łowieckiego.', en: 'There is no hunting district here.' },
   districtHereError: { pl: 'Nie udało się ustalić obwodu z lokalizacji.', en: 'Could not find the district from your location.' },
   districtClear: { pl: 'Usuń obwód', en: 'Remove district' },
@@ -340,7 +341,7 @@ const L = {
   pocketStopped: { pl: 'Udostępnianie zatrzymane', en: 'Sharing has stopped' },
   pocketStoppedDetail: { pl: 'Odblokuj ekran, żeby sprawdzić.', en: 'Unlock the screen to check.' },
   saveOffline: { pl: 'Zapisz mapę offline', en: 'Save map offline' },
-  exportGpx: { pl: '⤓ Pobierz ślady (GPX)', en: '⤓ Download tracks (GPX)' },
+  exportGpx: { pl: 'Pobierz ślady (GPX)', en: 'Download tracks (GPX)' },
   exportEmpty: { pl: 'Brak śladów do pobrania.', en: 'No tracks to download.' },
   lOsm: { pl: 'Mapa (OSM)', en: 'Map (OSM)' },
   lTopo: { pl: 'Topograficzna (OpenTopoMap)', en: 'Topographic (OpenTopoMap)' },
@@ -360,13 +361,13 @@ const L = {
   },
   stClubNote: { pl: 'Stałe zwyżki koła', en: "The club's permanent seats" },
   stHuntNote: { pl: 'Wczytane tylko do tego polowania', en: 'Loaded for this hunt only' },
-  stOther: { pl: '⤒ Inne dla tego polowania', en: '⤒ Other seats for this hunt' },
+  stOther: { pl: 'Inne dla tego polowania', en: 'Other seats for this hunt' },
   stSaveClub: { pl: 'Zapisz jako zwyżki koła', en: "Save as the club's seats" },
   stSaveClubSure: { pl: 'Zastąpić zwyżki koła tymi?', en: "Replace the club's seats with these?" },
   stClubSaved: { pl: 'Zapisano zwyżki koła:', en: "Club's seats saved:" },
   stLocked: { pl: 'Zwyżki koła są ukryte na tym urządzeniu. Wpisz hasło koła, aby je pokazać.', en: "The club's seats are hidden on this device. Enter the hunt passphrase to show them." },
   stUnlock: { pl: 'Pokaż', en: 'Show' },
-  stEdit: { pl: '✎ Edytuj', en: '✎ Edit' },
+  stEdit: { pl: 'Edytuj', en: 'Edit' },
   stEditClub: { pl: 'Edytujesz zwyżki koła (widoczne we wszystkich polowaniach).', en: "You are editing the club's seats (shown in every hunt)." },
   stEditHunt: { pl: 'Edytujesz zwyżki tylko tego polowania.', en: "You are editing this hunt's own seats." },
   stEditHint: {
@@ -379,13 +380,13 @@ const L = {
   stBrokenBox: { pl: 'Powalona / uszkodzona', en: 'Fallen / damaged' },
   stDelete: { pl: 'Usuń tę', en: 'Delete this one' },
   stDone: { pl: 'Gotowe', en: 'Done' },
-  stAddHere: { pl: '◎ Dodaj w mojej lokalizacji', en: '◎ Add at my location' },
+  stAddHere: { pl: 'Dodaj w mojej lokalizacji', en: 'Add at my location' },
   stSave: { pl: 'Zapisz zmiany', en: 'Save changes' },
   stSaved: { pl: 'Zapisano zwyżki.', en: 'Seats saved.' },
   stErrName: { pl: 'Każda zwyżka musi mieć nazwę.', en: 'Every seat needs a name.' },
   stErrLocate: { pl: 'Nie udało się ustalić lokalizacji.', en: 'Could not get your location.' },
-  stLoad: { pl: '⤒ Wczytaj z pliku KMZ/KML', en: '⤒ Load from a KMZ/KML file' },
-  stReplace: { pl: '⤒ Zastąp z pliku', en: '⤒ Replace from a file' },
+  stLoad: { pl: 'Wczytaj z pliku KMZ/KML', en: 'Load from a KMZ/KML file' },
+  stReplace: { pl: 'Zastąp z pliku', en: 'Replace from a file' },
   stReuse: { pl: 'Wczytaj ponownie', en: 'Load again' },
   stClear: { pl: 'Usuń z polowania', en: 'Remove from hunt' },
   stClearSure: { pl: 'Na pewno usunąć wszystkie?', en: 'Remove them all?' },
@@ -409,7 +410,7 @@ const L = {
   dEnd: { pl: 'Koniec', en: 'End' },
   dCorners: { pl: 'Dotknij mapy, aby dodać narożniki miotu. Narożniki można przeciągać.', en: 'Tap the map to add the corners of the drive. Corners can be dragged.' },
   dCornerCount: { pl: 'Narożniki:', en: 'Corners:' },
-  dUndo: { pl: '↶ Cofnij narożnik', en: '↶ Undo corner' },
+  dUndo: { pl: 'Cofnij narożnik', en: 'Undo corner' },
   dSave: { pl: 'Zapisz miot', en: 'Save drive' },
   errArea: { pl: 'Zaznacz na mapie co najmniej 3 narożniki miotu.', en: 'Mark at least 3 corners of the drive on the map.' },
   dStartNow: { pl: 'Rozpocznij miot', en: 'Start drive' },
@@ -471,8 +472,8 @@ const L = {
   phoneDel: { pl: 'Usuń numer', en: 'Remove number' },
   call: { pl: 'Zadzwoń', en: 'Call' },
   meet: { pl: 'Zbiórka na mapie', en: 'Meeting point on the map' },
-  meetSet: { pl: '⚑ Wskaż zbiórkę na mapie', en: '⚑ Mark the meeting point on the map' },
-  meetMove: { pl: '⚑ Przesuń zbiórkę', en: '⚑ Move the meeting point' },
+  meetSet: { pl: 'Wskaż zbiórkę na mapie', en: 'Mark the meeting point on the map' },
+  meetMove: { pl: 'Przesuń zbiórkę', en: 'Move the meeting point' },
   meetClear: { pl: 'Usuń z mapy', en: 'Remove from map' },
   meetPick: { pl: 'Dotknij mapy w miejscu zbiórki.', en: 'Tap the map where everyone meets.' },
   navigate: { pl: 'Nawiguj', en: 'Navigate' },
@@ -497,16 +498,16 @@ const L = {
   routeSpreadStart: { pl: 'linia startu', en: 'start line' },
   routeSpreadEnd: { pl: 'linia końca', en: 'end line' },
   routeSpreadNone: { pl: 'Zaznacz co najmniej jednego naganiacza.', en: 'Tick at least one beater.' },
-  routeMeet: { pl: '⚑ Zbiórka po miocie', en: '⚑ Meeting point after' },
+  routeMeet: { pl: 'Zbiórka po miocie', en: 'Meeting point after' },
   routeMeetHint: { pl: 'Dotknij mapy w miejscu zbiórki po tym miocie.', en: 'Tap the map where everyone meets after this drive.' },
   routeMeetClear: { pl: 'Usuń zbiórkę po miocie', en: 'Remove the meeting point' },
-  routeUndo: { pl: '↶ Cofnij punkt', en: '↶ Undo point' },
+  routeUndo: { pl: 'Cofnij punkt', en: 'Undo point' },
   routeDel: { pl: 'Usuń trasę', en: 'Delete route' },
   routeSave: { pl: 'Zapisz trasy', en: 'Save routes' },
   routeSaved: { pl: 'Zapisano trasy.', en: 'Routes saved.' },
   routeNoBeaters: { pl: 'Na polowanie nie zapisał się jeszcze żaden naganiacz.', en: 'No beaters have signed up yet.' },
   routeMine: { pl: 'Twoja trasa', en: 'Your route' },
-  routeGuide: { pl: '➤ Prowadź mnie', en: '➤ Guide me' },
+  routeGuide: { pl: 'Prowadź mnie', en: 'Guide me' },
   gToStart: { pl: 'Idź na start trasy', en: 'Go to the start of your route' },
   gOnRoute: { pl: 'Na trasie · do końca', en: 'On your route · to the end:' },
   gOffL: { pl: 'w lewo od trasy, wróć', en: 'left of your route, go back' },
@@ -548,9 +549,9 @@ const L = {
   cNone: { pl: 'Brak tusz do zabrania.', en: 'No carcasses to collect.' },
   cWait: { pl: 'po zakończeniu miotu', en: 'after the drive ends' },
   cPicked: { pl: 'zabrana', en: 'collected' },
-  cPick: { pl: '✓ Zabrane', en: '✓ Collected' },
+  cPick: { pl: 'Zabrane', en: 'Collected' },
   cUnpick: { pl: 'Cofnij', en: 'Undo' },
-  cHere: { pl: '📍 Leży tutaj', en: '📍 It lies here' },
+  cHere: { pl: 'Leży tutaj', en: 'It lies here' },
   cOnMap: { pl: 'Wskaż na mapie', en: 'Mark on the map' },
   cPickHint: { pl: 'Dotknij mapy tam, gdzie leży tusza.', en: 'Tap the map where the carcass lies.' },
   cShow: { pl: 'Mapa', en: 'Map' },
@@ -1203,7 +1204,7 @@ function drawShots() {
       kind: x.outcome,
       picked: !!c?.pickedBy,
       label,
-      popup: `<strong>${esc(label)}</strong><br>${esc(personName(x.uid))}<br>${esc(clock(x.ts))}${x.note ? `<br>${esc(x.note)}` : ''}${c?.pickedBy ? `<br>✓ ${esc(l('cPicked'))} · ${esc(personName(c.pickedBy))}` : ''}`,
+      popup: `<strong>${esc(label)}</strong><br>${esc(personName(x.uid))}<br>${esc(clock(x.ts))}${x.note ? `<br>${esc(x.note)}` : ''}${c?.pickedBy ? `<br>${ic('check', 14)} ${esc(l('cPicked'))} · ${esc(personName(c.pickedBy))}` : ''}`,
     });
   }
   hmap.setShots(views);
@@ -1783,7 +1784,7 @@ function renderDistrictPicker(form: string, def: HuntDistrict | null): string {
   const head = `<span>${l('fDistrict')}</span>`;
   if (picked)
     return `<div class="h-field">${head}<div class="h-district-picked"><span>${esc(picked.label)}</span>
-      <button type="button" class="btn small ghost" data-hunt="clearDistrict" data-form="${form}" aria-label="${l('districtClear')}">✕</button></div></div>`;
+      <button type="button" class="btn small ghost" data-hunt="clearDistrict" data-form="${form}" aria-label="${l('districtClear')}">${ic('x', 16)}</button></div></div>`;
   const q = draft.get(`${form}.districtQ`) ?? '';
   const { list, error } = districtsOf();
   let results = '';
@@ -1807,7 +1808,7 @@ function renderDistrictPicker(form: string, def: HuntDistrict | null): string {
   return `<div class="h-field"><label for="${id}">${head}</label>
     <input type="search" id="${id}" name="districtQ" data-hunt-field="${form}" value="${esc(q)}" placeholder="${esc(l('districtPh'))}" autocomplete="off" />
     ${results ? `<ul class="h-district-results">${results}</ul>` : ''}
-    <div><button type="button" class="btn small ghost" data-hunt="districtHere" data-form="${form}"${locatingDistrict ? ' disabled aria-busy="true"' : ''}>${l('districtHere')}</button></div>
+    <div><button type="button" class="btn small ghost" data-hunt="districtHere" data-form="${form}"${locatingDistrict ? ' disabled aria-busy="true"' : ''}>${ic('locate', 16)} ${l('districtHere')}</button></div>
     <small class="muted">${l('fDistrictHint')}</small></div>`;
 }
 
@@ -1844,7 +1845,7 @@ function renderLive(h: Hunt, me: Participant): string {
   const report =
     h.status === 'live' && !drawing && !remote
       ? `<div class="hs-actions${canShoot ? ' hs-two' : ''}"><button type="button" class="btn hs-report" data-hunt="sightOpen" aria-label="${esc(l('sightReportHint'))}">${speciesIcon('boar', 28)} ${l('sightReport')}</button>${
-          canShoot ? `<button type="button" class="btn hs-report hp-fire" data-hunt="shotFire" aria-label="${esc(l('shotHint'))}"><span class="hp-fire-icon" aria-hidden="true">✛</span> ${l('shot')}</button>` : ''
+          canShoot ? `<button type="button" class="btn hs-report hp-fire" data-hunt="shotFire" aria-label="${esc(l('shotHint'))}"><span class="hp-fire-icon" aria-hidden="true">${ic('crosshair', 26)}</span> ${l('shot')}</button>` : ''
         }</div>`
       : '';
   const isLead = leads(h, myUid());
@@ -1857,11 +1858,11 @@ function renderLive(h: Hunt, me: Participant): string {
   return `<h3>${l('mapTitle')}</h3>${t}${mine}${msgs}${report}${share}${renderDrives(h, isLead)}${drawing || planning ? '' : `${isLead ? renderSeatsLeader() : ''}${renderStands(isLead)}`}
     <div class="hm-bar"${drawing ? ' hidden' : ''}><div class="hm-counts">${liveCounts()}</div>
       <div class="hm-tools">
-        ${iShare ? `<button type="button" class="btn small ghost" data-hunt="centerMe">◎ ${l('centerMe')}</button>` : ''}
+        ${iShare ? `<button type="button" class="btn small ghost" data-hunt="centerMe">${ic('locate', 16)} ${l('centerMe')}</button>` : ''}
         <button type="button" class="btn small ghost" data-hunt="fitAll">${l('fitAll')}</button>
         <button type="button" class="btn small ghost" data-hunt="tracks" aria-pressed="${showTracks}">${showTracks ? l('hideTracks') : l('showTracks')}</button>
-        <button type="button" class="btn small ghost" data-hunt="gpx">${l('exportGpx')}</button>
-        ${h.district && saveOfflineCb ? `<button type="button" class="btn small ghost" data-hunt="saveOffline">⤓ ${l('saveOffline')}</button>` : ''}
+        <button type="button" class="btn small ghost" data-hunt="gpx">${ic('download', 16)} ${l('exportGpx')}</button>
+        ${h.district && saveOfflineCb ? `<button type="button" class="btn small ghost" data-hunt="saveOffline">${ic('download', 16)} ${l('saveOffline')}</button>` : ''}
       </div></div>
     ${picking}<div class="hm-slot"></div>
     ${drawing || planning ? '' : `${renderCarcasses(isLead)}${isLead ? renderMessages(true, h) : ''}<h4>${l('sightings')}</h4><div class="hs-list">${sightListHtml()}</div>${renderPokot(pokotCtx(h))}`}`;
@@ -1898,7 +1899,7 @@ function renderDrives(h: Hunt, isLeader: boolean): string {
           ? `<button type="button" class="btn small danger" data-hunt="driveDelete" data-drive="${esc(d.id)}"${btnBusy()}>${l('dDeleteSure')}</button>
              <button type="button" class="btn small ghost" data-hunt="unconfirm">${l('cancel')}</button>`
           : `${startEnd}<button type="button" class="btn small ghost" data-hunt="routeEdit" data-drive="${esc(d.id)}">${l('routes')}${routes.get(d.id)?.size ? ` (${routes.get(d.id)!.size})` : ''}</button><button type="button" class="btn small ghost" data-hunt="driveEdit" data-drive="${esc(d.id)}">${l('editDrive')}</button>
-             <button type="button" class="btn small ghost" data-hunt="askDriveDelete" data-drive="${esc(d.id)}" aria-label="${l('remove')} ${esc(d.name)}">✕</button>`;
+             <button type="button" class="btn small ghost" data-hunt="askDriveDelete" data-drive="${esc(d.id)}" aria-label="${l('remove')} ${esc(d.name)}">${ic('x', 16)}</button>`;
     }
     return `<li class="hd-drive hd-${st}"><span class="hd-num">${i + 1}</span>
       <span class="hd-info"><strong>${esc(d.name)}</strong><small class="muted">${when}</small></span>
@@ -1943,7 +1944,7 @@ function renderStandEditor(): string {
       ${errorBox()}
       <div class="h-actions">
         <button type="button" class="btn small" data-hunt="standsSave"${btnBusy()}>${l('stSave')}</button>
-        <button type="button" class="btn small ghost" data-hunt="standAddHere"${locatingStand ? ' disabled aria-busy="true"' : ''}>${l('stAddHere')}</button>
+        <button type="button" class="btn small ghost" data-hunt="standAddHere"${locatingStand ? ' disabled aria-busy="true"' : ''}>${ic('locate', 16)} ${l('stAddHere')}</button>
         <button type="button" class="btn small ghost" data-hunt="standsEditCancel">${l('cancel')}</button>
       </div>
     </div>`;
@@ -1986,7 +1987,7 @@ function renderStands(isLeader: boolean): string {
   if (isLeader) {
     const last = lastStands();
     const label = own ? l('stReplace') : clubStands.length ? l('stOther') : l('stLoad');
-    const file = `<label class="btn small${shown.length ? ' ghost' : ''}"><input type="file" class="hst-file" accept=".kmz,.kml,application/vnd.google-earth.kmz,application/vnd.google-earth.kml+xml" data-stands-file${busy ? ' disabled' : ''}>${label}</label>`;
+    const file = `<label class="btn small${shown.length ? ' ghost' : ''}"><input type="file" class="hst-file" accept=".kmz,.kml,application/vnd.google-earth.kmz,application/vnd.google-earth.kml+xml" data-stands-file${busy ? ' disabled' : ''}>${ic('upload', 16)} ${label}</label>`;
     const reuse =
       !shown.length && last
         ? `<button type="button" class="btn small ghost" data-hunt="standsReuse"${btnBusy()}>${l('stReuse')}: ${esc(last.file)} (${last.stands.length})</button>`
@@ -2005,7 +2006,7 @@ function renderStands(isLeader: boolean): string {
       : confirming === 'stands'
         ? sure('standsClear', l('stClearSure'))
         : `<button type="button" class="btn small ghost" data-hunt="askStandsClear">${l('stClear')}</button>`;
-    const edit = `<button type="button" class="btn small${shown.length ? '' : ' ghost'}" data-hunt="standsEdit">${l('stEdit')}</button>`;
+    const edit = `<button type="button" class="btn small${shown.length ? '' : ' ghost'}" data-hunt="standsEdit">${ic('edit', 16)} ${l('stEdit')}</button>`;
     ctl = `<div class="hst-actions">${edit}${saveClub}${file}${reuse}${clear}</div>`;
   }
   const open = standListOpen ?? ((isLeader && !shown.length) || locked);
@@ -2061,8 +2062,8 @@ function renderDriveForm(): string {
     <p class="small hd-hint${badFields.has('area') ? ' h-error' : ''}">${l('dCorners')} ${l('dCornerCount')} <strong class="hd-corner-count">${e.area.length}</strong></p>
     ${errorBox()}
     <div class="h-actions">
-      <button type="button" class="btn small ghost" data-hunt="driveLocate"${locatingDrive ? ' disabled aria-busy="true"' : ''}>◎ ${l('centerMe')}</button>
-      <button type="button" class="btn small ghost" data-hunt="driveUndo"${e.area.length ? '' : ' disabled'}>${l('dUndo')}</button>
+      <button type="button" class="btn small ghost" data-hunt="driveLocate"${locatingDrive ? ' disabled aria-busy="true"' : ''}>${ic('locate', 16)} ${l('centerMe')}</button>
+      <button type="button" class="btn small ghost" data-hunt="driveUndo"${e.area.length ? '' : ' disabled'}>${ic('undo', 16)} ${l('dUndo')}</button>
       <button type="submit" class="btn small"${btnBusy()}>${l('dSave')}</button>
       <button type="button" class="btn small ghost" data-hunt="driveCancel">${l('cancel')}</button>
     </div>
@@ -2138,7 +2139,7 @@ function renderInvite(h: Hunt): string {
   const now = conn.s === 'ready' ? conn.be.serverNow() : Date.now();
   const inv = invites ? currentInvite(invites, now) : null;
   const copyBtn = (what: string) =>
-    `<button type="button" class="btn ghost" data-hunt="copy" data-what="${what}">${copied === what ? `✓ ${l('copied')}` : l('copy')}</button>`;
+    `<button type="button" class="btn ghost" data-hunt="copy" data-what="${what}">${copied === what ? `${ic('check', 16)} ${l('copied')}` : l('copy')}</button>`;
   let body: string;
   if (invites === null) body = `<p class="muted small">${l('loading')}</p>`;
   else if (!inv)
@@ -2217,7 +2218,7 @@ function renderLeadDevices(h: Hunt): string {
       : '';
   const open = leadOpen ?? !!(pairCode || pairedNote);
   return `<details class="card h-lead"${open ? ' open' : ''}><summary data-hunt="leadBox" data-open="${open}"><strong>${l('leadTitle')}</strong></summary>
-    ${pairedNote ? `<p class="small" role="status">${esc(pairedNote)}</p>` : ''}
+    ${pairedNote ? `<p class="small" role="status">${ic('check', 16)} ${esc(pairedNote)}</p>` : ''}
     <p class="small muted">${l('leadHint')}</p>${code}
     <h4>${l('leadDevices')}</h4><ul class="h-people">${rows}</ul>${take}
     <h4>${l('deputies')}</h4>${deps.length ? `<ul class="h-people">${deps.map((u) => `<li class="h-person">${roleIcon('hunter')}<span class="h-pname">${esc(personName(u))}</span></li>`).join('')}</ul>` : ''}
@@ -2575,11 +2576,11 @@ function renderMeetLine(h: Hunt, isLeader: boolean): string {
   const set = isLeader
     ? pickMode?.kind === 'huntMeet'
       ? `<span class="small hr-picking">${l('meetPick')}</span> <button type="button" class="btn small ghost" data-hunt="pickCancel">${l('pickCancel')}</button>`
-      : `<button type="button" class="btn small ghost" data-hunt="meetPick">${l(h.meet ? 'meetMove' : 'meetSet')}</button>${
+      : `<button type="button" class="btn small ghost" data-hunt="meetPick">${ic('flag', 16)} ${l(h.meet ? 'meetMove' : 'meetSet')}</button>${
           h.meet ? ` <button type="button" class="btn small ghost" data-hunt="meetClear">${l('meetClear')}</button>` : ''
         }`
     : '';
-  const nav = h.meet ? `<a class="btn small" href="${esc(mapsLink(h.meet))}" target="_blank" rel="noopener">⚑ ${l('navigateMeet')}</a>` : '';
+  const nav = h.meet ? `<a class="btn small" href="${esc(mapsLink(h.meet))}" target="_blank" rel="noopener">${ic('flag', 16)} ${l('navigateMeet')}</a>` : '';
   if (!nav && !set) return '';
   return `<div class="h-actions hr-meetline">${nav}${set}</div>`;
 }
@@ -2593,11 +2594,11 @@ function renderPhone(): string {
       <div class="h-actions"><button type="submit" class="btn small"${btnBusy()}>${l('phoneSave')}</button>
       ${mine ? `<button type="button" class="btn small ghost" data-hunt="phoneDel"${btnBusy()}>${l('phoneDel')}</button>` : ''}
       <button type="button" class="btn small ghost" data-hunt="phoneCancel">${l('cancel')}</button></div></form>`;
-  return `<div class="small hr-phone">☎ ${l('phone')}: ${mine ? `<strong>${esc(fmtPhone(mine))}</strong>` : `<span class="muted">${l('phoneNone')}</span>`}
+  return `<div class="small hr-phone">${ic('phone', 16)} ${l('phone')}: ${mine ? `<strong>${esc(fmtPhone(mine))}</strong>` : `<span class="muted">${l('phoneNone')}</span>`}
     <button type="button" class="btn small ghost" data-hunt="phoneEdit">${l(mine ? 'phoneEdit' : 'phoneAdd')}</button></div>`;
 }
 
-const telLink = (p: string) => `<a class="h-tel" href="tel:${esc(p)}" title="${esc(l('call'))}">☎ ${esc(fmtPhone(p))}</a>`;
+const telLink = (p: string) => `<a class="h-tel" href="tel:${esc(p)}" title="${esc(l('call'))}">${ic('phone', 14)} ${esc(fmtPhone(p))}</a>`;
 
 /** Who collects carcasses; the leader assigns them. */
 function renderTransport(isLeader: boolean): string {
@@ -2644,21 +2645,21 @@ function renderCarcasses(isLeader: boolean): string {
       : l('cNoPos');
     const btns: string[] = [];
     if (c.at && !c.pickedBy) {
-      btns.push(`<button type="button" class="btn small" data-hunt="carcassGuide" data-sid="${esc(c.shotId)}">${l('routeGuide')}</button>`);
+      btns.push(`<button type="button" class="btn small" data-hunt="carcassGuide" data-sid="${esc(c.shotId)}">${ic('navigate', 16)} ${l('routeGuide')}</button>`);
       btns.push(`<a class="btn small ghost" href="${esc(mapsLink(c.at))}" target="_blank" rel="noopener">${l('navigate')}</a>`);
       btns.push(`<button type="button" class="btn small ghost" data-hunt="carcassShow" data-sid="${esc(c.shotId)}">${l('cShow')}</button>`);
     }
     if (canMove && !c.pickedBy) {
-      btns.push(`<button type="button" class="btn small ghost" data-hunt="carcassHere" data-sid="${esc(c.shotId)}"${btnBusy()}>${l('cHere')}</button>`);
+      btns.push(`<button type="button" class="btn small ghost" data-hunt="carcassHere" data-sid="${esc(c.shotId)}"${btnBusy()}>${ic('pin', 16)} ${l('cHere')}</button>`);
       btns.push(
         pickMode?.kind === 'carcass' && pickMode.shotId === c.shotId
           ? `<button type="button" class="btn small ghost" data-hunt="pickCancel">${l('pickCancel')}</button>`
           : `<button type="button" class="btn small ghost" data-hunt="carcassPick" data-sid="${esc(c.shotId)}">${l('cOnMap')}</button>`,
       );
     }
-    if (canPick && c.ready && !c.pickedBy) btns.push(`<button type="button" class="btn small" data-hunt="carcassTaken" data-sid="${esc(c.shotId)}"${btnBusy()}>${l('cPick')}</button>`);
+    if (canPick && c.ready && !c.pickedBy) btns.push(`<button type="button" class="btn small" data-hunt="carcassTaken" data-sid="${esc(c.shotId)}"${btnBusy()}>${ic('check', 16)} ${l('cPick')}</button>`);
     if (c.pickedBy && (isLeader || c.pickedBy === uid)) btns.push(`<button type="button" class="btn small ghost" data-hunt="carcassUntaken" data-sid="${esc(c.shotId)}"${btnBusy()}>${l('cUnpick')}</button>`);
-    const state = c.pickedBy ? `✓ ${l('cPicked')} · ${esc(personName(c.pickedBy))}${c.pickedAt ? ` · ${clock(c.pickedAt)}` : ''}` : c.ready ? where : `${l('cWait')}`;
+    const state = c.pickedBy ? `${ic('check', 14)} ${l('cPicked')} · ${esc(personName(c.pickedBy))}${c.pickedAt ? ` · ${clock(c.pickedAt)}` : ''}` : c.ready ? where : `${l('cWait')}`;
     return `<li class="hc-item${c.pickedBy ? ' hc-picked' : c.ready ? ' hc-ready' : ''}"><div><strong>${esc(gameName(c.game))}</strong>
       <span class="muted small">· ${esc(personName(c.shooter))}${c.driveId ? ` · ${esc(driveName(c.driveId))}` : ''} · ${esc(kindName(c.kind))}</span></div>
       <div class="small">${state}</div>${btns.length ? `<div class="h-actions">${btns.join('')}</div>` : ''}</li>`;
@@ -2669,7 +2670,7 @@ function renderCarcasses(isLeader: boolean): string {
       const c = carrierOf(k);
       const todo = ready.filter((x) => x.kind === k);
       return c?.phone && todo.length
-        ? `<a class="btn small ghost" href="${esc(smsLink(c.phone, carcassSms(todo)))}">✉ ${l('cSms')}: ${esc(c.name)} (${todo.length})</a>`
+        ? `<a class="btn small ghost" href="${esc(smsLink(c.phone, carcassSms(todo)))}">${ic('mail', 16)} ${l('cSms')}: ${esc(c.name)} (${todo.length})</a>`
         : '';
     })
     .join('');
@@ -2719,7 +2720,7 @@ function renderSeatsLeader(): string {
     )
     .join('');
   const names = sortStands(shownStands()).map((s) => `<option value="${esc(s.name)}"></option>`).join('');
-  return `<details class="hd-box hr-seats"><summary><strong>${l('seats')}</strong> <span class="muted">· ${esc(d.name)} · ${missing ? `${missing} ${l('seatsMissing')}` : '✓'}</span></summary>
+  return `<details class="hd-box hr-seats"><summary><strong>${l('seats')}</strong> <span class="muted">· ${esc(d.name)} · ${missing ? `${missing} ${l('seatsMissing')}` : ic('check', 16)}</span></summary>
     <form class="h-form" data-hunt-form="seats" data-drive="${esc(d.id)}" novalidate><ul class="hr-seatlist">${rows}</ul><datalist id="hr-seat-names-l">${names}</datalist>
     <div class="h-actions"><button type="submit" class="btn small"${btnBusy()}>${l('seatsSave')}</button></div></form></details>`;
 }
@@ -2732,8 +2733,8 @@ function renderMyRoute(me: Participant): string {
   if (g) return g;
   if (!d || !r || hunt?.status !== 'live') return '';
   const pos = myPos();
-  return `<div class="hr-seatcard card"><span>${roleIcon('beater', 18)} ${l('routeMine')} · <strong>${esc(d.name)}</strong>${pos ? ` · ▶ ${fmtDist(distanceM(pos, r[0]))}` : ''}</span>
-    <button type="button" class="btn small" data-hunt="guideOn">${l('routeGuide')}</button></div>`;
+  return `<div class="hr-seatcard card"><span>${roleIcon('beater', 18)} ${l('routeMine')} · <strong>${esc(d.name)}</strong>${pos ? ` · ${ic('navigate', 13)} ${fmtDist(distanceM(pos, r[0]))}` : ''}</span>
+    <button type="button" class="btn small" data-hunt="guideOn">${ic('navigate', 16)} ${l('routeGuide')}</button></div>`;
 }
 
 /** Leader: draw the beaters' routes and the meeting point of one drive. */
@@ -2761,10 +2762,10 @@ function renderRouteEditor(): string {
     <p class="small${e.mode !== 'route' ? ' hr-picking' : ''}">${hint}</p>
     ${list}
     <div class="h-actions">
-      ${e.sel && e.mode === 'route' ? `<button type="button" class="btn small ghost" data-hunt="routeUndo"${sel?.length ? '' : ' disabled'}>${l('routeUndo')}</button>
+      ${e.sel && e.mode === 'route' ? `<button type="button" class="btn small ghost" data-hunt="routeUndo"${sel?.length ? '' : ' disabled'}>${ic('undo', 16)} ${l('routeUndo')}</button>
       <button type="button" class="btn small ghost danger-text" data-hunt="routeDel"${sel ? '' : ' disabled'}>${l('routeDel')}</button>` : ''}
       <button type="button" class="btn small ghost" data-hunt="routeSpread" aria-pressed="${e.mode === 'spread'}"${bs.length ? '' : ' disabled'}>${l('routeSpread')}</button>
-      <button type="button" class="btn small ghost" data-hunt="routeMeet" aria-pressed="${e.mode === 'meet'}">${l('routeMeet')}</button>
+      <button type="button" class="btn small ghost" data-hunt="routeMeet" aria-pressed="${e.mode === 'meet'}">${ic('flag', 16)} ${l('routeMeet')}</button>
       ${e.meet ? `<button type="button" class="btn small ghost" data-hunt="routeMeetClear">${l('routeMeetClear')}</button>` : ''}
     </div>
     ${errorBox()}
@@ -2786,7 +2787,7 @@ function renderMessages(isLeader: boolean, h: Hunt): string {
       .map((m) => {
         const ok = acks.get(m.id)?.has(myUid());
         return `<li><span class="muted small">${clock(m.ts)}</span> ${esc(m.text)} ${
-          ok ? `<span class="small hmsg-ok">✓ ${l('msgAcked')}</span>` : `<button type="button" class="btn small" data-hunt="msgAck" data-mid="${esc(m.id)}">${l('msgAck')}</button>`
+          ok ? `<span class="small hmsg-ok">${ic('check', 16)} ${l('msgAcked')}</span>` : `<button type="button" class="btn small" data-hunt="msgAck" data-mid="${esc(m.id)}">${l('msgAck')}</button>`
         }</li>`;
       })
       .join('')}</ul>`;
@@ -2802,11 +2803,11 @@ function renderMessages(isLeader: boolean, h: Hunt): string {
     const got = acks.get(m.id) ?? new Map();
     const missing = rc.filter((p) => !got.has(p.uid));
     return `<li><div><span class="muted small">${clock(m.ts)} · ${l('msgTo')}: ${esc(toName(m.to))}</span>
-      <span class="hmsg-count${missing.length ? '' : ' all'}">✓ ${rc.length - missing.length}/${rc.length}</span>
-      <button type="button" class="btn small ghost" data-hunt="msgDel" data-mid="${esc(m.id)}" aria-label="${l('msgDel')}">✕</button></div>
+      <span class="hmsg-count${missing.length ? '' : ' all'}">${ic('check', 16)} ${rc.length - missing.length}/${rc.length}</span>
+      <button type="button" class="btn small ghost" data-hunt="msgDel" data-mid="${esc(m.id)}" aria-label="${l('msgDel')}">${ic('x', 16)}</button></div>
       <div>${esc(m.text)}</div>${missing.length && t - m.ts < 6 * 3600e3 ? `<div class="small muted">${l('msgWaiting')} ${missing.map((p) => esc(p.name)).join(', ')}</div>` : ''}</li>`;
   });
-  return `<details class="hd-box hmsg-box"${h.status === 'live' ? ' open' : ''}><summary><strong>✉ ${l('messages')}</strong> <span class="muted">(${messages.length})</span></summary>
+  return `<details class="hd-box hmsg-box"${h.status === 'live' ? ' open' : ''}><summary><strong>${ic('mail', 16)} ${l('messages')}</strong> <span class="muted">(${messages.length})</span></summary>
     <form class="h-form hmsg-form" data-hunt-form="msg" novalidate>
       <label class="h-field"><span>${l('msgTo')}</span><select name="to" data-hunt-field="msg">${opts}</select></label>
       <div class="hmsg-presets">${presets}</div>

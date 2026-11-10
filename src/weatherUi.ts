@@ -20,6 +20,7 @@ import {
   type Tip,
   type Trend,
 } from './weather';
+import { ic, moonIcon } from './icons';
 
 const esc = (s: unknown) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -104,15 +105,15 @@ const L = {
 };
 const l = (k: keyof typeof L) => tt(L[k]);
 
-const PHASES: Record<MoonPhaseName, { pl: string; en: string; icon: string }> = {
-  new: { pl: 'Nów', en: 'New moon', icon: '🌑' },
-  waxingCrescent: { pl: 'Przybywający sierp', en: 'Waxing crescent', icon: '🌒' },
-  firstQuarter: { pl: 'Pierwsza kwadra', en: 'First quarter', icon: '🌓' },
-  waxingGibbous: { pl: 'Przybywający garb', en: 'Waxing gibbous', icon: '🌔' },
-  full: { pl: 'Pełnia', en: 'Full moon', icon: '🌕' },
-  waningGibbous: { pl: 'Ubywający garb', en: 'Waning gibbous', icon: '🌖' },
-  lastQuarter: { pl: 'Ostatnia kwadra', en: 'Last quarter', icon: '🌗' },
-  waningCrescent: { pl: 'Ubywający sierp', en: 'Waning crescent', icon: '🌘' },
+const PHASES: Record<MoonPhaseName, { pl: string; en: string }> = {
+  new: { pl: 'Nów', en: 'New moon' },
+  waxingCrescent: { pl: 'Przybywający sierp', en: 'Waxing crescent' },
+  firstQuarter: { pl: 'Pierwsza kwadra', en: 'First quarter' },
+  waxingGibbous: { pl: 'Przybywający garb', en: 'Waxing gibbous' },
+  full: { pl: 'Pełnia', en: 'Full moon' },
+  waningGibbous: { pl: 'Ubywający garb', en: 'Waning gibbous' },
+  lastQuarter: { pl: 'Ostatnia kwadra', en: 'Last quarter' },
+  waningCrescent: { pl: 'Ubywający sierp', en: 'Waning crescent' },
 };
 
 const TREND: Record<Trend, { pl: string; en: string; arrow: string }> = {
@@ -274,8 +275,8 @@ export function renderWeather(onChange: () => void): string {
 function renderPlaces() {
   const chip = (id: string, label: string) =>
     `<button type="button" class="w-chip" data-weather="select" data-id="${esc(id)}" aria-pressed="${selected === id}">${label}</button>`;
-  const list = [chip(HERE, `◎ ${esc(l('here'))}`), ...saved.map((p) => chip(p.id, esc(p.name)))];
-  if (temp && !saved.some((p) => p.id === temp!.id)) list.push(chip(temp.id, `📍 ${esc(temp.name)}`));
+  const list = [chip(HERE, `${ic('locate', 16)} ${esc(l('here'))}`), ...saved.map((p) => chip(p.id, esc(p.name)))];
+  if (temp && !saved.some((p) => p.id === temp!.id)) list.push(chip(temp.id, `${ic('pin', 16)} ${esc(temp.name)}`));
   list.push(`<button type="button" class="w-chip add" data-weather="add" aria-expanded="${adding}">${l('add')}</button>`);
   return `<div class="w-places">${list.join('')}</div>`;
 }
@@ -334,7 +335,7 @@ function renderHeader(p: Place, at: number | null) {
     <div class="actions">
       ${isSaved ? `<button type="button" class="btn ghost" data-weather="rename">${l('rename')}</button><button type="button" class="btn ghost" data-weather="remove">${l('remove')}</button>` : `<button type="button" class="btn ghost" data-weather="save">${l('save')}</button>`}
       <a class="btn ghost" href="#/punkt/${p.lat.toFixed(5)},${p.lng.toFixed(5)}">${l('onMap')}</a>
-      <button type="button" class="btn ghost" data-weather="refresh" aria-label="${esc(l('refresh'))}">↻</button>
+      <button type="button" class="btn ghost" data-weather="refresh" aria-label="${esc(l('refresh'))}">${ic('refresh')}</button>
     </div></div>${nameForm}`;
 }
 
@@ -349,7 +350,7 @@ function renderNow(f: Forecast, now: number) {
   const vis = h.visibility == null ? '—' : h.visibility >= 10000 ? `> 10 km` : `${fmtNum(h.visibility / 1000, 1)} km`;
   return `<section class="card w-now">
     <p class="eyebrow">${l('now')}</p>
-    <div class="w-big"><span class="w-icon" aria-hidden="true">${d.icon}</span><b>${deg(c.temp)}</b>
+    <div class="w-big"><span class="w-icon" aria-hidden="true">${ic(d.icon, 48)}</span><b>${deg(c.temp)}</b>
       <div><strong>${esc(d.text)}</strong><span class="muted small">${l('feels')} ${deg(c.feels)}</span></div></div>
     <div class="kpis w-kpis">
       <div><span>${l('wind')}</span><b>${windArrow(c.windDir)} ${fmtNum(c.wind)} <small>km/h</small></b>
@@ -518,7 +519,7 @@ function renderMoon(f: Forecast, now: number, a: Astro) {
   const mt = a.moonToday;
   const riseSet = (d: Date | null) => (d ? fm.time(d) : mt.alwaysUp || mt.alwaysDown ? '—' : l('noRise'));
   return `<section class="card"><p class="eyebrow">${l('moon')}</p>
-    <div class="w-big"><span class="w-icon" aria-hidden="true">${ph.icon}</span>
+    <div class="w-big"><span class="w-icon" aria-hidden="true">${moonIcon(a.moon.fraction, a.moon.phase < 0.5, 48)}</span>
       <div><strong>${esc(tt(ph))}</strong><span class="muted small">${l('illum')} ${fmtNum(a.moon.fraction * 100)}%</span></div></div>
     <dl class="kv w-kv">
       <dt>${l('moonrise')}</dt><dd>${riseSet(mt.rise)}</dd>
@@ -542,10 +543,10 @@ function renderHourly(f: Forecast, p: Place, now: number) {
         const d = weatherDesc(h.code, lang, k !== 'day');
         return `<div class="w-hour light-${k}" title="${esc(d.text)}">
           <span class="muted small">${fm.hour(h.time)}</span>
-          <span class="w-icon-s" aria-label="${esc(d.text)}">${d.icon}</span>
+          <span class="w-icon-s" role="img" aria-label="${esc(d.text)}">${ic(d.icon, 22)}</span>
           <b>${deg(h.temp)}</b>
           <span class="small">${windArrow(h.windDir)} ${fmtNum(h.wind)}</span>
-          <span class="muted small">↯${fmtNum(h.gust)}</span>
+          <span class="muted small">${ic('wind', 12)}${fmtNum(h.gust)}</span>
           <span class="small w-rain">${h.precipProb != null ? `${fmtNum(h.precipProb)}%` : ''}</span>
         </div>`;
       })
@@ -569,12 +570,12 @@ function renderDaily(f: Forecast, p: Place, now: number) {
         const w = weatherDesc(d.code, lang);
         return `<tr>
           <td>${idx === 0 && d.time <= now ? l('today') : fm.day(d.time)}</td>
-          <td title="${esc(w.text)}">${w.icon}</td>
+          <td title="${esc(w.text)}">${ic(w.icon, 20)}</td>
           <td class="num"><b>${fmtNum(d.tmax)}°</b> <span class="muted">${fmtNum(d.tmin)}°</span></td>
           <td class="w-nowrap">${windArrow(d.windDir)} ${compass(d.windDir)} ${fmtNum(d.windMax)}<span class="muted w-gust">/${fmtNum(d.gustMax)}</span></td>
-          <td class="num">${fmtNum(d.precip, 1)} mm${d.precipProb != null ? `<span class="muted small w-prob"> ${fmtNum(d.precipProb)}%</span>` : ''}${d.snow > 0 ? `<br><span class="small">❄ ${fmtNum(d.snow, 1)} cm</span>` : ''}</td>
+          <td class="num">${fmtNum(d.precip, 1)} mm${d.precipProb != null ? `<span class="muted small w-prob"> ${fmtNum(d.precipProb)}%</span>` : ''}${d.snow > 0 ? `<br><span class="small">${ic('snowHeavy', 13)} ${fmtNum(d.snow, 1)} cm</span>` : ''}</td>
           <td class="w-nowrap small">${fm.time(s.sunrise)}–${fm.time(s.sunset)}</td>
-          <td class="w-nowrap">${PHASES[moonPhaseName(m.phase)].icon} <span class="small">${fmtNum(m.fraction * 100)}%</span></td>
+          <td class="w-nowrap">${moonIcon(m.fraction, m.phase < 0.5, 16)} <span class="small">${fmtNum(m.fraction * 100)}%</span></td>
         </tr>`;
       })
       .join('')}</tbody></table></div></section>`;

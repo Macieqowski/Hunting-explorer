@@ -23,6 +23,7 @@ import {
 } from './offline';
 import { boxKm2, type Box, type Detail } from './tiles';
 import { isApp } from './platform';
+import { ic } from './icons';
 
 const L = {
   title: { pl: 'Mapy offline', en: 'Offline maps' },
@@ -150,9 +151,9 @@ export function renderOffline(): string {
   // In the app saved tiles are files (tileFiles.ts): the browser's storage numbers do not apply.
   const appBytes = savedAreas().reduce((n, a) => n + a.bytes, 0);
   const persist = isApp()
-    ? `${appBytes ? `<p class="small">${l('savedSize')}: <b>${mb(appBytes)}</b></p>` : ''}<p class="muted small">✓ ${l('appStorage')}</p>`
+    ? `${appBytes ? `<p class="small">${l('savedSize')}: <b>${mb(appBytes)}</b></p>` : ''}<p class="muted small">${ic('check', 16)} ${l('appStorage')}</p>`
     : st?.persisted === true
-      ? `<p class="muted small">✓ ${l('persisted')}</p>`
+      ? `<p class="muted small">${ic('check', 16)} ${l('persisted')}</p>`
       : st?.persisted === false && savedAreas().length
         ? `<p class="muted small">${l('notPersisted')} <button type="button" class="btn small ghost" data-offline="persist">${l('keep')}</button></p>`
         : '';

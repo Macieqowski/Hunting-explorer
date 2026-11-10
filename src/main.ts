@@ -1,3 +1,4 @@
+import './fonts.css';
 import './style.css';
 import { fetchDistrictsAtPoint, fetchDistrictsByIds, BDL_WMS_DISTRICTS, type District } from './bdl';
 import {
@@ -14,6 +15,8 @@ import {
 } from './data';
 import { createMap, type MapApi } from './map';
 import { t, tt, getLang, setLang, fmtHa, fmtKm2, fmtNum, type Key } from './i18n';
+import { ic } from './icons';
+import { applyTheme, getThemePref, nextThemePref, setThemePref, watchSystemTheme, type ThemePref } from './theme';
 import { SEASONS, isOpen, effective, formatRanges, yearFrac, openOnlyIn, type Season } from './seasons';
 import { renderExams, handleExamClick, handleExamChange, drillSpecies } from './examUi';
 import { renderWeather, handleWeatherClick, handleWeatherInput, handleWeatherSubmit, showWeatherAt } from './weatherUi';
@@ -74,11 +77,13 @@ function loadSeasonVoiv(): string {
 // ---------------------------------------------------------------- layout
 
 document.documentElement.lang = getLang();
+applyTheme();
+watchSystemTheme(() => renderStatic());
 const app = $('#app');
 app.innerHTML = `
   <header class="topbar">
     <div class="brand">
-      <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M12 2 4 14h4l-3 5h6v3h2v-3h6l-3-5h4z"/></svg>
+      <svg class="brand-mark" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><path class="bm-pin" d="M16 2c6.1 0 11 4.7 11 10.6 0 7.4-8.3 15.1-11 17.4-2.7-2.3-11-10-11-17.4C5 6.700 9.900 2 16 2Z"/><path class="bm-tree" d="M16 6l-5 7h2.600l-3.600 5h5v3h2v-3h5l-3.600-5H21z"/></svg>
       <div><h1><span data-t="title"></span><span class="cur-section" id="cursection"></span></h1><p data-t="subtitle"></p></div>
     </div>
     <nav class="sections" id="sections" aria-label="Sections"></nav>
@@ -211,10 +216,19 @@ let pointResult: { status: 'loading' } | { status: 'done'; items: District[] } |
 
 // ---------------------------------------------------------------- rendering
 
+const THEME_LABEL: Record<ThemePref, Key> = { auto: 'themeAuto', light: 'themeLight', dark: 'themeDark' };
+const THEME_ICON = { auto: 'themeAuto', light: 'sun', dark: 'moon' } as const;
+/** Cycles automatic → light → dark. It sits with the sections: a small icon on a computer, a menu row on a phone. */
+function themeButton(): string {
+  const pref = getThemePref();
+  const label = `${t('theme')}: ${t(THEME_LABEL[pref])}`;
+  return `<button type="button" class="themebtn" id="themebtn" title="${label}" aria-label="${label}">${ic(THEME_ICON[pref], 20)}<span>${label}</span></button>`;
+}
+
 function renderStatic() {
   document.querySelectorAll<HTMLElement>('[data-t]').forEach((el) => (el.textContent = t(el.dataset.t as Key)));
   $('#lang').textContent = getLang() === 'pl' ? 'EN' : 'PL';
-  $('#locate').textContent = '◎ ' + t('locate');
+  $('#locate').innerHTML = `${ic('locate')}<span>${t('locate')}</span>`;
   const nb = $('#netbadge');
   nb.hidden = navigator.onLine;
   nb.textContent = t('offlineBadge');
@@ -222,7 +236,7 @@ function renderStatic() {
   const section = sectionOf(state.view);
   $('#sections').innerHTML = SECTIONS.map(
     ([id, k]) => `<button type="button" data-section="${id}" aria-current="${section === id ? 'page' : 'false'}">${t(k)}</button>`,
-  ).join('');
+  ).join('') + themeButton();
   const curKey = SECTIONS.find(([id]) => id === section)![1];
   $('#cursection').textContent = t(curKey);
   $('#menubtn').setAttribute('aria-label', t('menu'));
@@ -457,12 +471,12 @@ function districtCard(d: District, withHolderLink = true) {
 function renderDistrict(d: District) {
   return `${backButton()}${districtCard(d)}
     <div class="actions"><button type="button" class="btn ghost" data-action="copy">${t('copyLink')}</button>
-      <button type="button" class="btn ghost" data-action="saveOffline">⤓ ${t('saveOffline')}</button></div>
+      <button type="button" class="btn ghost" data-action="saveOffline">${ic('download')} ${t('saveOffline')}</button></div>
     ${openSeasonsFor(d.county_name)}`;
 }
 
 function renderPoint() {
-  const head = `${backButton()}<button type="button" class="btn ghost w-point-btn" data-action="weatherHere">☁ ${t('weatherHere')}</button>`;
+  const head = `${backButton()}<button type="button" class="btn ghost w-point-btn" data-action="weatherHere">${ic('cloud')} ${t('weatherHere')}</button>`;
   if (pointResult.status === 'loading') return `${head}<p class="muted">${t('identifying')}</p>`;
   if (pointResult.status === 'error') return `${head}<div class="notice error">${esc(pointResult.message)}</div>`;
   if (!pointResult.items.length) return `${head}<p class="muted">${t('outside')}</p>`;
@@ -490,7 +504,7 @@ function renderClub(c: Club) {
     <div class="actions">
       <a class="btn ghost" target="_blank" rel="noopener" href="https://www.google.com/search?q=${encodeURIComponent(c.name + ' koło łowieckie')}">${t('searchWeb')} ↗</a>
       <button type="button" class="btn ghost" data-action="copy">${t('copyLink')}</button>
-      <button type="button" class="btn ghost" data-action="saveOffline">⤓ ${t('saveOffline')}</button>
+      <button type="button" class="btn ghost" data-action="saveOffline">${ic('download')} ${t('saveOffline')}</button>
     </div>
   </article>
   <h3>${t('districtsCap')}</h3>
@@ -635,7 +649,7 @@ function showUpdateBanner(version: string, url: string) {
   el.setAttribute('role', 'status');
   el.innerHTML = `<span>${pl ? `Jest nowa wersja aplikacji (${esc(version)}).` : `A new version of the app is out (${esc(version)}).`}</span>
     <a class="btn small" href="${esc(url)}" target="_blank" rel="noopener">${pl ? 'Pobierz' : 'Download'}</a>
-    <button type="button" class="btn small ghost" aria-label="${pl ? 'Zamknij' : 'Close'}">✕</button>`;
+    <button type="button" class="btn small ghost" aria-label="${pl ? 'Zamknij' : 'Close'}">${ic('x', 16)}</button>`;
   el.querySelector('button')!.addEventListener('click', () => {
     dismissUpdate(version);
     el.remove();
@@ -710,6 +724,7 @@ function renderAbout() {
       <li><a href="https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU19951470713" target="_blank" rel="noopener">${pl ? 'Ustawa Prawo łowieckie' : 'Hunting Law Act'}</a></li>
       <li><a href="https://api.sejm.gov.pl/eli/acts/DU/2023/99/text.html" target="_blank" rel="noopener">${pl ? 'Rozporządzenie w sprawie okresów polowań' : 'Hunting seasons regulation'}</a></li>
     </ul>
+    <p class="muted small">${pl ? 'Kroje pisma' : 'Fonts'}: Inter, Barlow Semi Condensed, Manrope, JetBrains Mono (<a href="./licenses/fonts-OFL.txt" target="_blank" rel="noopener">SIL Open Font License 1.1</a>). ${pl ? 'Ikony w stylu' : 'Icons in the style of'} Lucide.</p>
     <p class="muted small">${
       pl
         ? 'Aplikacja ma charakter informacyjny. Wiążące są dokumenty źródłowe: uchwały sejmików, umowy dzierżawy i przepisy prawa.'
@@ -750,6 +765,14 @@ document.addEventListener('keydown', (e) => {
 });
 
 $('#sections').addEventListener('click', (e) => {
+  if ((e.target as HTMLElement).closest('#themebtn')) {
+    const pref = nextThemePref(getThemePref());
+    setThemePref(pref);
+    renderStatic();
+    $('#themebtn').focus();
+    toast(`${t('theme')}: ${t(THEME_LABEL[pref])}`);
+    return;
+  }
   const b = (e.target as HTMLElement).closest<HTMLElement>('[data-section]');
   if (b) setMenu(false);
   if (!b || b.dataset.section === sectionOf(state.view)) return;

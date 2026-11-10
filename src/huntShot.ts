@@ -2,6 +2,7 @@
 // which animal. A full-screen sheet with big buttons, like the sighting report.
 
 import { GAMES, GAME_GROUPS, type GameGroup, type Outcome } from './pokot';
+import { ic } from './icons';
 
 export interface ShotText {
   title: string; // "Shot logged. Result?"
@@ -43,7 +44,7 @@ export function openShotSheet(text: ShotText, isOffSeason: (key: string) => bool
   };
 
   const stepOutcome = () => {
-    el.innerHTML = `<div class="hs-top"><strong>${text.title}</strong><button type="button" class="hs-x" data-p="later" aria-label="${text.later}">✕</button></div>
+    el.innerHTML = `<div class="hs-top"><strong>${text.title}</strong><button type="button" class="hs-x" data-p="later" aria-label="${text.later}">${ic('x', 22)}</button></div>
       <div class="hp-outcomes">
         <button type="button" class="hp-o hp-o-kill" data-p="o" data-v="kill">${text.outcomes.kill}</button>
         <button type="button" class="hp-o hp-o-wound" data-p="o" data-v="wound">${text.outcomes.wound}</button>

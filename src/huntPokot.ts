@@ -5,6 +5,7 @@
 import { getLang, tt } from './i18n';
 import { isLeader as leads, type Drive, type Hunt, type Participant } from './hunt';
 import { GAMES, GAME_GROUPS, NO_SHOOTER, NOTE_MAX, OUTCOMES, fmtCoords, isBoar, bagBySpecies, gameByKey, hunterTotals, huntKing, huntMisser, outOfSeason, shotsByDrive, voivodeshipOf, type GameGroup, type Outcome, type Shot } from './pokot';
+import { ic } from './icons';
 
 const esc = (s: unknown) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -59,7 +60,7 @@ export const PL = {
   lockHint: { pl: 'Po zatwierdzeniu nikt nie może zmieniać strzałów.', en: 'After confirming, nobody can change the shots.' },
   unlock: { pl: 'Odblokuj do poprawek', en: 'Unlock for corrections' },
   lockAfterEnd: { pl: 'Pokot można zatwierdzić po zakończeniu polowania.', en: 'The results can be confirmed after the hunt has ended.' },
-  pdf: { pl: '⤓ Pobierz pokot (PDF)', en: '⤓ Download results (PDF)' },
+  pdf: { pl: 'Pobierz pokot (PDF)', en: 'Download results (PDF)' },
   pdfHint: { pl: 'W oknie drukowania wybierz „Zapisz jako PDF”.', en: 'In the print dialog choose “Save as PDF”.' },
   offSeason: { pl: 'poza okresem polowań', en: 'outside the season' },
   retention: {
@@ -293,7 +294,7 @@ export function renderPokot(c: PokotCtx): string {
     <h4>${pl('hunters')}</h4>${totalsTable(c, false)}
     ${boars(c).length ? `<h4>${pl('asf')}</h4><p class="small muted">${pl('asfHint')}</p>${asfTable(c, false)}<p class="small">${pl('asfKeep')}</p>` : ''}
     ${leaderCtl}
-    <div class="h-actions"><button type="button" class="btn small ghost" data-hunt="pokotPdf">${pl('pdf')}</button></div>
+    <div class="h-actions"><button type="button" class="btn small ghost" data-hunt="pokotPdf">${ic('download', 16)} ${pl('pdf')}</button></div>
     <p class="muted small">${pl('pdfHint')} ${pl('retention')}</p>
   </section>`;
 }
