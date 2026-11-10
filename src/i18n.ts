@@ -3,6 +3,10 @@ export type Lang = 'pl' | 'en';
 const dict = {
   title: { pl: 'Polowanie', en: 'Polowanie' },
   menu: { pl: 'Menu', en: 'Menu' },
+  theme: { pl: 'Wygląd', en: 'Appearance' },
+  themeAuto: { pl: 'automatyczny', en: 'automatic' },
+  themeLight: { pl: 'jasny', en: 'light' },
+  themeDark: { pl: 'ciemny', en: 'dark' },
   subtitle: { pl: 'Obwody łowieckie i ich dzierżawcy w całej Polsce', en: 'Hunting districts and their leaseholders across Poland' },
   sectionMap: { pl: 'Mapa', en: 'Map' },
   tabClubs: { pl: 'Koła', en: 'Clubs' },

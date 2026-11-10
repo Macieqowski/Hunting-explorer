@@ -6,6 +6,7 @@ import { SPECIES, HERDS, compassPoint, declination, headingFromOrientation, norm
 import { speciesIcon } from './huntIcons';
 import { isApp } from './platform';
 import { listenNativeCompass } from './native';
+import { ic } from './icons';
 
 export interface ReportText {
   title: string; // "What did you see?"
@@ -150,7 +151,7 @@ export function openReport(text: ReportText, lng: () => number | null, onSave: (
 
   const stepAnimal = () => {
     stopCompass();
-    el.innerHTML = `<div class="hs-top"><strong>${text.title}</strong><button type="button" class="hs-x" data-s="cancel" aria-label="${text.cancel}">✕</button></div>
+    el.innerHTML = `<div class="hs-top"><strong>${text.title}</strong><button type="button" class="hs-x" data-s="cancel" aria-label="${text.cancel}">${ic('x', 22)}</button></div>
       <div class="hs-count" role="radiogroup" aria-label="${text.count}"><span>${text.count}</span>${HERDS.map(
         (h) => `<button type="button" role="radio" aria-checked="${h === count}" data-s="count" data-v="${h}">${text.herd(h)}</button>`,
       ).join('')}</div>
@@ -159,7 +160,7 @@ export function openReport(text: ReportText, lng: () => number | null, onSave: (
 
   const stepDirection = () => {
     const name = `${text.species[species!]} ${text.herd(count)}`;
-    el.innerHTML = `<div class="hs-top"><button type="button" class="hs-x" data-s="back" aria-label="${text.back}">←</button><strong>${text.where(name)}</strong><button type="button" class="hs-x" data-s="cancel" aria-label="${text.cancel}">✕</button></div>
+    el.innerHTML = `<div class="hs-top"><button type="button" class="hs-x" data-s="back" aria-label="${text.back}">←</button><strong>${text.where(name)}</strong><button type="button" class="hs-x" data-s="cancel" aria-label="${text.cancel}">${ic('x', 22)}</button></div>
       <div class="hs-compass" ${manual ? 'hidden' : ''}>
         <p class="hs-hint">${text.point}</p>
         <div class="hs-dial"><svg viewBox="-100 -100 200 200" aria-hidden="true">

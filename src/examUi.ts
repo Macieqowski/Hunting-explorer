@@ -5,6 +5,7 @@ import { getLang, tt, fmtNum } from './i18n';
 import { speciesIn } from './atlasMatch';
 import { speciesBySlug } from './atlas';
 import { saveTextFile } from './platform';
+import { ic } from './icons';
 
 const BANK_IDS = ['mysliwy', 'selekcjoner'] as const;
 type BankId = (typeof BANK_IDS)[number];
@@ -441,7 +442,7 @@ function renderProgress(b: Bank, progress: Progress, sum: ReturnType<typeof summ
       ? `<details class="prog-missed"><summary>${l('missed')}</summary>${missed
           .map(
             (q) => `<article class="card review"><p class="eyebrow">${esc(q.topic)} · ${progress[q.id].wrong} ${l('missedTimes')}</p><p><strong>${esc(q.q)}</strong></p>${img(q.image, 'q-img small-img')}
-            <p class="small ok-text">✓ ${correctOf(q)
+            <p class="small ok-text">${ic('check', 16)} ${correctOf(q)
               .map((c) => `<span class="ans-inline">${answerHtml(q.answers[c])}</span>`)
               .join(', ')}</p></article>`,
           )
@@ -547,7 +548,7 @@ function renderResult(a: Attempt) {
             ({ d, i }) => `<article class="card review">
       <p class="eyebrow">${i + 1}. ${esc(d.question.topic)}</p><p><strong>${esc(d.question.q)}</strong></p>${img(d.question.image, 'q-img small-img')}
       <p class="small bad-text">${l('yourAnswer')}: ${a.answers[i]?.length ? answersInline(d, a.answers[i]!) : l('none')}</p>
-      <p class="small ok-text">✓ ${answersInline(d, d.correct)}</p>
+      <p class="small ok-text">${ic('check', 16)} ${answersInline(d, d.correct)}</p>
       ${d.question.explanation ? `<p class="small">${esc(d.question.explanation)}</p>` : ''}${sourceLink(d)}${atlasChips(d)}</article>`,
           )
           .join('')

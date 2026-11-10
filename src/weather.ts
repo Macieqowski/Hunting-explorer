@@ -1,6 +1,8 @@
 // Weather data from Open-Meteo (free, keyless, CORS-enabled) plus the hunter-oriented
 // conclusions drawn from it. No DOM here; see weatherUi.ts for rendering.
 
+import type { IconName } from './icons';
+
 export const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 export const GEOCODE_URL = 'https://geocoding-api.open-meteo.com/v1/search';
 
@@ -263,38 +265,38 @@ export function hunterTips(f: Forecast, now: number, moon: { fraction: number; u
 
 // ---------------------------------------------------------------- WMO weather codes
 
-type Desc = { pl: string; en: string; icon: string; night?: string };
+type Desc = { pl: string; en: string; icon: IconName; night?: IconName };
 const WMO: Record<number, Desc> = {
-  0: { pl: 'Bezchmurnie', en: 'Clear sky', icon: '☀️', night: '🌙' },
-  1: { pl: 'Przeważnie pogodnie', en: 'Mainly clear', icon: '🌤️', night: '🌙' },
-  2: { pl: 'Częściowe zachmurzenie', en: 'Partly cloudy', icon: '⛅', night: '☁️' },
-  3: { pl: 'Pochmurno', en: 'Overcast', icon: '☁️' },
-  45: { pl: 'Mgła', en: 'Fog', icon: '🌫️' },
-  48: { pl: 'Mgła osadzająca szadź', en: 'Freezing fog', icon: '🌫️' },
-  51: { pl: 'Lekka mżawka', en: 'Light drizzle', icon: '🌦️' },
-  53: { pl: 'Mżawka', en: 'Drizzle', icon: '🌦️' },
-  55: { pl: 'Gęsta mżawka', en: 'Dense drizzle', icon: '🌧️' },
-  56: { pl: 'Marznąca mżawka', en: 'Freezing drizzle', icon: '🌧️' },
-  57: { pl: 'Gęsta marznąca mżawka', en: 'Dense freezing drizzle', icon: '🌧️' },
-  61: { pl: 'Słaby deszcz', en: 'Light rain', icon: '🌦️' },
-  63: { pl: 'Deszcz', en: 'Rain', icon: '🌧️' },
-  65: { pl: 'Ulewa', en: 'Heavy rain', icon: '🌧️' },
-  66: { pl: 'Marznący deszcz', en: 'Freezing rain', icon: '🌧️' },
-  67: { pl: 'Silny marznący deszcz', en: 'Heavy freezing rain', icon: '🌧️' },
-  71: { pl: 'Słaby śnieg', en: 'Light snow', icon: '🌨️' },
-  73: { pl: 'Śnieg', en: 'Snow', icon: '🌨️' },
-  75: { pl: 'Intensywny śnieg', en: 'Heavy snow', icon: '❄️' },
-  77: { pl: 'Śnieg ziarnisty', en: 'Snow grains', icon: '🌨️' },
-  80: { pl: 'Przelotny deszcz', en: 'Rain showers', icon: '🌦️' },
-  81: { pl: 'Przelotne opady deszczu', en: 'Moderate showers', icon: '🌧️' },
-  82: { pl: 'Gwałtowne ulewy', en: 'Violent showers', icon: '⛈️' },
-  85: { pl: 'Przelotny śnieg', en: 'Snow showers', icon: '🌨️' },
-  86: { pl: 'Intensywne opady śniegu', en: 'Heavy snow showers', icon: '❄️' },
-  95: { pl: 'Burza', en: 'Thunderstorm', icon: '⛈️' },
-  96: { pl: 'Burza z gradem', en: 'Thunderstorm with hail', icon: '⛈️' },
-  99: { pl: 'Silna burza z gradem', en: 'Severe thunderstorm with hail', icon: '⛈️' },
+  0: { pl: 'Bezchmurnie', en: 'Clear sky', icon: 'sun', night: 'moon' },
+  1: { pl: 'Przeważnie pogodnie', en: 'Mainly clear', icon: 'sunCloud', night: 'moon' },
+  2: { pl: 'Częściowe zachmurzenie', en: 'Partly cloudy', icon: 'sunCloud', night: 'moonCloud' },
+  3: { pl: 'Pochmurno', en: 'Overcast', icon: 'cloud' },
+  45: { pl: 'Mgła', en: 'Fog', icon: 'fog' },
+  48: { pl: 'Mgła osadzająca szadź', en: 'Freezing fog', icon: 'fog' },
+  51: { pl: 'Lekka mżawka', en: 'Light drizzle', icon: 'drizzle' },
+  53: { pl: 'Mżawka', en: 'Drizzle', icon: 'drizzle' },
+  55: { pl: 'Gęsta mżawka', en: 'Dense drizzle', icon: 'rain' },
+  56: { pl: 'Marznąca mżawka', en: 'Freezing drizzle', icon: 'rain' },
+  57: { pl: 'Gęsta marznąca mżawka', en: 'Dense freezing drizzle', icon: 'rain' },
+  61: { pl: 'Słaby deszcz', en: 'Light rain', icon: 'drizzle' },
+  63: { pl: 'Deszcz', en: 'Rain', icon: 'rain' },
+  65: { pl: 'Ulewa', en: 'Heavy rain', icon: 'rain' },
+  66: { pl: 'Marznący deszcz', en: 'Freezing rain', icon: 'rain' },
+  67: { pl: 'Silny marznący deszcz', en: 'Heavy freezing rain', icon: 'rain' },
+  71: { pl: 'Słaby śnieg', en: 'Light snow', icon: 'snow' },
+  73: { pl: 'Śnieg', en: 'Snow', icon: 'snow' },
+  75: { pl: 'Intensywny śnieg', en: 'Heavy snow', icon: 'snowHeavy' },
+  77: { pl: 'Śnieg ziarnisty', en: 'Snow grains', icon: 'snow' },
+  80: { pl: 'Przelotny deszcz', en: 'Rain showers', icon: 'drizzle' },
+  81: { pl: 'Przelotne opady deszczu', en: 'Moderate showers', icon: 'rain' },
+  82: { pl: 'Gwałtowne ulewy', en: 'Violent showers', icon: 'storm' },
+  85: { pl: 'Przelotny śnieg', en: 'Snow showers', icon: 'snow' },
+  86: { pl: 'Intensywne opady śniegu', en: 'Heavy snow showers', icon: 'snowHeavy' },
+  95: { pl: 'Burza', en: 'Thunderstorm', icon: 'storm' },
+  96: { pl: 'Burza z gradem', en: 'Thunderstorm with hail', icon: 'storm' },
+  99: { pl: 'Silna burza z gradem', en: 'Severe thunderstorm with hail', icon: 'storm' },
 };
-export function weatherDesc(code: number, lang: 'pl' | 'en', night = false): { text: string; icon: string } {
-  const d = WMO[code] ?? { pl: '—', en: '—', icon: '·' };
+export function weatherDesc(code: number, lang: 'pl' | 'en', night = false): { text: string; icon: IconName } {
+  const d: Desc = WMO[code] ?? { pl: '—', en: '—', icon: 'cloud' };
   return { text: d[lang], icon: night && d.night ? d.night : d.icon };
 }

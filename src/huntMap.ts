@@ -11,6 +11,7 @@ import { createWind } from './windLayer';
 import { roleIcon, ROLE_COLOR, speciesIcon, SPECIES_COLOR, standIcon } from './huntIcons';
 import type { Stand, StandKind } from './stands';
 import { freshness, distanceM, offsetPoint, type Area, type DriveState, type Position, type Role, type TrackPoint, type Species, type SightLook } from './hunt';
+import { ic } from './icons';
 
 export interface PersonInfo {
   name: string;
@@ -603,7 +604,7 @@ export function createHuntMap(text: HuntMapText): HuntMap {
       meetLayer.clearLayers();
       for (const m of ms)
         L.marker([m.lat, m.lng], {
-          icon: L.divIcon({ className: 'hm-icon', html: `<div class="hr-meet"><span aria-hidden="true">⚑</span><span class="hm-label">${esc(m.label)}</span></div>`, iconSize: [0, 0] }),
+          icon: L.divIcon({ className: 'hm-icon', html: `<div class="hr-meet"><span aria-hidden="true">${ic('flag', 26)}</span><span class="hm-label">${esc(m.label)}</span></div>`, iconSize: [0, 0] }),
           title: m.label,
           zIndexOffset: -300,
         })
