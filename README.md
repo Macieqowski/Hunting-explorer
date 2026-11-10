@@ -34,9 +34,11 @@ All BDL data is loaded **live in the browser** (JSONP against the public ArcGIS 
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173
+npm run dev      # the app, http://localhost:5173
+npm run dev:landing  # the welcome page
 npm test         # unit tests (vitest)
-npm run build    # static site in dist/
+npm run build    # static site in dist/: welcome page at the root, the app in dist/app/
+npm run preview  # serves dist/ as the website will
 npm run test:rules  # Firebase security rules on the emulator (needs Java 21)
 ```
 
@@ -47,7 +49,8 @@ Stack: Vite + TypeScript + Leaflet, no framework. Code layout:
 - `src/seasons.ts` – hunting season data and logic
 - `src/map.ts` – Leaflet map and layers
 - `src/hunt.ts`, `src/huntUi.ts`, `src/huntMap.ts`, `src/huntShare.ts`, `src/huntSighting.ts`, `src/huntIcons.ts`, `src/stands.ts` – group hunts: logic, pages, live map, location sharing, game reporting with the compass, role, species and high-seat icons, high seats (zwyżki, ambony) read from a KMZ/KML file; `src/huntBackend.ts` (interface) + `src/huntFirebase.ts` (Firebase, loaded only when the section opens); rules in `database.rules.json`, tested in `rules/`
-- `src/main.ts` – UI, routing, rendering
+- `src/main.ts` – UI, routing, rendering; `src/nav.ts` – the five destinations and link addresses; `src/tokens.css` – colours, fonts and shapes of the light and dark look
+- `landing/` – the welcome page at the root of the site (`vite.landing.config.ts`); it passes old `#/…` links on to `app/`
 - `src/i18n.ts` – Polish/English strings
 
 ## Exam question banks

@@ -1,6 +1,7 @@
 // Atlas zwierzyny: species list and species pages. Rendered as strings like the other
 // sections; main.ts routes #/atlas and #/atlas/<slug> here and forwards [data-atlas] clicks.
 
+import { ic } from './icons';
 import { getLang, tt } from './i18n';
 import { SPECIES, GROUPS, speciesBySlug, seasonsFor, protectedLookalikes, type Species, type Tx } from './atlas';
 import { trackSvg } from './atlasTracks';
@@ -30,7 +31,7 @@ const L = {
   },
   search: { pl: 'Szukaj gatunku', en: 'Search species' },
   none: { pl: 'Brak gatunku o tej nazwie.', en: 'No species with that name.' },
-  back: { pl: '← Wszystkie gatunki', en: '← All species' },
+  back: { pl: 'Wszystkie gatunki', en: 'All species' },
   facts: { pl: 'W skrócie', en: 'At a glance' },
   terms: { pl: 'Nazwy łowieckie', en: 'Hunting terms' },
   identify: { pl: 'Jak rozpoznać gatunek', en: 'Telling the species' },
@@ -174,7 +175,7 @@ function renderSeason(sp: Species, voiv: string): string {
   return `<section class="atlas-sec"><h3>${tl(L.season)}</h3>
     <table class="tbl atlas-season"><tbody>${rows}</tbody></table>
     ${hasVariants ? `<p class="muted small">* ${tl(L.voivHint)}</p>` : ''}
-    <p class="small"><a href="#/seasons" data-atlas="seasons">${tl(L.allSeasons)} →</a></p></section>`;
+    <p class="small"><a href="#/seasons" data-atlas="seasons">${tl(L.allSeasons)} ${ic('chevron', 14)}</a></p></section>`;
 }
 
 function renderProtection(sp: Species): string {
@@ -208,7 +209,7 @@ export function setAtlasVoivodeship(v: string) {
 function renderSpecies(sp: Species): string {
   const p = sp.track.print;
   return `<article class="atlas atlas-species">
-    <a href="#/atlas" class="btn ghost back" data-atlas="go" data-slug="">${tl(L.back)}</a>
+    <a href="#/atlas" class="btn ghost back" data-atlas="go" data-slug="">${ic('back', 18)} ${tl(L.back)}</a>
     <h2>${esc(tl(sp.name))} <span class="atlas-latin">${esc(sp.latin)}</span></h2>
     <p>${rich(sp.terms)}</p>
     ${renderPhotos(sp)}
@@ -259,7 +260,7 @@ function renderCredits(): string {
       }),
   ).join('');
   return `<article class="atlas">
-    <a href="#/atlas" class="btn ghost back" data-atlas="go" data-slug="">${tl(L.back)}</a>
+    <a href="#/atlas" class="btn ghost back" data-atlas="go" data-slug="">${ic('back', 18)} ${tl(L.back)}</a>
     <h2>${tl(L.photos)}</h2><p class="small">${tl(L.photosIntro)}</p>
     <ul class="atlas-credits">${rows}</ul></article>`;
 }

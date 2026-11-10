@@ -6,7 +6,9 @@
 // - Map tiles and other servers are not touched here; the app keeps tiles itself.
 
 /* global PRECACHE, VERSION */
-const CACHE = 'app-' + VERSION;
+// 'app-…' was the name used while the app lived at the root of the site; those copies are removed.
+const PREFIX = 'polowanie-app-';
+const CACHE = PREFIX + VERSION;
 const scope = self.registration.scope;
 const INDEX = new URL('index.html', scope).href;
 
@@ -20,7 +22,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('app-') && k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => (k.startsWith(PREFIX) && k !== CACHE) || k.startsWith('app-')).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });

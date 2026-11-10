@@ -1,4 +1,5 @@
 import './fonts.css';
+import './tokens.css';
 import './style.css';
 import { fetchDistrictsAtPoint, fetchDistrictsByIds, BDL_WMS_DISTRICTS, type District } from './bdl';
 import {
@@ -17,18 +18,20 @@ import { createMap, type MapApi } from './map';
 import { t, tt, getLang, setLang, fmtHa, fmtKm2, fmtNum, type Key } from './i18n';
 import { ic } from './icons';
 import { applyTheme, getThemePref, nextThemePref, setThemePref, watchSystemTheme, type ThemePref } from './theme';
+import { AREAS, KNOW_PAGES, MAP_TABS, areaOf, knowPageOf, knowView, viewToHash, hashToView, type Area, type KnowPage, type MapTab, type Tab, type View } from './nav';
+import { createSheet } from './sheet';
 import { SEASONS, isOpen, effective, formatRanges, yearFrac, openOnlyIn, type Season } from './seasons';
 import { renderExams, handleExamClick, handleExamChange, drillSpecies } from './examUi';
 import { renderWeather, handleWeatherClick, handleWeatherInput, handleWeatherSubmit, showWeatherAt } from './weatherUi';
 import { renderBallistics, handleBallisticsClick, handleBallisticsChange, handleBallisticsSubmit } from './ballisticsUi';
-import { renderHunts, handleHuntClick, handleHuntInput, handleHuntSubmit, handleHuntChange, leaveHunts, mountHuntMap } from './huntUi';
+import { renderHunts, handleHuntClick, handleHuntInput, handleHuntSubmit, handleHuntChange, leaveHunts, mountHuntMap, huntBack, huntPhoneBack } from './huntUi';
 import { renderAtlas, handleAtlasClick, handleAtlasInput, setAtlasVoivodeship } from './atlasUi';
 import { speciesForSeason } from './atlas';
 import { initOffline, onOfflineChange } from './offline';
 import { initOfflineUi, renderOffline, handleOfflineEvent, startDraft } from './offlineUi';
 import type { AreaTarget } from './offline';
 import { loadDistrictList, checkDistrictUpdate, type DistrictList, type SnapshotMeta } from './districtData';
-import { isApp, publicHref, copyText, initDeepLinks, appVersion, checkForAppUpdate, dismissUpdate, APK_URL } from './platform';
+import { isApp, publicHref, copyText, initDeepLinks, appVersion, checkForAppUpdate, dismissUpdate, onBackButton, minimizeApp, APK_URL } from './platform';
 
 // ---------------------------------------------------------------- helpers
 
@@ -37,15 +40,6 @@ const esc = (s: unknown) =>
 const $ = <T extends HTMLElement = HTMLElement>(sel: string, root: ParentNode = document) => root.querySelector(sel) as T;
 const typeKey = (h: HolderType) => `type_${h}` as Key;
 const cap = (s: string | null) => (s ? s.charAt(0).toLocaleUpperCase('pl') + s.slice(1) : '—');
-
-type Tab = 'clubs' | 'districts' | 'stats' | 'offline' | 'seasons' | 'exams' | 'weather' | 'hunt' | 'ballistics' | 'about';
-type View =
-  | { kind: 'tab'; tab: Tab }
-  | { kind: 'district'; slug: string }
-  | { kind: 'club'; key: string }
-  | { kind: 'point'; lat: number; lng: number }
-  | { kind: 'hunt'; id: string; invite?: string }
-  | { kind: 'atlas'; slug: string | null };
 
 const state = {
   districts: [] as District[],
@@ -86,16 +80,13 @@ app.innerHTML = `
       <svg class="brand-mark" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><path class="bm-pin" d="M16 2c6.1 0 11 4.7 11 10.6 0 7.4-8.3 15.1-11 17.4-2.7-2.3-11-10-11-17.4C5 6.700 9.900 2 16 2Z"/><path class="bm-tree" d="M16 6l-5 7h2.600l-3.600 5h5v3h2v-3h5l-3.600-5H21z"/></svg>
       <div><h1><span data-t="title"></span><span class="cur-section" id="cursection"></span></h1><p data-t="subtitle"></p></div>
     </div>
-    <nav class="sections" id="sections" aria-label="Sections"></nav>
+    <nav class="sections" id="sections"></nav>
     <span class="netbadge" id="netbadge" hidden></span>
-    <button class="lang" id="lang" type="button" aria-label="Language"></button>
-    <button class="menubtn" id="menubtn" type="button" aria-controls="sections" aria-expanded="false">
-      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
-    </button>
+    <div class="topbar-tools" id="tools"></div>
   </header>
-  <div class="menu-scrim" id="menuscrim" hidden></div>
   <main class="layout">
     <aside class="panel" id="panel">
+      <button class="sheet-handle" id="sheethandle" type="button"><span aria-hidden="true"></span></button>
       <nav class="tabs" id="tabs" role="tablist"></nav>
       <section class="content" id="content" aria-live="polite"></section>
     </aside>
@@ -106,62 +97,30 @@ app.innerHTML = `
         <img alt="" src="${BDL_WMS_DISTRICTS}?request=GetLegendGraphic&version=1.3.0&format=image/png&layer=0" />
       </details>
     </div>
-  </main>`;
+  </main>
+  <nav class="bottomnav" id="bottomnav"></nav>`;
 
 const content = $('#content');
 const mapApi: MapApi = createMap($('#map'), (lat, lng) => navigate({ kind: 'point', lat, lng }));
 
-// Top-level sections. The map section holds the panel tabs; every other section is a
-// full-width page without the map (add new features here).
-type Section = 'map' | 'seasons' | 'atlas' | 'exams' | 'weather' | 'hunt' | 'ballistics';
-const SECTIONS: [Section, Key][] = [
-  ['map', 'sectionMap'],
-  ['seasons', 'tabSeasons'],
-  ['atlas', 'tabAtlas'],
-  ['exams', 'tabExams'],
-  ['weather', 'tabWeather'],
-  ['hunt', 'tabHunt'],
-  ['ballistics', 'tabBallistics'],
-];
-const PAGE_SECTIONS: Tab[] = ['seasons', 'exams', 'weather', 'hunt', 'ballistics'];
-const sectionOf = (v: View): Section =>
-  v.kind === 'hunt' ? 'hunt' : v.kind === 'atlas' ? 'atlas' : v.kind === 'tab' && PAGE_SECTIONS.includes(v.tab) ? (v.tab as Section) : 'map';
-let lastSection: Section = 'map';
-let lastMapView: View = { kind: 'tab', tab: 'clubs' };
+// The five destinations: a bar at the bottom on a phone, at the top on a computer (see nav.ts).
+// "map" keeps the map with its lists; every other area is a full-width page without the map.
+const AREA_LABEL: Record<Area, Key> = { map: 'sectionMap', hunt: 'areaHunt', weather: 'tabWeather', know: 'areaKnow', more: 'areaMore' };
+const AREA_ICON = { map: 'map', hunt: 'users', weather: 'sunCloud', know: 'book', more: 'more' } as const;
+const KNOW_LABEL: Record<KnowPage, Key> = { seasons: 'knowSeasons', atlas: 'knowAtlas', exams: 'knowExams', ballistics: 'knowBallistics' };
+const KNOW_TITLE: Record<KnowPage, Key> = { seasons: 'tabSeasons', atlas: 'tabAtlas', exams: 'tabExams', ballistics: 'tabBallistics' };
+const MAP_TAB_LABEL: Record<MapTab, Key> = { clubs: 'tabClubs', districts: 'tabDistricts', stats: 'tabStats', offline: 'tabOffline' };
+let lastArea: Area = 'map';
+/** Where each area was left, so coming back to it returns to the same place. */
+const lastIn: Partial<Record<Area, View>> = {};
+const areaHome = (a: Area): View =>
+  a === 'map' ? { kind: 'tab', tab: 'clubs' } : a === 'know' ? { kind: 'tab', tab: 'seasons' } : a === 'more' ? { kind: 'tab', tab: 'more' } : { kind: 'tab', tab: a };
+
+// On a phone the panel beside the map is a pull-up sheet over it.
+const phone = matchMedia('(max-width: 760px)');
+const sheet = createSheet($('#panel'), $('#sheethandle'), () => phone.matches && areaOf(state.view) === 'map');
 
 // ---------------------------------------------------------------- routing
-
-function viewToHash(v: View): string {
-  switch (v.kind) {
-    case 'tab':
-      return v.tab === 'clubs' ? '' : v.tab === 'hunt' ? '#/polowanie' : `#/${v.tab}`;
-    case 'hunt':
-      return `#/polowanie/${encodeURIComponent(v.id)}${v.invite ? `/${v.invite}` : ''}`;
-    case 'atlas':
-      return v.slug ? `#/atlas/${v.slug}` : '#/atlas';
-    case 'district':
-      return `#/obwod/${v.slug}`;
-    case 'club':
-      return `#/kolo/${encodeURIComponent(v.key)}`;
-    case 'point':
-      return `#/punkt/${v.lat.toFixed(5)},${v.lng.toFixed(5)}`;
-  }
-}
-
-function hashToView(h: string): View {
-  const [, kind, arg, arg2] = h.replace(/^#/, '').split('/');
-  if (kind === 'obwod' && arg) return { kind: 'district', slug: arg };
-  // #/polowanie/<hunt>/<invitation token>
-  if (kind === 'polowanie') return arg ? { kind: 'hunt', id: decodeURIComponent(arg), ...(arg2 ? { invite: arg2 } : {}) } : { kind: 'tab', tab: 'hunt' };
-  if (kind === 'atlas') return { kind: 'atlas', slug: arg || null };
-  if (kind === 'kolo' && arg) return { kind: 'club', key: decodeURIComponent(arg) };
-  if (kind === 'punkt' && arg) {
-    const [lat, lng] = arg.split(',').map(Number);
-    if (isFinite(lat) && isFinite(lng)) return { kind: 'point', lat, lng };
-  }
-  if (['districts', 'stats', 'offline', 'seasons', 'exams', 'weather', 'ballistics', 'about'].includes(kind)) return { kind: 'tab', tab: kind as Tab };
-  return { kind: 'tab', tab: 'clubs' };
-}
 
 function navigate(v: View, push = true) {
   state.view = v;
@@ -170,6 +129,9 @@ function navigate(v: View, push = true) {
     const h = viewToHash(v);
     if (h !== location.hash) history.pushState(null, '', h || location.pathname + location.search);
   }
+  // A tapped district, club or point opens the sheet half way: details below, the place above.
+  if (v.kind === 'district' || v.kind === 'club' || v.kind === 'point') sheet.set('half');
+  else if (v.kind === 'tab' && (MAP_TABS as readonly string[]).includes(v.tab) && v.tab !== 'clubs' && sheet.get() === 'peek') sheet.set('half');
   render();
   onViewMapEffects(v);
 }
@@ -188,18 +150,18 @@ async function onViewMapEffects(v: View) {
       const res = await fetchDistrictsAtPoint(v.lat, v.lng);
       if (token !== effectToken) return;
       pointResult = { status: 'done', items: res.map((r) => r.attributes) };
-      mapApi.highlight(res, { marker: [v.lat, v.lng] });
+      mapApi.highlight(res, { marker: [v.lat, v.lng], padBottom: sheet.cover() });
       render();
     } else if (v.kind === 'district') {
       const d = findBySlug(state.districts, v.slug);
       if (!d) return;
       const res = await fetchDistrictsByIds([d.objectid], 0.00005);
-      if (token === effectToken) mapApi.highlight(res, { fit: true });
+      if (token === effectToken) mapApi.highlight(res, { fit: true, padBottom: sheet.cover() });
     } else if (v.kind === 'club') {
       const c = state.clubsByKey.get(v.key);
       if (!c) return;
       const res = await fetchDistrictsByIds(c.districts.map((d) => d.objectid));
-      if (token === effectToken) mapApi.highlight(res, { fit: true });
+      if (token === effectToken) mapApi.highlight(res, { fit: true, padBottom: sheet.cover() });
     }
   } catch (e) {
     if (token !== effectToken) return;
@@ -225,42 +187,48 @@ function themeButton(): string {
   return `<button type="button" class="themebtn" id="themebtn" title="${label}" aria-label="${label}">${ic(THEME_ICON[pref], 20)}<span>${label}</span></button>`;
 }
 
+function areaButtons(area: Area, icons: boolean): string {
+  return AREAS.map(
+    (id) => `<button type="button" data-area="${id}" aria-current="${area === id ? 'page' : 'false'}">${icons ? ic(AREA_ICON[id], 24) : ''}<span>${t(AREA_LABEL[id])}</span></button>`,
+  ).join('');
+}
+
 function renderStatic() {
   document.querySelectorAll<HTMLElement>('[data-t]').forEach((el) => (el.textContent = t(el.dataset.t as Key)));
-  $('#lang').textContent = getLang() === 'pl' ? 'EN' : 'PL';
   $('#locate').innerHTML = `${ic('locate')}<span>${t('locate')}</span>`;
   const nb = $('#netbadge');
   nb.hidden = navigator.onLine;
   nb.textContent = t('offlineBadge');
   document.title = t('title');
-  const section = sectionOf(state.view);
-  $('#sections').innerHTML = SECTIONS.map(
-    ([id, k]) => `<button type="button" data-section="${id}" aria-current="${section === id ? 'page' : 'false'}">${t(k)}</button>`,
-  ).join('') + themeButton();
-  const curKey = SECTIONS.find(([id]) => id === section)![1];
-  $('#cursection').textContent = t(curKey);
-  $('#menubtn').setAttribute('aria-label', t('menu'));
-  app.classList.toggle('page-mode', section !== 'map');
-  if (section !== lastSection) {
-    lastSection = section;
+  const v = state.view;
+  const area = areaOf(v);
+  const know = knowPageOf(v);
+  $('#sections').innerHTML = areaButtons(area, false);
+  $('#sections').setAttribute('aria-label', t('mainNav'));
+  $('#bottomnav').innerHTML = areaButtons(area, true);
+  $('#bottomnav').setAttribute('aria-label', t('mainNav'));
+  $('#tools').innerHTML = `<button class="lang" id="lang" type="button" aria-label="${t('language')}">${getLang() === 'pl' ? 'EN' : 'PL'}</button>${themeButton()}`;
+  $('#sheethandle').setAttribute('aria-label', t('sheetToggle'));
+  // Beside the app's name on a phone: where you are.
+  const here: Key = know ? KNOW_TITLE[know] : area === 'hunt' ? 'tabHunt' : v.kind === 'tab' && v.tab === 'about' ? 'tabAbout' : AREA_LABEL[area];
+  $('#cursection').textContent = t(here);
+  app.classList.toggle('page-mode', area !== 'map');
+  for (const a of AREAS) app.classList.toggle(`area-${a}`, a === area);
+  if (area !== lastArea) {
+    lastArea = area;
     content.scrollTop = 0;
     // Leaflet needs a size refresh after its container was hidden.
-    if (section === 'map') setTimeout(() => mapApi.map.invalidateSize(), 0);
+    if (area === 'map') setTimeout(() => mapApi.map.invalidateSize(), 0);
   }
-  if (section === 'map') lastMapView = state.view;
-  const tabs: [Tab, Key][] = [
-    ['clubs', 'tabClubs'],
-    ['districts', 'tabDistricts'],
-    ['stats', 'tabStats'],
-    ['offline', 'tabOffline'],
-    ['about', 'tabAbout'],
-  ];
-  $('#tabs').innerHTML = tabs
-    .map(
-      ([id, k]) =>
-        `<button role="tab" type="button" data-tab="${id}" aria-selected="${state.view.kind === 'tab' && state.tab === id}">${t(k)}</button>`,
-    )
-    .join('');
+  lastIn[area] = v;
+  $('#tabs').innerHTML =
+    area === 'map'
+      ? MAP_TABS.map(
+          (id) => `<button role="tab" type="button" data-tab="${id}" aria-selected="${v.kind === 'tab' && state.tab === id}">${t(MAP_TAB_LABEL[id])}</button>`,
+        ).join('')
+      : area === 'know'
+        ? KNOW_PAGES.map((id) => `<button role="tab" type="button" data-know="${id}" aria-selected="${know === id}">${t(KNOW_LABEL[id])}</button>`).join('')
+        : '';
 }
 
 function render() {
@@ -279,8 +247,8 @@ function render() {
   if (v.kind === 'hunt' || (v.kind === 'tab' && v.tab === 'hunt')) return renderHuntSection(v.kind === 'hunt' ? v.id : null, v.kind === 'hunt' ? v.invite : undefined);
   leaveHunts();
   if (v.kind === 'tab' && v.tab === 'offline') return void (content.innerHTML = renderOffline());
-  if (v.kind === 'tab' && (v.tab === 'seasons' || v.tab === 'about')) {
-    content.innerHTML = v.tab === 'seasons' ? renderSeasons() : renderAbout();
+  if (v.kind === 'tab' && (v.tab === 'seasons' || v.tab === 'about' || v.tab === 'more')) {
+    content.innerHTML = v.tab === 'seasons' ? renderSeasons() : v.tab === 'about' ? renderAbout() : renderMore();
     return;
   }
   if (!state.loaded) return void (content.innerHTML = renderLoading());
@@ -431,11 +399,11 @@ function openSeasonsFor(voiv: string | null) {
   const now = new Date();
   const open = SEASONS.filter((s) => isOpen(s, now, voiv));
   return `<h3>${t('openToday')}</h3><div class="chips">${open.map((s) => `<span class="chip">${esc(tt(s.name))}</span>`).join('')}</div>
-    <p class="small"><a href="#/seasons" data-nav="tab" data-tab="seasons">${t('allSeasons')} →</a></p>`;
+    <p class="small"><a href="#/seasons" data-nav="tab" data-tab="seasons">${t('allSeasons')} ${ic('chevron', 14)}</a></p>`;
 }
 
 function backButton() {
-  return `<button type="button" class="btn ghost back" data-action="back">${t('back')}</button>`;
+  return `<button type="button" class="btn ghost back" data-action="back">${ic('back', 18)} ${t('back')}</button>`;
 }
 
 function districtCard(d: District, withHolderLink = true) {
@@ -682,9 +650,41 @@ function renderAppBox(pl: boolean) {
       <li>The app announces new versions itself, at the bottom of the screen.</li></ol></section>`;
 }
 
+/** "Więcej": the settings kept on this device, and the pages that are not part of everyday use. */
+function renderMore() {
+  const pref = getThemePref();
+  const seg = (action: string, value: string, label: string, on: boolean, icon = '') =>
+    `<button type="button" data-action="${action}" data-value="${value}" aria-pressed="${on}">${icon}${label}</button>`;
+  const row = (href: string, tab: Tab, icon: string, title: string, hint: string) =>
+    `<li><a href="${href}" data-nav="tab" data-tab="${tab}">${icon}<span><strong>${title}</strong><small class="muted">${hint}</small></span>${ic('chevron', 20)}</a></li>`;
+  return `<div class="more">
+    <h2>${t('areaMore')}</h2>
+    <h3>${t('settings')}</h3>
+    <div class="set-row"><span id="set-theme">${t('theme')}</span>
+      <div class="seg" role="group" aria-labelledby="set-theme">
+        ${seg('theme', 'auto', cap(t('themeAuto')), pref === 'auto', ic('themeAuto', 18))}
+        ${seg('theme', 'light', cap(t('themeLight')), pref === 'light', ic('sun', 18))}
+        ${seg('theme', 'dark', cap(t('themeDark')), pref === 'dark', ic('moon', 18))}
+      </div></div>
+    <div class="set-row"><span id="set-lang">${t('language')}</span>
+      <div class="seg" role="group" aria-labelledby="set-lang">
+        ${seg('lang', 'pl', 'Polski', getLang() === 'pl')}
+        ${seg('lang', 'en', 'English', getLang() === 'en')}
+      </div></div>
+    <h3>${t('moreSection')}</h3>
+    <ul class="more-list">
+      ${row('#/offline', 'offline', ic('download', 22), t('moreOffline'), t('moreOfflineHint'))}
+      ${isApp() ? '' : row('#/about', 'about', ic('android', 22), t('moreApp'), t('moreAppHint'))}
+      ${row('#/about', 'about', ic('info', 22), t('moreAbout'), t('moreAboutHint'))}
+    </ul>
+    ${isApp() && installedVersion ? `<p class="muted small">${getLang() === 'pl' ? 'Wersja' : 'Version'} ${esc(installedVersion)}</p>` : ''}
+  </div>`;
+}
+
 function renderAbout() {
   const pl = getLang() === 'pl';
   return `<article class="prose">
+    <a class="btn ghost back" href="#/wiecej" data-nav="tab" data-tab="more">${ic('back', 18)} ${t('areaMore')}</a>
     ${renderAppBox(pl)}
     ${
       pl
@@ -743,49 +743,67 @@ function toast(msg: string) {
   setTimeout(() => el.remove(), 3500);
 }
 
-$('#lang').addEventListener('click', () => {
-  setLang(getLang() === 'pl' ? 'en' : 'pl');
+function changeLang(to: 'pl' | 'en') {
+  if (to === getLang()) return;
+  setLang(to);
+  document.documentElement.lang = to;
   mapApi.rebuildLayerControl();
   render();
-});
-
-// On phones the sections live in a drop-down menu behind the ☰ button.
-function setMenu(open: boolean) {
-  app.classList.toggle('menu-open', open);
-  $('#menubtn').setAttribute('aria-expanded', String(open));
-  $('#menuscrim').hidden = !open;
 }
-$('#menubtn').addEventListener('click', () => setMenu(!app.classList.contains('menu-open')));
-$('#menuscrim').addEventListener('click', () => setMenu(false));
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && app.classList.contains('menu-open')) {
-    setMenu(false);
-    $('#menubtn').focus();
+function changeTheme(pref: ThemePref, announce: boolean) {
+  setThemePref(pref);
+  render();
+  if (announce) toast(`${t('theme')}: ${t(THEME_LABEL[pref])}`);
+}
+
+// Language and look: buttons in the top bar on a computer, rows in "Więcej" on a phone.
+$('#tools').addEventListener('click', (e) => {
+  const el = e.target as HTMLElement;
+  if (el.closest('#lang')) {
+    changeLang(getLang() === 'pl' ? 'en' : 'pl');
+    $('#lang').focus();
+  } else if (el.closest('#themebtn')) {
+    changeTheme(nextThemePref(getThemePref()), true);
+    $('#themebtn').focus();
   }
 });
 
-$('#sections').addEventListener('click', (e) => {
-  if ((e.target as HTMLElement).closest('#themebtn')) {
-    const pref = nextThemePref(getThemePref());
-    setThemePref(pref);
-    renderStatic();
-    $('#themebtn').focus();
-    toast(`${t('theme')}: ${t(THEME_LABEL[pref])}`);
+function onAreaClick(e: Event) {
+  const b = (e.target as HTMLElement).closest<HTMLElement>('[data-area]');
+  if (!b) return;
+  const a = b.dataset.area as Area;
+  // A second tap on the current destination goes to its start (the hunt list, the map lists…).
+  if (a === areaOf(state.view)) {
+    if (a === 'map') sheet.set(sheet.get() === 'peek' ? 'half' : 'peek');
+    else navigate(areaHome(a));
     return;
   }
-  const b = (e.target as HTMLElement).closest<HTMLElement>('[data-section]');
-  if (b) setMenu(false);
-  if (!b || b.dataset.section === sectionOf(state.view)) return;
-  const s = b.dataset.section as Section;
-  navigate(s === 'map' ? lastMapView : s === 'atlas' ? { kind: 'atlas', slug: null } : { kind: 'tab', tab: s });
-});
+  navigate(lastIn[a] ?? areaHome(a));
+}
+$('#sections').addEventListener('click', onAreaClick);
+$('#bottomnav').addEventListener('click', onAreaClick);
 
 $('#tabs').addEventListener('click', (e) => {
+  const k = (e.target as HTMLElement).closest<HTMLElement>('[data-know]');
+  if (k) return navigate(knowView(k.dataset.know as KnowPage));
   const b = (e.target as HTMLElement).closest<HTMLElement>('[data-tab]');
   if (!b) return;
   state.limit = 100;
   mapApi.clearHighlight();
+  if (sheet.get() === 'peek') sheet.set('half');
   navigate({ kind: 'tab', tab: b.dataset.tab as Tab });
+});
+// Escape closes what is on top: the hunt's field-mode list, then field mode itself.
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && areaOf(state.view) === 'hunt' && !document.querySelector('.hs-sheet, .hmsg-sheet, #pp-root') && huntBack()) e.preventDefault();
+});
+// Typing in a search field needs the room: the sheet opens fully.
+content.addEventListener('focusin', (e) => {
+  if (sheet.active() && (e.target as HTMLElement).matches('input[type="search"]')) sheet.set('full');
+});
+phone.addEventListener('change', () => {
+  renderStatic();
+  setTimeout(() => mapApi.map.invalidateSize(), 0);
 });
 
 content.addEventListener('click', (e) => {
@@ -833,6 +851,12 @@ content.addEventListener('click', (e) => {
     return;
   }
   switch (el.dataset.action) {
+    case 'theme':
+      changeTheme(el.dataset.value as ThemePref, false);
+      break;
+    case 'lang':
+      changeLang(el.dataset.value as 'pl' | 'en');
+      break;
     case 'more':
       state.limit += 200;
       render();
@@ -1010,7 +1034,7 @@ initOfflineUi({
     if (state.view.kind === 'tab' && state.view.tab === 'offline') render();
   },
   mapBox: () => {
-    if (sectionOf(state.view) !== 'map') return null;
+    if (areaOf(state.view) !== 'map') return null;
     const b = mapApi.map.getBounds();
     return [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()];
   },
@@ -1055,6 +1079,14 @@ navigate(hashToView(location.hash), false);
 load();
 // App only: links to www.polowanie.org opened on the phone land here, and new APKs are announced.
 void initDeepLinks((hash) => navigate(hashToView(hash)));
+// App only: the phone's back button closes what is on top, then goes one screen back. On the first
+// screen it puts the app aside instead of closing it, so location sharing on a hunt goes on.
+void onBackButton((canGoBack) => {
+  if (huntPhoneBack()) return;
+  if (sheet.active() && areaOf(state.view) === 'map' && sheet.get() === 'full') return sheet.set('half');
+  if (canGoBack) history.back();
+  else void minimizeApp();
+});
 void appVersion().then((v) => {
   installedVersion = v;
   if (v) void checkForAppUpdate(showUpdateBanner);

@@ -1,28 +1,31 @@
 # Android app (APK)
 
-The Android app is the website wrapped with [Capacitor](https://capacitorjs.com/): the same `src/` code, built by Vite into `dist/` and copied into `android/`. For now it is not in Google Play; people install `polowanie.apk` from the GitHub release (the About page links to it). Android 9 (API 28) or newer.
+The Android app is the website wrapped with [Capacitor](https://capacitorjs.com/): the same `src/` code, built by Vite into `dist/app/` and copied into `android/`. For now it is not in Google Play; people install `polowanie.apk` from the GitHub release (the welcome page and the About page link to it). Android 9 (API 28) or newer.
 
 ## What differs in the app
 
 All of it lives in `src/platform.ts`:
 
-- Links and QR codes (invitations, leader pairing) always point at `https://www.polowanie.org/`, because the app itself runs at `https://localhost`.
-- Such links open the app when it is installed (`android/app/src/main/AndroidManifest.xml` + `public/.well-known/assetlinks.json`).
+- Links and QR codes (invitations, leader pairing) always point at `https://www.polowanie.org/app/`, because the app itself runs at `https://localhost`.
+- Such links open the app when it is installed (`android/app/src/main/AndroidManifest.xml` + `landing/public/.well-known/assetlinks.json`, served from the root of the site). Older links without `app/` open the app as well.
 - Share, copy, GPX and exam-progress export use the Android share sheet; the pokot print uses Android's print service (`PrinterPlugin.java`), which can also save a PDF.
 - No service worker: the files are inside the APK.
 - Once in 12 hours the app asks GitHub for the newest release and shows a bar when there is a newer APK.
 - On a phone whose WebView is older than Chrome 87 it shows `public/webview-update.html`.
+- The phone's back button closes what is on top (a report sheet, the field-mode list, field mode), then goes one screen back; on the first screen it puts the app aside instead of closing it, so location sharing goes on. The pocket screen and a leader's message ignore it.
+- The big field-mode buttons give a short tick under the finger.
 
 Native features (`src/native.ts`, plugins in `android/app/src/main/java/org/polowanie/app/`):
 
 - **Location sharing with the screen off** (`BackgroundLocationPlugin`, `LocationService`): a foreground service with a notification ("Polowanie: udostępniasz położenie" + Stop) sends positions while the phone is locked. It uses Android's own location providers, so it also works without Google Play services. The beater guidance gets these positions too, so it buzzes off-route with the phone in the pocket. Swiping the app away stops sharing.
 - **Alerts** (`AlertsPlugin`): vibration patterns that work without a recent tap and with the screen off (alarm vibrations, so also in silent mode), and a notification for leader messages, drive start/end, game coming your way, wounded game and carcasses to collect while the app is not on screen. No sound.
+- **System bars** (`BarsPlugin`): the status bar and the navigation bar take the colour of the app's own bars and dark or light icons, following the look chosen in the app (which may differ from the phone's dark mode).
 - **Compass** (`CompassPlugin`): Android's rotation-vector sensor, which also says when it needs calibrating (figure-eight hint).
 - **Offline maps**: tiles of saved areas are files in the app's storage (`src/tileFiles.ts`) instead of the WebView's database, which Android may clear when the phone is low on space.
 
 ## Built-in club and district list
 
-The list of all hunting districts (numbers, leaseholders, areas; no boundaries) is `public/data/districts.json`, made from BDL by `node scripts/snapshot-districts.mjs`. The website and the app read it instead of downloading ~3 MB from BDL on every start. The deploy workflow refreshes it every Monday (falling back to the file the website serves, then to the one in the repository, if BDL does not answer); the app compares `districts-meta.json` on www.polowanie.org with its own at most every 6 hours (and on "Check for updates") and keeps a newer list on the phone. Boundaries on the map still come from BDL live.
+The list of all hunting districts (numbers, leaseholders, areas; no boundaries) is `public/data/districts.json`, made from BDL by `node scripts/snapshot-districts.mjs`. The website and the app read it instead of downloading ~3 MB from BDL on every start. The deploy workflow refreshes it every Monday (falling back to the file the website serves, then to the one in the repository, if BDL does not answer); the app compares `districts-meta.json` on www.polowanie.org (`app/data/`; app 0.1.x reads `data/` at the root, which the build keeps as a copy) with its own at most every 6 hours (and on "Check for updates") and keeps a newer list on the phone. Boundaries on the map still come from BDL live.
 
 ## One-time setup: the signing key
 
@@ -36,7 +39,7 @@ Add three repository secrets (**Settings → Secrets and variables → Actions �
 | `ANDROID_KEYSTORE_PASSWORD` | the keystore password (the key has the same one) |
 | `ANDROID_KEY_ALIAS` | `polowanie` |
 
-The certificate's SHA-256 fingerprint is in `public/.well-known/assetlinks.json`. A new key needs a new fingerprint there (`keytool -list -v -keystore polowanie-release.p12`).
+The certificate's SHA-256 fingerprint is in `landing/public/.well-known/assetlinks.json`. A new key needs a new fingerprint there (`keytool -list -v -keystore polowanie-release.p12`).
 
 ## Publishing a version
 
@@ -56,3 +59,7 @@ cd android && ./gradlew assembleDebug   # android/app/build/outputs/apk/debug/ap
 For a signed release build set `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` and run `npm run android:apk`. Firebase needs the same `VITE_FIREBASE_*` variables as the website build.
 
 Install on a phone with USB debugging: `adb install -r polowanie.apk`. Logs: `adb logcat -s Capacitor/Console`.
+
+## Icons and launch screen
+
+All icons are drawn from the brand mark (`branding/mark.svg`, a map pin with a spruce) by `node scripts/make-icons.mjs`: the website icons in `public/`, the launcher icons (`mipmap-*`) and the Android 9–11 launch screens (`drawable*/splash.png`). On Android 12+ the launch screen is the icon on brand green, or on graphite when the phone is in dark mode (`values/styles.xml`, `values-night/colors.xml`). The script needs the `playwright` package; the images are committed, so it only runs when the mark changes.

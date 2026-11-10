@@ -4,6 +4,8 @@
  * is what every colour, font and corner radius in style.css reads. index.html sets the same
  * attribute before the first paint, so a dark screen does not flash white on start.
  */
+import { setSystemBars } from './native';
+
 export type ThemePref = 'auto' | 'light' | 'dark';
 export type Theme = 'light' | 'dark';
 
@@ -34,6 +36,7 @@ export function applyTheme(): Theme {
   const theme = resolveTheme(getThemePref());
   document.documentElement.dataset.theme = theme;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', BAR[theme]);
+  setSystemBars(theme);
   return theme;
 }
 

@@ -8,6 +8,8 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_APP_ID?: string;
   /** Local development only: point at the database emulator, e.g. "127.0.0.1:9000". */
   readonly VITE_FIREBASE_EMULATOR?: string;
+  /** Welcome page only: contact address shown to clubs (repository variable CONTACT_EMAIL). */
+  readonly VITE_CONTACT_EMAIL?: string;
 }
 
 interface ImportMeta {

@@ -6,8 +6,11 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 /** True inside the Android (later iOS) app, false on the website. */
 export const isApp = (): boolean => Capacitor.isNativePlatform();
 
-/** Public address of the app. Links and QR codes made in the app must point here, not at the app's local origin. */
-export const PUBLIC_URL = 'https://www.polowanie.org/';
+/**
+ * Public address of the app. Links and QR codes made in the app must point here, not at the app's
+ * local origin. (Older links without app/ keep working: the welcome page at the root passes them on.)
+ */
+export const PUBLIC_URL = 'https://www.polowanie.org/app/';
 
 /** Base for shareable links (invitations, pairing codes): the website address the link was made on, or the public site in the app. */
 export const publicBase = (): string => (isApp() ? PUBLIC_URL : `${location.origin}${location.pathname}`);
@@ -84,6 +87,23 @@ export async function initDeepLinks(go: (hash: string) => void): Promise<void> {
   };
   App.addListener('appUrlOpen', (e) => open(e.url));
   open((await App.getLaunchUrl())?.url);
+}
+
+/**
+ * App only: the phone's back button (or back gesture). `onBack` gets whether there is an earlier
+ * screen in the history; with a listener in place Capacitor does nothing by itself.
+ */
+export async function onBackButton(onBack: (canGoBack: boolean) => void): Promise<void> {
+  if (!isApp()) return;
+  const { App } = await import('@capacitor/app');
+  await App.addListener('backButton', (e) => onBack(e.canGoBack));
+}
+
+/** App only: puts the app aside like the home button does. Location sharing goes on. */
+export async function minimizeApp(): Promise<void> {
+  if (!isApp()) return;
+  const { App } = await import('@capacitor/app');
+  await App.minimizeApp();
 }
 
 /** Version of the installed app (e.g. "0.1.0"), or null on the website. */
