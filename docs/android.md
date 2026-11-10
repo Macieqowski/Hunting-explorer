@@ -13,6 +13,17 @@ All of it lives in `src/platform.ts`:
 - Once in 12 hours the app asks GitHub for the newest release and shows a bar when there is a newer APK.
 - On a phone whose WebView is older than Chrome 87 it shows `public/webview-update.html`.
 
+Native features (`src/native.ts`, plugins in `android/app/src/main/java/org/polowanie/app/`):
+
+- **Location sharing with the screen off** (`BackgroundLocationPlugin`, `LocationService`): a foreground service with a notification ("Polowanie: udostępniasz położenie" + Stop) sends positions while the phone is locked. It uses Android's own location providers, so it also works without Google Play services. The beater guidance gets these positions too, so it buzzes off-route with the phone in the pocket. Swiping the app away stops sharing.
+- **Alerts** (`AlertsPlugin`): vibration patterns that work without a recent tap and with the screen off (alarm vibrations, so also in silent mode), and a notification for leader messages, drive start/end, game coming your way, wounded game and carcasses to collect while the app is not on screen. No sound.
+- **Compass** (`CompassPlugin`): Android's rotation-vector sensor, which also says when it needs calibrating (figure-eight hint).
+- **Offline maps**: tiles of saved areas are files in the app's storage (`src/tileFiles.ts`) instead of the WebView's database, which Android may clear when the phone is low on space.
+
+## Built-in club and district list
+
+The list of all hunting districts (numbers, leaseholders, areas; no boundaries) is `public/data/districts.json`, made from BDL by `node scripts/snapshot-districts.mjs`. The website and the app read it instead of downloading ~3 MB from BDL on every start. The deploy workflow refreshes it every Monday (falling back to the file the website serves, then to the one in the repository, if BDL does not answer); the app compares `districts-meta.json` on www.polowanie.org with its own at most every 6 hours (and on "Check for updates") and keeps a newer list on the phone. Boundaries on the map still come from BDL live.
+
 ## One-time setup: the signing key
 
 Every version must be signed with the same key, or it will not install over the previous one. Keep a backup of the key outside GitHub.

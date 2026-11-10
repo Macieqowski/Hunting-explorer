@@ -22,6 +22,7 @@ import {
   type StorageInfo,
 } from './offline';
 import { boxKm2, type Box, type Detail } from './tiles';
+import { isApp } from './platform';
 
 const L = {
   title: { pl: 'Mapy offline', en: 'Offline maps' },
@@ -39,6 +40,11 @@ const L = {
     en: 'The browser may delete saved maps when space runs low.',
   },
   keep: { pl: 'Zachowaj na stałe', en: 'Keep permanently' },
+  appStorage: {
+    pl: 'Zapisane mapy są w pamięci aplikacji. Telefon ich nie usunie; znikną dopiero po usunięciu obszaru albo aplikacji.',
+    en: 'Saved maps are kept in the app’s storage. The phone will not delete them; they go only when you delete the area or the app.',
+  },
+  savedSize: { pl: 'Zapisane mapy', en: 'Saved maps' },
   iosHint: {
     pl: 'Na iPhonie dodaj aplikację do ekranu początkowego (Udostępnij → Do ekranu początkowego) i otwieraj ją stamtąd. Inaczej Safari usunie zapisane mapy po 7 dniach bez używania.',
     en: 'On iPhone, add the app to your Home Screen (Share → Add to Home Screen) and open it from there. Otherwise Safari deletes saved maps after 7 days without use.',
@@ -141,8 +147,11 @@ export function renderOffline(): string {
     st?.usage != null
       ? `<p class="small">${l('used')}: <b>${mb(st.usage)}</b>${st.quota ? ` · ${mb(Math.max(0, st.quota - st.usage))} ${l('free')}` : ''}</p>`
       : '';
-  const persist =
-    st?.persisted === true
+  // In the app saved tiles are files (tileFiles.ts): the browser's storage numbers do not apply.
+  const appBytes = savedAreas().reduce((n, a) => n + a.bytes, 0);
+  const persist = isApp()
+    ? `${appBytes ? `<p class="small">${l('savedSize')}: <b>${mb(appBytes)}</b></p>` : ''}<p class="muted small">✓ ${l('appStorage')}</p>`
+    : st?.persisted === true
       ? `<p class="muted small">✓ ${l('persisted')}</p>`
       : st?.persisted === false && savedAreas().length
         ? `<p class="muted small">${l('notPersisted')} <button type="button" class="btn small ghost" data-offline="persist">${l('keep')}</button></p>`
@@ -153,7 +162,7 @@ export function renderOffline(): string {
   return `<h2>${l('title')}</h2>
     <p class="small">${l('intro')}</p>
     <p class="off-net ${online ? 'on' : 'off'} small"><span aria-hidden="true">●</span> ${online ? l('online') : l('offline')}</p>
-    ${ios}${space}${persist}
+    ${ios}${isApp() ? '' : space}${persist}
     ${renderDraft()}
     ${draft ? '' : `<div class="actions"><button type="button" class="btn" data-offline="saveView"${viewOk ? '' : ' disabled'}>${l('saveView')}</button></div>
       ${online && !viewOk ? `<p class="muted small">${l('zoomIn')}</p>` : ''}

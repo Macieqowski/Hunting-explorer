@@ -9,6 +9,9 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         // Plugins that live in this app (not in npm packages) are registered before the bridge starts.
         registerPlugin(PrinterPlugin.class);
+        registerPlugin(BackgroundLocationPlugin.class);
+        registerPlugin(AlertsPlugin.class);
+        registerPlugin(CompassPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

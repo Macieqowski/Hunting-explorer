@@ -1,5 +1,5 @@
 import { defineConfig, type Plugin } from 'vite';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
 /**
@@ -19,7 +19,12 @@ function serviceWorker(): Plugin {
         hash.update(f);
         hash.update(item.type === 'chunk' ? item.code : typeof item.source === 'string' ? item.source : Buffer.from(item.source));
       }
-      const precache = ['./', ...files, 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
+      // The built-in district list (scripts/snapshot-districts.mjs) can change without any code
+      // change (weekly deploy), so it is part of the version too.
+      const meta = new URL('./public/data/districts-meta.json', import.meta.url);
+      const data = existsSync(meta) ? ['data/districts.json'] : [];
+      if (data.length) hash.update(readFileSync(meta));
+      const precache = ['./', ...files, ...data, 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
       const template = readFileSync(new URL('./sw/service-worker.js', import.meta.url), 'utf8');
       this.emitFile({
         type: 'asset',

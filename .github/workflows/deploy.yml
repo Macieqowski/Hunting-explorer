@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # Weekly: refreshes the built-in club and district list from BDL (scripts/snapshot-districts.mjs);
+  # the Android app picks up the new list from the website.
+  schedule:
+    - cron: '17 3 * * 1'
 
 permissions:
   contents: read
@@ -32,6 +36,8 @@ jobs:
           java-version: 21
       - name: Test Firebase security rules (emulator)
         run: npm run test:rules
+      - name: Club and district list from BDL
+        run: node scripts/snapshot-districts.mjs
       - run: npm run build
         env:
           # Public Firebase web config for the group hunt section (Settings → Secrets and variables → Actions → Variables).

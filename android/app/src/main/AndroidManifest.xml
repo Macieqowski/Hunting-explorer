@@ -36,6 +36,12 @@
 
         </activity>
 
+        <!-- Location sharing with the screen off (BackgroundLocationPlugin). -->
+        <service
+            android:name=".LocationService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -54,6 +60,11 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
-    <!-- Buzzing on hunt alerts, messages and leaving the beater route (navigator.vibrate). -->
+    <!-- Keeps sharing your position with the screen off: a foreground service with a notification. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- That notification, and hunt alerts (messages, drives) while the app is in the background. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Buzzing on hunt alerts, messages and leaving the beater route (AlertsPlugin). -->
     <uses-permission android:name="android.permission.VIBRATE" />
 </manifest>

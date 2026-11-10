@@ -79,9 +79,10 @@ import {
   type Carcass,
   type Carrier,
 } from './huntCrew';
-import { setGuide, guideCardHtml, guideLine, enableCompass, type GuideText, type GuideTarget } from './huntGuide';
+import { setGuide, guideCardHtml, guideLine, guideFix, enableCompass, type GuideText, type GuideTarget } from './huntGuide';
 import { Sharer } from './huntShare';
-import { publicBase, canShare, shareLink, copyText, printPage, saveTextFile } from './platform';
+import { publicBase, canShare, shareLink, copyText, printPage, saveTextFile, isApp } from './platform';
+import { alertUser, vibrate } from './native';
 import { openPocket, updatePocket } from './huntPocket';
 import { roleIcon, speciesIcon, standIcon } from './huntIcons';
 import { standsFromFile, sortStands, parseLatLng, fmtLatLng, nextStandName, STAND_LIMITS, type Stand, type StandKind } from './stands';
@@ -285,6 +286,16 @@ const L = {
   shareConsent: {
     pl: 'Twoje położenie zobaczą tylko potwierdzeni uczestnicy tego polowania, wyłącznie gdy polowanie trwa. Zapisywany jest też ślad Twojej trasy; położenie i ślady są przechowywane 7 dni po zakończeniu polowania, potem są usuwane. Możesz przestać w każdej chwili.',
     en: 'Only confirmed participants of this hunt will see your position, and only while the hunt is in progress. Your track is recorded too; positions and tracks are kept for 7 days after the hunt ends, then deleted. You can stop at any time.',
+  },
+  shareInBackground: {
+    pl: 'Możesz zgasić ekran i schować telefon: aplikacja wysyła położenie w tle, dopóki widać jej powiadomienie.',
+    en: 'You can lock the screen and pocket the phone: the app keeps sending your position while its notification is shown.',
+  },
+  shareNotifTitle: { pl: 'Polowanie: udostępniasz położenie', en: 'Polowanie: sharing your location' },
+  shareNotifText: { pl: 'Widzą je uczestnicy polowania. Dotknij, aby otworzyć mapę.', en: 'Hunt participants can see it. Tap to open the map.' },
+  shareDeniedApp: {
+    pl: 'Aplikacja nie ma dostępu do lokalizacji. Zezwól na nią w ustawieniach telefonu (Aplikacje → Polowanie → Uprawnienia → Lokalizacja) i spróbuj ponownie.',
+    en: 'The app has no access to your location. Allow it in the phone settings (Apps → Polowanie → Permissions → Location) and try again.',
   },
   shareKeepOpen: {
     pl: 'Zostaw tę stronę otwartą: po zablokowaniu ekranu telefon przestaje wysyłać położenie.',
@@ -1010,7 +1021,7 @@ function onDrives(ds: Drive[]) {
     const text = act ? `${act.name} ${l('dStarted')}` : prev ? `${prev.name} ${l('dEnded')}` : '';
     if (text) {
       showToast(text);
-      navigator.vibrate?.([300, 150, 300]);
+      alertUser(hunt?.name ?? 'Polowanie', text, [300, 150, 300]);
     }
   }
   lastActive = actId;
@@ -1054,8 +1065,9 @@ function onSightings(ss: Sighting[]) {
       if (seenSights.has(s.id)) continue;
       seenSights.add(s.id);
       if (s.uid === myUid() || now() - s.ts > 2 * 60e3 || !me || !headingToward(s, me)) continue;
-      navigator.vibrate?.([200, 100, 200, 100, 400]);
-      showToast(`${sightName(s)} ${l('sightToward')} (${Math.round(distanceM(s, me))} m)`);
+      const text = `${sightName(s)} ${l('sightToward')} (${Math.round(distanceM(s, me))} m)`;
+      alertUser(hunt?.name ?? 'Polowanie', text, [200, 100, 200, 100, 400]);
+      showToast(text);
     }
   } else seenSights = new Set(ss.map((s) => s.id));
   drawSightings();
@@ -1143,7 +1155,7 @@ function openSightReport() {
       } catch (e) {
         throw new Error(errText(e));
       }
-      navigator.vibrate?.(80);
+      vibrate(80);
       showToast(`${l('sightSaved')}: ${sightName(r)} → ${compassPoint(r.heading)}`, sid);
     },
   );
@@ -1162,9 +1174,10 @@ function onShots(ss: Shot[]) {
       if (seenWounds.has(w.id)) continue;
       seenWounds.add(w.id);
       if (w.uid === myUid()) continue;
-      navigator.vibrate?.([400, 150, 400]);
       const d = drives.find((x) => x.id === w.driveId);
-      showToast(`${l('shotWoundAlert')}: ${[gameName(w.game), personName(w.uid), d?.name].filter(Boolean).join(' · ')}`);
+      const text = `${l('shotWoundAlert')}: ${[gameName(w.game), personName(w.uid), d?.name].filter(Boolean).join(' · ')}`;
+      alertUser(hunt?.name ?? 'Polowanie', text, [400, 150, 400]);
+      showToast(text);
     }
   } else seenWounds = new Set(wounds.map((w) => w.id));
   if (shotEdit && shotEdit !== 'new' && !ss.some((x) => shotEdit === x.id || shotEdit === `del:${x.id}`)) shotEdit = null;
@@ -1210,7 +1223,7 @@ function fireShot() {
   if (!id || conn.s !== 'ready') return;
   const be = conn.be;
   const driveId = activeDrive(drives)?.id ?? null;
-  navigator.vibrate?.(60);
+  vibrate(60);
   // Log the shot first, so it counts even if the sheet is closed without an answer.
   const logged = shotFix().then((at) => be.addShot(id, { outcome: 'unknown', game: null, note: '', driveId }, at));
   logged.then(
@@ -1493,6 +1506,10 @@ function startSharing() {
         rerender();
         updatePocket();
       },
+      // With the screen off only these fixes arrive, so the beater guidance uses them too.
+      onFix: (f) => guideFix({ lat: f.lat, lng: f.lng }, f.acc),
+      notification: () => ({ title: l('shareNotifTitle'), text: l('shareNotifText'), stop: l('shareStop') }),
+      onStoppedOutside: forgetSharing,
     });
   try {
     localStorage.setItem(SHARE_KEY, id);
@@ -1804,12 +1821,12 @@ function renderLive(h: Hunt, me: Participant): string {
     if (st === 'on' || st === 'starting')
       share = `<div class="h-share on" role="status"><span class="h-share-dot" aria-hidden="true"></span>
         <div><strong>${st === 'on' ? l('shareOn') : l('shareStarting')}</strong><br><small class="h-share-sent muted"></small>
-        <small class="muted">${l('shareKeepOpen')}</small></div>
+        <small class="muted">${l(isApp() ? 'shareInBackground' : 'shareKeepOpen')}</small></div>
         <div class="h-share-btns"><button type="button" class="btn" data-hunt="pocket" title="${esc(l('pocketHint'))}">${l('pocket')}</button>
         <button type="button" class="btn danger" data-hunt="shareStop">${l('shareStop')}</button></div></div>`;
     else {
       const problem =
-        st === 'denied' ? l('shareDenied') : st === 'unavailable' ? l('shareUnavailable') : st === 'error' ? `${l('shareStopped')} ${sharer?.error ?? ''}` : '';
+        st === 'denied' ? l(isApp() ? 'shareDeniedApp' : 'shareDenied') : st === 'unavailable' ? l('shareUnavailable') : st === 'error' ? `${l('shareStopped')} ${sharer?.error ?? ''}` : '';
       share = `<div class="h-share card"><strong>${l('shareTitle')}</strong>
         <p class="small">${l('shareConsent')}</p><p class="small muted">${l('shareSafety')}</p>
         ${problem ? `<p class="h-error">${esc(problem)}</p>` : ''}
@@ -2352,14 +2369,15 @@ function checkCarcasses() {
   const fresh = ready.filter((c) => !seenCarcasses!.has(c.shotId));
   fresh.forEach((c) => seenCarcasses!.add(c.shotId));
   if (!fresh.length) return;
-  navigator.vibrate?.([...BUZZ.carcass]);
   const counts = new Map<string, number>();
   for (const c of fresh) {
     const name = gameName(c.game).split(' – ')[0];
     counts.set(name, (counts.get(name) ?? 0) + 1);
   }
   const drv = [...new Set(fresh.map((c) => driveName(c.driveId)).filter(Boolean))].join(', ');
-  showToast(`${l('cAlert')}: ${[...counts].map(([n, k]) => (k > 1 ? `${k} × ${n}` : n)).join(', ')}${drv ? ` (${drv})` : ''}`, undefined, 'sight', 20_000);
+  const text = `${l('cAlert')}: ${[...counts].map(([n, k]) => (k > 1 ? `${k} × ${n}` : n)).join(', ')}${drv ? ` (${drv})` : ''}`;
+  alertUser(hunt?.name ?? 'Polowanie', text, BUZZ.carcass);
+  showToast(text, undefined, 'sight', 20_000);
 }
 
 /** Text message body listing carcasses to collect, with map links. */
@@ -2506,7 +2524,7 @@ function onMessages() {
   const fresh = seenMsgs ? pending.filter((m) => !seenMsgs!.has(m.id)) : [];
   if (!seenMsgs) seenMsgs = new Set(messages.map((m) => m.id));
   else messages.forEach((m) => seenMsgs!.add(m.id));
-  if (fresh.length) navigator.vibrate?.([...BUZZ.message]);
+  if (fresh.length) alertUser(l('msgFromLeader'), fresh.map((m) => m.text).join('\n'), BUZZ.message);
   const show = pending[0];
   if (show && show.id !== msgSheetId) openMsgSheet(show);
   else if (!show) closeMsgSheet();

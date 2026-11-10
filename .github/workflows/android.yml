@@ -16,6 +16,8 @@ on:
       - 'android/**'
       - 'capacitor.config.ts'
       - 'src/platform.ts'
+      - 'src/native.ts'
+      - 'scripts/snapshot-districts.mjs'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/android.yml'
@@ -72,6 +74,8 @@ jobs:
           echo "Wersja $v (kod $code), wydanie: $release"
 
       - run: npm ci
+      - name: Club and district list from BDL
+        run: node scripts/snapshot-districts.mjs
       - name: Build the web app
         run: npm run build
         env:
@@ -159,10 +163,30 @@ jobs:
             cat logcat.txt | tail -200
             if grep -E "Uncaught|TypeError|ReferenceError|SyntaxError" logcat.txt | grep -v "Error injecting safe area CSS"; then echo "::error::Błąd JavaScript w aplikacji"; exit 1; fi
             grep -q "Polowanie\|Loading app\|Capacitor" logcat.txt || echo "::warning::Brak logów Capacitora"
+            grep -Eq "\[polowanie\] districts [0-9]{4,} built-in" logcat.txt || { echo "::error::Aplikacja nie wczytała wbudowanej listy obwodów"; exit 1; }
+            grep -q "\[polowanie\] plugins Printer,BackgroundLocation,Alerts,Compass" logcat.txt || { echo "::error::Brak wtyczek aplikacji"; exit 1; }
+            # The location service (screen-off sharing) must start as a foreground service.
+            adb root; adb wait-for-device; sleep 3
+            adb shell pm grant org.polowanie.app android.permission.ACCESS_FINE_LOCATION
+            adb shell pm grant org.polowanie.app android.permission.POST_NOTIFICATIONS
+            adb shell am start-foreground-service -n org.polowanie.app/.LocationService --es title Test --es text Test
+            sleep 5
+            adb emu geo fix 21.0 52.2 || true
+            sleep 3
+            adb shell dumpsys activity services org.polowanie.app > services.txt
+            adb shell dumpsys location > location.txt || true
+            adb exec-out screencap -p > screen-service.png
+            grep -E "isForeground=true|foregroundId=1001" services.txt || { cat services.txt; echo "::error::Usługa lokalizacji nie działa jako usługa pierwszoplanowa"; exit 1; }
+            grep -q "org.polowanie.app" location.txt || echo "::warning::Brak żądania lokalizacji aplikacji w dumpsys location"
+            adb shell am startservice -n org.polowanie.app/.LocationService -a org.polowanie.app.STOP_LOCATION
+            adb logcat -d > logcat-all.txt || true
+            if grep -E "FATAL EXCEPTION" -A20 logcat-all.txt | grep -A20 "org.polowanie.app"; then echo "::error::Aplikacja uległa awarii"; exit 1; fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: emulator-screenshots
           path: |
             screen-*.png
-            logcat.txt
+            logcat*.txt
+            services.txt
+            location.txt
