@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Polowanie: mapa obwodów łowieckich i polowania zbiorowe na żywo</title>
+    <meta name="description" content="Polowanie zbiorowe na jednej mapie: mioty, stanowiska, naganka i pokot. Do tego mapa obwodów łowieckich w Polsce, także offline, okresy polowań, atlas zwierzyny i pytania egzaminacyjne." />
+    <link rel="canonical" href="https://www.polowanie.org/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Polowanie: całe polowanie zbiorowe na jednej mapie" />
+    <meta property="og:description" content="Prowadzący widzi linię myśliwych i nagankę na żywo. Każdy uczestnik zna swoje stanowisko, kierunek wiatru i granice miotu." />
+    <meta property="og:url" content="https://www.polowanie.org/" />
+    <meta property="og:image" content="https://www.polowanie.org/icon-512.png" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%231e5a3a' d='M16 2c6.1 0 11 4.7 11 10.6 0 7.4-8.3 15.1-11 17.4-2.7-2.3-11-10-11-17.4C5 6.7 9.9 2 16 2Z'/%3E%3Cpath fill='%23fff' d='M16 6l-5 7h2.6l-3.6 5h5v3h2v-3h5l-3.6-5H21z'/%3E%3C/svg%3E" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <meta name="theme-color" content="#f3f2ec" />
+    <script>
+      // Until this page existed the app itself lived at this address. Its links (invitations,
+      // QR codes, bookmarks: everything with #/…) and apps added to the home screen go on to ./app/.
+      (function () {
+        var hash = location.hash;
+        var installed = false;
+        try {
+          installed = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+        } catch (e) {}
+        if (hash.indexOf('#/') === 0 || installed) {
+          location.replace('./app/' + hash);
+          return;
+        }
+        // The look chosen in the app (or the system one) before the first paint.
+        var dark = false;
+        try {
+          var pref = localStorage.getItem('theme');
+          dark = pref === 'dark' || (pref !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+        } catch (e) {}
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+        if (dark) document.querySelector('meta[name="theme-color"]').setAttribute('content', '#101412');
+      })();
+    </script>
+  </head>
+  <body>
+    <a class="skip" href="#tresc">Przejdź do treści</a>
+
+    <header class="top">
+      <div class="wrap top-in">
+        <a class="logo" href="./" aria-label="Polowanie, strona główna">
+          <svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true"><path class="bm-pin" d="M16 2c6.1 0 11 4.7 11 10.6 0 7.4-8.3 15.1-11 17.400-2.700-2.300-11-10-11-17.400C5 6.700 9.900 2 16 2Z" /><path class="bm-tree" d="M16 6l-5 7h2.600l-3.600 5h5v3h2v-3h5l-3.600-5H21z" /></svg>
+          <span>Polowanie</span>
+        </a>
+        <nav class="top-nav" aria-label="Strona">
+          <a class="top-link" href="#funkcje">Funkcje</a>
+          <a class="top-link" href="#kola">Dla kół</a>
+          <a class="top-link" href="#pobierz">Pobierz</a>
+          <a class="btn btn-primary btn-s" href="./app/">Otwórz aplikację</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="tresc">
+      <section class="wrap hero">
+        <div class="hero-text">
+          <span class="eyebrow">Dla myśliwych i kół łowieckich</span>
+          <h1>Całe polowanie zbiorowe na jednej mapie</h1>
+          <p class="lead">Prowadzący widzi linię myśliwych i nagankę na żywo. Każdy uczestnik zna swoje stanowisko, kierunek wiatru i granice miotu. Działa także bez zasięgu.</p>
+          <div class="cta">
+            <a class="btn btn-primary" href="./app/">Otwórz w przeglądarce</a>
+            <a class="btn btn-ghost" href="#pobierz">
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M4 21h16" /></svg>
+              Pobierz na Androida
+            </a>
+          </div>
+          <p class="note">Bez zakładania konta. Android 9 lub nowszy, na iPhonie w przeglądarce.</p>
+        </div>
+
+        <div class="hero-art" aria-hidden="true">
+          <div class="phone">
+            <div class="screen">
+              <svg class="scene" viewBox="0 0 280 580" preserveAspectRatio="xMidYMid slice">
+                <rect class="s-land" width="280" height="580" />
+                <path class="s-forest" d="M-20 80C40 50 130 60 190 90s110 40 110 110v190H-20Z" />
+                <path class="s-river" d="M-10 330C60 310 110 340 170 320S240 300 290 310" />
+                <path class="s-drive" d="M44 130 232 114 246 292 56 310Z" />
+                <path class="s-line" d="M60 292 240 276" />
+                <g class="s-hunter"><circle cx="70" cy="291" r="8" /><circle cx="104" cy="288" r="8" /><circle cx="138" cy="285" r="8" /><circle cx="172" cy="282" r="8" /><circle cx="236" cy="276" r="8" /></g>
+                <circle class="s-me" cx="204" cy="279" r="11" />
+                <g class="s-beater"><path d="M62 150h14l-7 13ZM100 146h14l-7 13ZM138 148h14l-7 13ZM176 142h14l-7 13ZM214 144h14l-7 13Z" /></g>
+              </svg>
+              <div class="p-top">
+                <div><strong>Miot 2 · Bagno</strong><span>trwa 24 min</span></div>
+                <span class="p-live">Trwa</span>
+              </div>
+              <div class="p-bottom">
+                <div class="p-btn p-main">Widzę zwierzynę</div>
+                <div class="p-row"><div class="p-btn">Strzał</div><div class="p-btn">Wiadomości</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="wrap" aria-label="W liczbach">
+        <dl class="stats">
+          <div><dd>%DISTRICTS%</dd><dt>obwodów łowieckich na mapie</dt></div>
+          <div><dd>%QUESTIONS%</dd><dt>pytań do egzaminu na myśliwego</dt></div>
+          <div><dd>offline</dd><dt>mapy zapisane w telefonie</dt></div>
+          <div><dd>bez konta</dd><dt>dołączasz linkiem lub kodem QR</dt></div>
+        </dl>
+      </section>
+
+      <section id="funkcje" class="band">
+        <div class="wrap sec">
+          <h2>Trzy rzeczy, do których sięgniesz najczęściej</h2>
+          <div class="cards">
+            <article class="card">
+              <span class="card-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4" /><path d="M5 4h12l-2.500 4 2.500 4H5" /></svg></span>
+              <h3>Polowanie zbiorowe na żywo</h3>
+              <p>Mioty, stanowiska, trasy naganki, zgłoszenia zwierzyny i strzałów. Na koniec pokot gotowy do wydruku.</p>
+              <a class="more" href="./app/#/polowanie">Otwórz polowania</a>
+            </article>
+            <article class="card">
+              <span class="card-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z" /><path d="M9 3v15M15 6v15" /></svg></span>
+              <h3>Mapa obwodów, także offline</h3>
+              <p>Granice %DISTRICTS% obwodów łowieckich w Polsce, oddziały leśne, ortofotomapa i wiatr. Zapisz obszar i korzystaj w lesie bez internetu.</p>
+              <a class="more" href="./app/">Otwórz mapę</a>
+            </article>
+            <article class="card">
+              <span class="card-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h7a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H3V5Z" /><path d="M21 5h-7a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h7V5Z" /></svg></span>
+              <h3>Wiedza pod ręką</h3>
+              <p>Okresy polowań na dziś, atlas zwierzyny, kalkulator balistyczny i %QUESTIONS% pytań do egzaminu na myśliwego.</p>
+              <a class="more" href="./app/#/seasons">Otwórz okresy polowań</a>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="kola" class="wrap sec">
+        <div class="sec-head">
+          <span class="kicker">Dla kół łowieckich</span>
+          <h2>Jak wygląda polowanie z aplikacją</h2>
+        </div>
+        <ol class="steps">
+          <li><span class="step-n">1</span><strong>Prowadzący rysuje mioty</strong><span>Na komputerze lub telefonie: granice miotów, linia myśliwych, zbiórka.</span></li>
+          <li><span class="step-n">2</span><strong>Uczestnicy skanują kod</strong><span>Myśliwi, naganiacze i goście dołączają linkiem lub kodem QR, bez konta.</span></li>
+          <li><span class="step-n">3</span><strong>W lesie wszyscy widzą to samo</strong><span>Pozycje, kierunek naganki, zgłoszona zwierzyna i komunikaty prowadzącego.</span></li>
+          <li><span class="step-n">4</span><strong>Pokot w kilka minut</strong><span>Strzały i zwierzyna z całego dnia w jednym zestawieniu, do zatwierdzenia i druku.</span></li>
+        </ol>
+        <div class="banner">
+          <p>Chcesz wypróbować na polowaniu swojego koła?</p>
+          <a class="btn btn-invert" id="contact" href="./app/#/polowanie">Zobacz polowania zbiorowe</a>
+        </div>
+      </section>
+
+      <section id="pobierz" class="band band-last">
+        <div class="wrap sec get">
+          <div class="get-text">
+            <h2>Pobierz aplikację na Androida</h2>
+            <ol class="how">
+              <li><span class="how-n">1</span><span>Zeskanuj kod telefonem albo otwórz tę stronę na telefonie i stuknij „Pobierz plik APK”.</span></li>
+              <li><span class="how-n">2</span><span>Otwórz pobrany plik. Gdy Android zapyta o zgodę na instalację, wybierz Ustawienia i zezwól.</span></li>
+              <li><span class="how-n">3</span><span>Stuknij Zainstaluj. Kolejne wersje aplikacja zaproponuje sama.</span></li>
+            </ol>
+            <a class="btn btn-primary" id="apk" href="https://github.com/Macieqowski/Hunting-explorer/releases/latest/download/polowanie.apk">
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M4 21h16" /></svg>
+              Pobierz plik APK
+            </a>
+            <p class="note">Na iPhonie otwórz aplikację w Safari i wybierz Udostępnij, a potem „Do ekranu początkowego”.</p>
+          </div>
+          <div class="qr" id="qr" role="img" aria-label="Kod QR do pobrania aplikacji na Androida"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="wrap foot-in">
+        <div>
+          <span class="foot-name">Polowanie</span>
+          <p>Dane o obwodach łowieckich: Bank Danych o Lasach.</p>
+        </div>
+        <nav aria-label="Stopka">
+          <a href="./app/">Otwórz aplikację</a>
+          <a href="./app/#/about">Źródła danych i licencje</a>
+          <a href="#pobierz">Pobierz na Androida</a>
+          <a id="contact-foot" hidden>Kontakt</a>
+        </nav>
+      </div>
+    </footer>
+
+    <script type="module" src="./landing.ts"></script>
+  </body>
+</html>

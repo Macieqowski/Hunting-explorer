@@ -125,7 +125,7 @@ jobs:
           gh release create "android-v$V" out/polowanie.apk \
             --target "$GITHUB_SHA" \
             --title "Polowanie – aplikacja Android $V" \
-            --notes "Plik do zainstalowania: polowanie.apk (Android 9 lub nowszy). Instrukcja: https://www.polowanie.org/#/about"
+            --notes "Plik do zainstalowania: polowanie.apk (Android 9 lub nowszy). Instrukcja: https://www.polowanie.org/#pobierz"
 
   # Starts the APK in an Android emulator and fails if the page does not load or logs a JS error.
   smoke-test:
@@ -156,7 +156,7 @@ jobs:
             adb shell monkey -p org.polowanie.app -c android.intent.category.LAUNCHER 1
             sleep 45
             adb exec-out screencap -p > screen-start.png
-            adb shell am start -a android.intent.action.VIEW -d "https://www.polowanie.org/#/about" org.polowanie.app
+            adb shell am start -a android.intent.action.VIEW -d "https://www.polowanie.org/app/#/about" org.polowanie.app
             sleep 15
             adb exec-out screencap -p > screen-about.png
             adb logcat -d -s Capacitor/Console:* Capacitor:* chromium:* > logcat.txt || true

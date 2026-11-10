@@ -1,5 +1,5 @@
 import { defineConfig, type Plugin } from 'vite';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
 /**
@@ -35,10 +35,24 @@ function serviceWorker(): Plugin {
   };
 }
 
-// Relative base so the build works on GitHub Pages under /<repo>/ and anywhere else.
+/** Starts every build from an empty dist/: the welcome page is built into its root afterwards. */
+function cleanDist(): Plugin {
+  return {
+    name: 'hunting-clean-dist',
+    apply: 'build',
+    buildStart() {
+      rmSync(new URL('./dist', import.meta.url), { recursive: true, force: true });
+    },
+  };
+}
+
+// The app is built into dist/app/ and the welcome page (vite.landing.config.ts) into dist/, so
+// the site serves the page at / and the app at /app/. The Android app packs dist/app/ only.
+// Relative base so the build works under any address.
 export default defineConfig({
   base: './',
-  plugins: [serviceWorker()],
+  build: { outDir: 'dist/app' },
+  plugins: [cleanDist(), serviceWorker()],
   // rules/ holds the Firebase security rules tests, which need the emulator (npm run test:rules).
   test: { globals: true, environment: 'node', exclude: ['rules/**', 'node_modules/**'] },
 } as any);

@@ -4,8 +4,9 @@
   "description": "Interactive map of Polish hunting districts (obwody łowieckie) and the hunting clubs (koła łowieckie) that lease them.",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
+    "dev:landing": "vite --config vite.landing.config.ts",
+    "build": "tsc --noEmit && vite build && vite build --config vite.landing.config.ts",
+    "preview": "vite preview --config vite.landing.config.ts",
     "test": "vitest run",
     "test:rules": "npx --yes firebase-tools@15 emulators:exec --only database --project demo-hunting \"vitest run --config vitest.rules.config.ts\"",
     "android:sync": "npm run build && cap sync android",

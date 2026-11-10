@@ -22,6 +22,6 @@ describe('outside the app', () => {
     expect(isApp()).toBe(false);
     (globalThis as any).location = { origin: 'https://example.org', pathname: '/x/', hash: '' };
     expect(publicBase()).toBe('https://example.org/x/');
-    expect(PUBLIC_URL).toBe('https://www.polowanie.org/');
+    expect(PUBLIC_URL).toBe('https://www.polowanie.org/app/');
   });
 });
