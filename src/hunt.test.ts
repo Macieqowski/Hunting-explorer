@@ -16,6 +16,7 @@ const base: Hunt = {
   pokotLockedAt: null,
   pokotTitles: false,
   meet: null,
+  leaders: {},
   district: null,
 };
 
@@ -235,4 +236,26 @@ describe('sightings', () => {
     const gpx = toGpx('T', new Map(), [], new Map(), () => '', [], [{ s, label: 'Dziki 3–6 → 42°' }]);
     expect(gpx).toContain('<name>Dziki 3–6 → 42°</name><type>boar</type>');
   });
+});
+
+import { isLeader, isLeaderDevice, isDeputy, otherLeaderDevices } from './hunt';
+
+describe('leader devices and deputies', () => {
+  const h = parseHunt('a', { name: 'x', status: 'live', leaderUid: 'phone', leaders: { pc: 'device', phone: 'device', dep: 'deputy', bad: 'admin' } })!;
+  it('parses only known kinds', () => expect(h.leaders).toEqual({ pc: 'device', phone: 'device', dep: 'deputy' }));
+  it('old hunts without the list still have their leader', () => {
+    const old = parseHunt('a', { name: 'x', status: 'open', leaderUid: 'L' })!;
+    expect(old.leaders).toEqual({});
+    expect(isLeader(old, 'L')).toBe(true);
+    expect(isLeaderDevice(old, 'L')).toBe(true);
+  });
+  it('devices and deputies lead; only devices pair and appoint', () => {
+    expect(['phone', 'pc', 'dep'].map((u) => isLeader(h, u))).toEqual([true, true, true]);
+    expect(isLeader(h, 'x')).toBe(false);
+    expect(isLeader(h, '')).toBe(false);
+    expect(isLeader(null, 'pc')).toBe(false);
+    expect(['phone', 'pc', 'dep'].map((u) => isLeaderDevice(h, u))).toEqual([true, true, false]);
+    expect(['phone', 'pc', 'dep'].map((u) => isDeputy(h, u))).toEqual([false, false, true]);
+  });
+  it('lists the devices other than the one in the field', () => expect(otherLeaderDevices(h)).toEqual(['pc']));
 });

@@ -733,3 +733,116 @@ describe('crew planning', () => {
     await assertSucceeds(update(ref(db('lead')), { 'hunts/h1': null, 'participants/h1': null, 'routes/h1': null, 'seats/h1': null, 'transport/h1': null }));
   });
 });
+
+describe('leader devices and deputies', () => {
+  const TOK = 'Pair_def-1234567890XYZw';
+  const MIN = 60e3;
+  const code = (uid: string, tok = TOK, exp = Date.now() + 10 * MIN) =>
+    update(ref(db(uid)), { [`hunts/h1/leaders/${uid}`]: 'device', [`leaderPair/h1/${tok}`]: { exp, createdAt: serverTimestamp() } });
+  const pair = (uid: string, tok = TOK, consume = true) =>
+    update(ref(db(uid)), {
+      [`leaderPairJoins/h1/${uid}`]: tok,
+      [`hunts/h1/leaders/${uid}`]: 'device',
+      ...(consume ? { [`leaderPair/h1/${tok}`]: null } : {}),
+      [`userHunts/${uid}/h1`]: true,
+    });
+  /** This device becomes the leader in the field: the leader's row moves to it. */
+  const takeOver = (uid: string, from: string) =>
+    update(ref(db(uid)), {
+      'hunts/h1/leaderUid': uid,
+      [`participants/h1/${uid}`]: { name: 'Jan Prowadzący', role: 'leader', status: 'confirmed', joinedAt: serverTimestamp() },
+      [`participants/h1/${from}`]: null,
+    });
+  const confirmed = async (u: string, role = 'hunter') => {
+    await join(u, role);
+    await update(ref(db('lead'), `participants/h1/${u}`), { status: 'confirmed' });
+  };
+
+  it('a pairing code is made and read by a leader device only, valid at most 15 minutes', async () => {
+    await createHunt('lead');
+    await confirmed('a');
+    await assertFails(code('a'));
+    await assertFails(code('lead', TOK, Date.now() + 16 * MIN));
+    await assertFails(code('lead', 'short'));
+    await assertSucceeds(code('lead'));
+    await assertSucceeds(get(ref(db('lead'), 'leaderPair/h1')));
+    await assertFails(get(ref(db('a'), 'leaderPair/h1')));
+  });
+  it('the code adds a phone as a leader device once', async () => {
+    await createHunt('lead');
+    await assertFails(pair('phone')); // no code yet
+    await code('lead');
+    await assertFails(pair('phone', 'Zzzz_def-1234567890XYZw'));
+    await assertFails(pair('phone', TOK, false)); // must use the code up
+    await assertSucceeds(pair('phone'));
+    await assertFails(pair('phone2')); // already used
+    await assertFails(get(ref(db('lead'), 'leaderPairJoins/h1/phone')));
+  });
+  it('an expired code does not work', async () => {
+    await createHunt('lead');
+    await env.withSecurityRulesDisabled((ctx) =>
+      update(ref(ctx.database() as unknown as Database), { 'hunts/h1/leaders/lead': 'device', [`leaderPair/h1/${TOK}`]: { exp: Date.now() - 1000, createdAt: 1 } }),
+    );
+    await assertFails(pair('phone'));
+  });
+  it('a paired phone takes over the leader row; the computer keeps its rights', async () => {
+    await createHunt('lead');
+    await confirmed('a');
+    await join('b');
+    await assertFails(takeOver('phone', 'lead')); // not a leader device
+    await code('lead');
+    await pair('phone');
+    await assertFails(takeOver('a', 'lead'));
+    await assertSucceeds(takeOver('phone', 'lead'));
+    await assertSucceeds(get(ref(db('phone'), 'participants/h1')));
+    // both devices lead
+    await assertSucceeds(update(ref(db('lead'), 'participants/h1/b'), { status: 'confirmed' }));
+    await assertSucceeds(update(ref(db('phone'), 'hunts/h1'), { status: 'live' }));
+    await assertSucceeds(set(ref(db('lead'), 'messages/h1/m1'), { text: 'Start', to: 'all', ts: serverTimestamp() }));
+    await assertSucceeds(set(ref(db('phone'), 'shots/h1/s1'), { uid: 'phone', outcome: 'kill', game: 'boar_sow', ts: serverTimestamp() }));
+    // the computer still sees everything without a participant row of its own
+    for (const path of ['participants/h1', 'positions/h1', 'shots/h1', 'drives/h1', 'messages/h1', 'phones/h1'])
+      await assertSucceeds(get(ref(db('lead'), path)));
+    await assertFails(get(ref(db('stranger'), 'participants/h1')));
+    // and the computer can take the field back
+    await assertSucceeds(takeOver('lead', 'phone'));
+  });
+  it('nobody else can take leaderUid or make themselves a device', async () => {
+    await createHunt('lead');
+    await confirmed('a');
+    await assertFails(update(ref(db('a'), 'hunts/h1'), { leaderUid: 'a' }));
+    await assertFails(update(ref(db('a'), 'hunts/h1/leaders'), { a: 'device' }));
+    await assertFails(update(ref(db('lead'), 'hunts/h1/leaders'), { a: 'device' }));
+    await assertFails(update(ref(db('lead'), 'hunts/h1'), { leaderUid: 'a' }));
+  });
+  it('a confirmed participant can be made deputy and then leads, but cannot pair or appoint', async () => {
+    await createHunt('lead');
+    await confirmed('a');
+    await join('b');
+    await confirmed('c');
+    await assertFails(update(ref(db('lead'), 'hunts/h1/leaders'), { b: 'deputy' })); // not confirmed
+    await assertFails(update(ref(db('a'), 'hunts/h1/leaders'), { a: 'deputy' }));
+    await assertSucceeds(update(ref(db('lead'), 'hunts/h1/leaders'), { a: 'deputy' }));
+    await assertSucceeds(update(ref(db('a'), 'participants/h1/b'), { status: 'confirmed' }));
+    await assertSucceeds(set(ref(db('a'), 'drives/h1/d1'), { name: 'Miot 1', start: '08:00', end: '09:00', area: '52,21;52.1,21;52.1,21.1' }));
+    await assertFails(update(ref(db('a'), 'participants/h1/lead'), { role: 'hunter' }));
+    await assertFails(update(ref(db('a'), 'hunts/h1/leaders'), { c: 'deputy' }));
+    await assertFails(update(ref(db('a'), 'hunts/h1/leaders'), { a: 'device' }));
+    await assertFails(update(ref(db('a'), 'hunts/h1'), { leaderUid: 'a' }));
+    await assertFails(code('a'));
+    // a device removes the deputy, or the deputy withdraws and steps down at once
+    await assertSucceeds(update(ref(db('lead'), 'hunts/h1/leaders'), { a: null }));
+    await assertFails(update(ref(db('a'), 'participants/h1/c'), { role: 'beater' }));
+    await update(ref(db('lead'), 'hunts/h1/leaders'), { a: 'deputy' });
+    await assertSucceeds(update(ref(db('a')), { 'participants/h1/a': null, 'hunts/h1/leaders/a': null, 'userHunts/a/h1': null }));
+    await assertFails(update(ref(db('c')), { 'participants/h1/c': null, 'hunts/h1/leaders/c': null })); // not a deputy: may not touch the hunt
+  });
+  it('codes and used codes go with the hunt', async () => {
+    await createHunt('lead');
+    await code('lead');
+    await pair('phone');
+    await assertSucceeds(
+      update(ref(db('phone')), { 'hunts/h1': null, 'participants/h1': null, 'leaderPair/h1': null, 'leaderPairJoins/h1': null }),
+    );
+  });
+});

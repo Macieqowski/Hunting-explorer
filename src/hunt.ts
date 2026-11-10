@@ -40,6 +40,33 @@ export interface Hunt extends HuntInput {
   pokotTitles: boolean;
   /** Meeting point (zbiórka) on the map, set by the leader. */
   meet: { lat: number; lng: number } | null;
+  /**
+   * Who else leads: the leader's other devices (paired by a code, e.g. the phone taken
+   * into the field) and deputies (other participants). `leaderUid` is the device in the
+   * field: the leader's row, position and shots are under it.
+   */
+  leaders: Record<string, LeaderKind>;
+}
+
+export type LeaderKind = 'device' | 'deputy';
+
+/** Whether this device may run the hunt (the leader's devices and deputies). */
+export const isLeader = (h: Pick<Hunt, 'leaderUid' | 'leaders'> | null | undefined, uid: string) =>
+  !!h && !!uid && (h.leaderUid === uid || uid in h.leaders);
+/** One of the leader's own devices (not a deputy): may pair devices and appoint deputies. */
+export const isLeaderDevice = (h: Pick<Hunt, 'leaderUid' | 'leaders'> | null | undefined, uid: string) =>
+  !!h && !!uid && (h.leaderUid === uid || h.leaders[uid] === 'device');
+export const isDeputy = (h: Pick<Hunt, 'leaderUid' | 'leaders'> | null | undefined, uid: string) =>
+  !!h && h.leaderUid !== uid && h.leaders[uid] === 'deputy';
+/** The leader's devices other than the one in the field. */
+export const otherLeaderDevices = (h: Pick<Hunt, 'leaderUid' | 'leaders'>) =>
+  Object.keys(h.leaders).filter((u) => h.leaders[u] === 'device' && u !== h.leaderUid);
+
+function parseLeaders(v: unknown): Record<string, LeaderKind> {
+  const out: Record<string, LeaderKind> = {};
+  if (!v || typeof v !== 'object') return out;
+  for (const [uid, k] of Object.entries(v as Record<string, unknown>)) if (k === 'device' || k === 'deputy') out[uid] = k;
+  return out;
 }
 
 /** Last known position of one participant. */
@@ -168,6 +195,7 @@ export function parseHunt(id: string, v: unknown): Hunt | null {
     pokotTitles: o.pokotTitles === true,
     district: parseDistrict(o.district),
     meet: parseMeet(o.meet),
+    leaders: parseLeaders(o.leaders),
   };
 }
 

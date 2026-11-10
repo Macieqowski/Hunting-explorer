@@ -974,3 +974,12 @@ form.hr-seatcard { display: grid; }
   :root:not([data-theme='light']) .hr-badge-tr { background: #78350f; color: #fef3c7; }
 }
 .hmsg-later { justify-content: center; }
+
+/* ASF: killed boar with their coordinates (pokot panel; the printout has a table) */
+.hp-asf { margin: 6px 0; padding-left: 1.4em; display: grid; gap: 8px; }
+.hp-xy { font-variant-numeric: tabular-nums; font-weight: 600; user-select: all; }
+
+/* the leader's devices and deputies */
+.h-lead { margin: 12px 0; }
+.h-lead > summary { cursor: pointer; }
+.h-lead h4 { margin: 12px 0 4px; }

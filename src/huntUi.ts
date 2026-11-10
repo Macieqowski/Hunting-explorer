@@ -38,8 +38,12 @@ import {
   compassPoint,
   distanceM,
   windFocusTime,
+  isLeader as leads,
+  isLeaderDevice,
+  isDeputy,
+  otherLeaderDevices,
 } from './hunt';
-import { currentInvite, inviteExpiry, inviteLink, validToken, type Invite } from './invite';
+import { currentInvite, inviteExpiry, inviteLink, leaderPairLink, pairTokenOf, validToken, type Invite } from './invite';
 import type { District } from './bdl';
 import { fetchDistrictsAtPoint } from './bdl';
 import { fold, districtSlug } from './data';
@@ -199,6 +203,43 @@ const L = {
   qrShow: { pl: 'Kod QR', en: 'QR code' },
   qrHide: { pl: 'Ukryj kod QR', en: 'Hide QR code' },
   qrHint: { pl: 'Zeskanuj aparatem telefonu.', en: 'Scan with a phone camera.' },
+  leadTitle: { pl: 'Prowadzenie z telefonu', en: 'Run the hunt from your phone' },
+  leadHint: {
+    pl: 'Przygotuj polowanie tutaj, a prowadź je z telefonu: zeskanuj kod aparatem telefonu i potwierdź. Telefon dostanie prawa prowadzącego i to on będzie prowadzącym na mapie (pozycja, strzały). To urządzenie zachowa prawa, np. do pokotu i PDF po polowaniu.',
+    en: 'Set the hunt up here and run it from your phone: scan the code with the phone camera and confirm. The phone gets the leader’s rights and becomes the leader on the map (position, shots). This device keeps its rights, e.g. for the results and PDF afterwards.',
+  },
+  leadCode: { pl: 'Pokaż kod QR dla telefonu', en: 'Show a QR code for the phone' },
+  leadCodeValid: { pl: 'Kod jednorazowy, ważny do', en: 'One-time code, valid until' },
+  leadCodeExpired: { pl: 'Kod wygasł.', en: 'The code has expired.' },
+  leadCodeCancel: { pl: 'Anuluj kod', en: 'Cancel the code' },
+  leadPaired: { pl: '✓ Telefon sparowany. Prowadzi polowanie w terenie, a to urządzenie zachowało prawa.', en: '✓ Phone paired. It now leads in the field; this device kept its rights.' },
+  leadMoved: { pl: '✓ To urządzenie jest teraz prowadzącym w terenie.', en: '✓ This device is now the leader in the field.' },
+  leadDevices: { pl: 'Urządzenia prowadzącego', en: 'Leader’s devices' },
+  leadThis: { pl: 'To urządzenie', en: 'This device' },
+  leadOther: { pl: 'Inne urządzenie', en: 'Another device' },
+  leadField: { pl: 'w terenie', en: 'in the field' },
+  leadTake: { pl: 'To urządzenie jest w terenie', en: 'This device is in the field' },
+  leadTakeHint: { pl: 'Przenosi prowadzącego na mapie, w pokocie i na liście uczestników na to urządzenie.', en: 'Moves the leader on the map, in the results and in the participant list to this device.' },
+  remoteLead: {
+    pl: 'Prowadzisz to polowanie z tego urządzenia. Prowadzącym w terenie (pozycja na mapie, strzały) jest drugie urządzenie.',
+    en: 'You run this hunt from this device. Another device is the leader in the field (position on the map, shots).',
+  },
+  deputies: { pl: 'Zastępcy prowadzącego', en: 'Deputy leaders' },
+  deputyHint: {
+    pl: 'Zastępca ma te same prawa co prowadzący, np. gdy telefon prowadzącego się rozładuje. Dodasz go przyciskiem „+ zastępca” na liście uczestników.',
+    en: 'A deputy has the same rights as the leader, e.g. if the leader’s phone runs flat. Add one with “+ deputy” in the participant list.',
+  },
+  deputyMake: { pl: '+ zastępca', en: '+ deputy' },
+  deputyDrop: { pl: 'Odbierz zastępstwo', en: 'Remove as deputy' },
+  deputyBadge: { pl: 'zastępca', en: 'deputy' },
+  deputyYou: { pl: 'Jesteś zastępcą prowadzącego: masz te same prawa co prowadzący.', en: 'You are a deputy leader: you have the same rights as the leader.' },
+  pairTitle: { pl: 'Prowadzenie polowania na tym urządzeniu', en: 'Run this hunt on this device' },
+  pairAsk: {
+    pl: 'To urządzenie dostanie prawa prowadzącego i będzie prowadzącym na mapie. Urządzenie, na którym przygotowano polowanie, zachowa swoje prawa.',
+    en: 'This device gets the leader’s rights and becomes the leader on the map. The device the hunt was set up on keeps its rights.',
+  },
+  pairOk: { pl: 'Potwierdź', en: 'Confirm' },
+  errPair: { pl: 'Kod wygasł albo został już użyty. Pokaż nowy kod na komputerze i zeskanuj go jeszcze raz.', en: 'The code has expired or was already used. Show a new code on the computer and scan it again.' },
   clubLink: { pl: 'Link dla członków koła (zapis z hasłem koła)', en: 'Link for club members (sign-up with the club passphrase)' },
   guestTitle: { pl: 'Zaproszenie na polowanie', en: 'Invitation to the hunt' },
   guestHint: {
@@ -556,6 +597,14 @@ let copied: string | null = null;
 let guestToken: { id: string; token: string } | null = null;
 /** Tokens the database refused, so the link in the address bar does not bring the guest form back. */
 const refusedTokens = new Set<string>();
+/** Pairing code from the link this phone opened (`lead.<token>`), until used or refused. */
+let pairToken: { id: string; token: string } | null = null;
+/** The code this leader device shows for pairing another one, and the devices there were then. */
+let pairCode: { id: string; token: string; exp: number; before: string } | null = null;
+/** Shown once after a successful pairing. */
+let pairedNote: string | null = null;
+/** The "run from your phone" box opened or closed by hand (null: by default). */
+let leadOpen: boolean | null = null;
 /** The leader's invitation links: null until loaded. */
 let invites: Invite[] | null = null;
 let invitesFor: string | null = null;
@@ -854,7 +903,7 @@ function ago(ms: number) {
 function syncLive() {
   const id = watched;
   const me = members?.find((p) => p.uid === myUid());
-  const allowed = !!(id && hunt && me && me.status === 'confirmed');
+  const allowed = !!(id && hunt && ((me && me.status === 'confirmed') || remoteLead()));
   if (!allowed) {
     if (posUnsub || hmap) stopLive();
   } else if (conn.s === 'ready' && !posUnsub) {
@@ -944,7 +993,7 @@ function syncLive() {
   if (allowed && hunt?.status === 'live' && rememberedSharing() === id && !sharer?.active && sharer?.state !== 'denied')
     queueMicrotask(startSharing);
   // The leader's app deletes positions and tracks RETENTION_MS after the end (there is no server code).
-  if (id && hunt && hunt.leaderUid === myUid() && shouldPurge(hunt, now()) && !purged.has(id) && conn.s === 'ready') {
+  if (id && hunt && leads(hunt, myUid()) && shouldPurge(hunt, now()) && !purged.has(id) && conn.s === 'ready') {
     purged.add(id);
     conn.be.purgeLocations(id).catch(() => purged.delete(id));
   }
@@ -1204,6 +1253,7 @@ const pokotCtx = (h: Hunt): PokotCtx => ({
   busy,
   error: pokotError,
   clock,
+  boarAt: new Map(allCarcasses().filter((x) => x.kind === 'boar').map((x) => [x.shotId, { at: x.at, src: x.src }])),
 });
 
 let printEl: HTMLElement | null = null;
@@ -1549,6 +1599,9 @@ function setRoute(id: string | null) {
   invites = null;
   invitesFor = null;
   qrOpen = false;
+  leadOpen = null;
+  pairCode = null;
+  pairedNote = null;
   if (id) subscribe(id);
   else mine = { s: 'idle' };
 }
@@ -1616,6 +1669,8 @@ export function renderHunts(id: string | null, invite: string | undefined, ctx: 
   if (!firebaseConfig()) return `<div class="hunts"><h2>${tt({ pl: 'Polowanie zbiorowe', en: 'Group hunts' })}</h2><div class="notice">${l('notConfigured')}</div></div>`;
   setRoute(id);
   if (id && validToken(invite) && !refusedTokens.has(invite)) guestToken = { id, token: invite };
+  const pt = pairTokenOf(invite);
+  if (id && pt && !refusedTokens.has(pt)) pairToken = { id, token: pt };
   connect();
   let body: string;
   if (conn.s === 'error')
@@ -1638,7 +1693,7 @@ function renderList(): string {
             (h) => `<li><a href="#/polowanie/${esc(h.id)}" data-hunt="open" data-id="${esc(h.id)}">
               <strong>${esc(h.name)}</strong>
               <span class="meta">${esc(fmtDate(h.date, false))}, ${esc(h.start)}–${esc(h.end)}${h.place ? ` · ${esc(h.place)}` : ''}</span>
-              ${statusBadge(h.status)}${conn.s === 'ready' && h.leaderUid === conn.be.uid ? ` <span class="h-mine">${roleIcon('leader', 14)} ${l('r_leader')}</span>` : ''}
+              ${statusBadge(h.status)}${conn.s === 'ready' && leads(h, conn.be.uid) ? ` <span class="h-mine">${roleIcon('leader', 14)} ${l('r_leader')}</span>` : ''}
             </a></li>`,
           )
           .join('')}</ul>`
@@ -1744,8 +1799,10 @@ function renderDistrictPicker(form: string, def: HuntDistrict | null): string {
 
 function renderLive(h: Hunt, me: Participant): string {
   if (me.status !== 'confirmed') return `<div class="notice">${l('unconfirmedMap')}</div>`;
+  const remote = remoteLead();
   let share = '';
-  if (h.status === 'live') {
+  if (remote) share = '';
+  else if (h.status === 'live') {
     const st = sharer && sharer.huntId === h.id ? sharer.state : 'off';
     if (st === 'on' || st === 'starting')
       share = `<div class="h-share on" role="status"><span class="h-share-dot" aria-hidden="true"></span>
@@ -1768,20 +1825,20 @@ function renderLive(h: Hunt, me: Participant): string {
     toast && Date.now() < toast.until
       ? `<div class="hd-toast" role="alert"><span>${esc(toast.text)}</span>${toast.undo ? `<button type="button" class="btn small" data-hunt="${toast.undoKind === 'shot' ? 'shotUndo' : 'sightUndo'}" data-sid="${esc(toast.undo)}">${l('sightUndo')}</button>` : ''}</div>`
       : '';
-  const drawing = !!driveEdit && h.leaderUid === myUid();
+  const drawing = !!driveEdit && leads(h, myUid());
   const canShoot = me.role !== 'beater';
   const report =
-    h.status === 'live' && !drawing
+    h.status === 'live' && !drawing && !remote
       ? `<div class="hs-actions${canShoot ? ' hs-two' : ''}"><button type="button" class="btn hs-report" data-hunt="sightOpen" aria-label="${esc(l('sightReportHint'))}">${speciesIcon('boar', 28)} ${l('sightReport')}</button>${
           canShoot ? `<button type="button" class="btn hs-report hp-fire" data-hunt="shotFire" aria-label="${esc(l('shotHint'))}"><span class="hp-fire-icon" aria-hidden="true">✛</span> ${l('shot')}</button>` : ''
         }</div>`
       : '';
-  const isLead = h.leaderUid === myUid();
+  const isLead = leads(h, myUid());
   const planning = !!routeEdit && isLead;
   const picking = pickMode
     ? `<div class="notice hr-pickbar"><span>${l(pickMode.kind === 'huntMeet' ? 'meetPick' : 'cPickHint')}</span><button type="button" class="btn small ghost" data-hunt="pickCancel">${l('pickCancel')}</button></div>`
     : '';
-  const mine = drawing || planning ? '' : `${h.status === 'live' ? renderMyRoute(me) : ''}${h.status !== 'ended' ? renderMySeat(me) : ''}`;
+  const mine = drawing || planning || remote ? '' : `${h.status === 'live' ? renderMyRoute(me) : ''}${h.status !== 'ended' ? renderMySeat(me) : ''}`;
   const msgs = isLead ? '' : renderMessages(false, h);
   return `<h3>${l('mapTitle')}</h3>${t}${mine}${msgs}${report}${share}${renderDrives(h, isLead)}${drawing || planning ? '' : `${isLead ? renderSeatsLeader() : ''}${renderStands(isLead)}`}
     <div class="hm-bar"${drawing ? ' hidden' : ''}><div class="hm-counts">${liveCounts()}</div>
@@ -2004,8 +2061,9 @@ function renderHunt(): string {
   if (hunt === null) return `${back}<div class="notice">${l('notFound')}${huntError ? `<p class="muted small">${esc(huntError)}</p>` : ''}</div>`;
   const h = hunt;
   const uid = conn.s === 'ready' ? conn.be.uid : '';
-  const isLeader = h.leaderUid === uid;
-  const me = members?.find((p) => p.uid === uid);
+  const isLeader = leads(h, uid);
+  const remote = isLeader && !!members && !members.some((p) => p.uid === uid);
+  const me: Participant | undefined = members?.find((p) => p.uid === uid) ?? (remote ? { uid, name: h.leaderName, role: 'leader', status: 'confirmed', joinedAt: 0 } : undefined);
   const info = `<article class="card h-head">
       <div class="h-title"><h2>${esc(h.name)}</h2>${statusBadge(h.status)}</div>
       <dl class="kv">
@@ -2019,14 +2077,17 @@ function renderHunt(): string {
     </article>`;
   if (editing && isLeader) return `${back}${renderHuntForm('edit')}`;
   if (!membersLoaded) return `${back}${info}<p class="muted">${l('loading')}</p>`;
+  const pairing = pairToken && pairToken.id === h.id ? renderPairAsk(h) : '';
   if (!me) {
     syncLive();
-    return `${back}${info}${renderJoin(h)}`;
+    return `${back}${info}${pairing || renderJoin(h)}`;
   }
   syncLive();
   if (isLeader) watchInvites(h.id);
   const crew = me.status === 'confirmed' ? renderTransport(isLeader) : '';
-  return `${back}${info}${renderMe(me, isLeader)}${renderLive(h, me)}${crew}${isLeader ? renderInvite(h) : ''}${renderMembers(uid, isLeader)}${isLeader ? renderManage(h) : ''}`;
+  const meBox = remote ? renderRemoteLead(h) : renderMe(me, isLeader);
+  const leadBox = isLeaderDevice(h, uid) ? renderLeadDevices(h) : isDeputy(h, uid) ? `<div class="notice small">${l('deputyYou')}</div>` : '';
+  return `${back}${info}${pairing}${meBox}${leadBox}${renderLive(h, me)}${crew}${isLeader ? renderInvite(h) : ''}${renderMembers(uid, isLeader)}${isLeader ? renderManage(h) : ''}`;
 }
 
 function renderJoin(h: Hunt): string {
@@ -2048,7 +2109,7 @@ function renderJoin(h: Hunt): string {
 }
 
 function renderMe(me: Participant, isLeader: boolean): string {
-  const withdraw = isLeader
+  const withdraw = me.role === 'leader'
     ? ''
     : confirming === 'withdraw'
       ? `<button type="button" class="btn danger" data-hunt="withdraw"${btnBusy()}>${l('withdrawSure')}</button>
@@ -2095,20 +2156,88 @@ function renderInvite(h: Hunt): string {
     </details>`;
 }
 
-function makeQr(url: string) {
+function makeQr(url: string, done: (q: { url: string; svg: string }) => void = (q) => (qr = q)) {
   import('qrcode-generator').then(({ default: qrcode }) => {
     const q = qrcode(0, 'M');
     q.addData(url);
     q.make();
-    qr = { url, svg: q.createSvgTag({ cellSize: 6, margin: 3, scalable: true }) };
+    done({ url, svg: q.createSvgTag({ cellSize: 6, margin: 3, scalable: true }) });
     rerender();
   });
+}
+let pairQr: { url: string; svg: string } | null = null;
+
+/** Leader devices other than this one, and which is in the field: changes when another device pairs or takes over. */
+const devicesKey = (h: Hunt) => `${otherLeaderDevices(h).filter((u) => u !== myUid()).sort().join(',')}|${h.leaderUid}`;
+
+/** On a leader device: pair a phone, see the leader's devices, move the field role here. */
+function renderLeadDevices(h: Hunt): string {
+  const uid = myUid();
+  if (pairCode && (pairCode.id !== h.id || devicesKey(h) !== pairCode.before)) {
+    if (pairCode.id === h.id) pairedNote = l('leadPaired');
+    pairCode = null;
+  }
+  const now = conn.s === 'ready' ? conn.be.serverNow() : Date.now();
+  const devs = [h.leaderUid, ...Object.keys(h.leaders).filter((u) => h.leaders[u] === 'device' && u !== h.leaderUid)];
+  const rows = devs
+    .map(
+      (u) => `<li class="h-person">${roleIcon('leader')}<span class="h-pname">${l(u === uid ? 'leadThis' : 'leadOther')}${u === h.leaderUid ? ` <span class="hr-badge">${l('leadField')}</span>` : ''}</span>${
+        u !== uid && u !== h.leaderUid ? `<span class="h-pctl"><button type="button" class="btn small ghost" data-hunt="leadRemove" data-uid="${esc(u)}"${btnBusy()}>${l('remove')}</button></span>` : ''
+      }</li>`,
+    )
+    .join('');
+  let code: string;
+  if (pairCode && pairCode.exp > now) {
+    const url = leaderPairLink(appBase(), h.id, pairCode.token);
+    if (pairQr?.url !== url) makeQr(url, (q) => (pairQr = q));
+    code = `<figure class="h-qr">${pairQr?.url === url ? pairQr.svg : `<p class="muted small">${l('loading')}</p>`}<figcaption class="small muted">${esc(h.name)} · ${l('leadTitle')}</figcaption></figure>
+      <div class="h-invite"><input type="text" readonly value="${esc(url)}" aria-label="${l('leadTitle')}" data-hunt-select /></div>
+      <p class="small">${l('leadCodeValid')} ${esc(clock(pairCode.exp))}</p>
+      <div class="h-actions"><button type="button" class="btn small ghost" data-hunt="leadCodeCancel"${btnBusy()}>${l('leadCodeCancel')}</button></div>`;
+  } else
+    code = `${pairCode ? `<p class="small muted">${l('leadCodeExpired')}</p>` : ''}<div class="h-actions"><button type="button" class="btn" data-hunt="leadCode"${btnBusy()}>${l('leadCode')}</button></div>`;
+  const deps = Object.keys(h.leaders).filter((u) => h.leaders[u] === 'deputy');
+  const take =
+    h.leaderUid !== uid
+      ? `<div class="h-actions"><button type="button" class="btn small ghost" data-hunt="leadTake"${btnBusy()}>${l('leadTake')}</button></div><p class="small muted">${l('leadTakeHint')}</p>`
+      : '';
+  const open = leadOpen ?? !!(pairCode || pairedNote);
+  return `<details class="card h-lead"${open ? ' open' : ''}><summary data-hunt="leadBox" data-open="${open}"><strong>${l('leadTitle')}</strong></summary>
+    ${pairedNote ? `<p class="small" role="status">${esc(pairedNote)}</p>` : ''}
+    <p class="small muted">${l('leadHint')}</p>${code}
+    <h4>${l('leadDevices')}</h4><ul class="h-people">${rows}</ul>${take}
+    <h4>${l('deputies')}</h4>${deps.length ? `<ul class="h-people">${deps.map((u) => `<li class="h-person">${roleIcon('hunter')}<span class="h-pname">${esc(personName(u))}</span></li>`).join('')}</ul>` : ''}
+    <p class="small muted">${l('deputyHint')}</p>${errorBox()}</details>`;
+}
+
+/** A leader device whose leader row is on another device. */
+function renderRemoteLead(h: Hunt): string {
+  return `<div class="notice h-me">${roleIcon('leader', 22)}<div><strong>${esc(h.leaderName)}</strong><br><span class="small">${l('remoteLead')}</span></div></div>`;
+}
+
+/** On the phone that opened a pairing link. */
+function renderPairAsk(h: Hunt): string {
+  if (h.leaderUid === myUid()) {
+    pairToken = null;
+    return '';
+  }
+  return `<div class="card h-form"><h3>${roleIcon('leader', 22)} ${l('pairTitle')}</h3>
+    <p><strong>${esc(h.name)}</strong> · ${esc(h.leaderName)}</p><p class="small">${l('pairAsk')}</p>${errorBox()}
+    <div class="h-actions"><button type="button" class="btn" data-hunt="pairConfirm"${btnBusy()}>${l('pairOk')}</button>
+    <button type="button" class="btn ghost" data-hunt="pairCancel">${l('cancel')}</button></div></div>`;
 }
 
 function renderMembers(uid: string, isLeader: boolean): string {
   const ps = members ?? [];
   const c = countRoles(ps);
+  const h = hunt;
+  const canAppoint = isLeaderDevice(h, uid);
   const row = (p: Participant) => {
+    const deputy = isDeputy(h, p.uid);
+    const appoint =
+      canAppoint && p.role !== 'leader' && p.status === 'confirmed' && confirming !== `remove:${p.uid}`
+        ? `<button type="button" class="btn small ghost" data-hunt="deputy" data-uid="${esc(p.uid)}" data-on="${deputy ? '' : '1'}"${btnBusy()}>${l(deputy ? 'deputyDrop' : 'deputyMake')}</button>`
+        : '';
     const controls =
       isLeader && p.role !== 'leader'
         ? confirming === `remove:${p.uid}`
@@ -2116,14 +2245,14 @@ function renderMembers(uid: string, isLeader: boolean): string {
              <button type="button" class="btn small ghost" data-hunt="unconfirm">${l('cancel')}</button>`
           : `${p.status === 'registered' ? `<button type="button" class="btn small" data-hunt="confirm" data-uid="${esc(p.uid)}"${btnBusy()}>${l('confirm')}</button>` : ''}
              <button type="button" class="btn small ghost" data-hunt="role" data-uid="${esc(p.uid)}" data-to="${p.role === 'hunter' ? 'beater' : 'hunter'}"${btnBusy()}>${l(p.role === 'hunter' ? 'makeBeater' : 'makeHunter')}</button>
-             <button type="button" class="btn small ghost" data-hunt="askRemove" data-uid="${esc(p.uid)}">${l('remove')}</button>`
+             <button type="button" class="btn small ghost" data-hunt="askRemove" data-uid="${esc(p.uid)}">${l('remove')}</button>${appoint}`
         : '';
     const fd = focus();
     const seat = fd && p.role !== 'beater' ? seats.get(fd.id)?.get(p.uid) : undefined;
     const carries = myCarcassKinds(transport, p.uid);
     const ph = phones.get(p.uid);
     return `<li class="h-person${p.status === 'registered' ? ' pending' : ''}">${roleIcon(p.role)}
-      <span class="h-pname">${esc(p.name)}${p.uid === uid ? ` <span class="muted">(${l('you')})</span>` : ''}${seat ? ` <span class="hr-badge" title="${esc(l('seat'))}">${standIcon('zwyzka', false, 12)} ${esc(seat)}</span>` : ''}${carries.length ? ` <span class="hr-badge hr-badge-tr">${esc(carries.map(kindName).join(', '))}</span>` : ''}
+      <span class="h-pname">${esc(p.name)}${p.uid === uid ? ` <span class="muted">(${l('you')})</span>` : ''}${deputy ? ` <span class="hr-badge">${roleIcon('leader', 12)} ${l('deputyBadge')}</span>` : ''}${seat ? ` <span class="hr-badge" title="${esc(l('seat'))}">${standIcon('zwyzka', false, 12)} ${esc(seat)}</span>` : ''}${carries.length ? ` <span class="hr-badge hr-badge-tr">${esc(carries.map(kindName).join(', '))}</span>` : ''}
         ${p.status === 'registered' ? `<small class="muted">${l('pending')}</small>` : ''}${ph && p.uid !== uid ? `<small>${telLink(ph)}</small>` : ''}</span>
       ${controls ? `<span class="h-pctl">${controls}</span>` : ''}</li>`;
   };
@@ -2172,7 +2301,9 @@ const guideText = (): GuideText => ({
 
 const fmtDist = (m: number) => (m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`);
 const meName = () => members?.find((p) => p.uid === myUid());
-const isLeaderNow = () => !!hunt && hunt.leaderUid === myUid();
+const isLeaderNow = () => leads(hunt, myUid());
+/** A leader device with no row of its own: the leader is in the field on another device. */
+const remoteLead = () => !!hunt && leads(hunt, myUid()) && !!members && !members.some((p) => p.uid === myUid());
 const beaters = () => (members ?? []).filter((p) => p.role === 'beater');
 const shooters = () => (members ?? []).filter((p) => p.role === 'hunter' || p.role === 'leader');
 const kindName = (k: CarcassKind) => l(k === 'boar' ? 'tr_boar' : 'tr_deer');
@@ -3050,6 +3181,9 @@ export function handleHuntClick(el: HTMLElement): boolean {
     case 'standList':
       standListOpen = el.dataset.open !== 'true';
       break;
+    case 'leadBox':
+      leadOpen = el.dataset.open !== 'true';
+      break;
     case 'standsEdit': {
       const own = stands.length > 0;
       driveEdit = null;
@@ -3192,6 +3326,62 @@ export function handleHuntClick(el: HTMLElement): boolean {
     case 'qr':
       qrOpen = !qrOpen;
       break;
+    case 'leadCode':
+      if (id && hunt) {
+        const before = devicesKey(hunt);
+        pairedNote = null;
+        run(async (be) => {
+          const c = await be.newLeaderCode(id);
+          pairCode = { id, ...c, before };
+        });
+      }
+      return true;
+    case 'leadCodeCancel':
+      if (id) {
+        pairCode = null;
+        run((be) => be.cancelLeaderCode(id));
+      }
+      return true;
+    case 'leadTake':
+      if (id) {
+        pairedNote = null;
+        run(async (be) => {
+          await be.takeField(id);
+          pairedNote = l('leadMoved');
+        });
+      }
+      return true;
+    case 'leadRemove':
+      if (id && uid) run((be) => be.removeLeader(id, uid));
+      return true;
+    case 'deputy':
+      if (id && uid) run((be) => be.setDeputy(id, uid, el.dataset.on === '1'));
+      return true;
+    case 'pairCancel':
+      pairToken = null;
+      formError = '';
+      if (id) go(id);
+      break;
+    case 'pairConfirm':
+      if (id && pairToken?.id === id) {
+        const token = pairToken.token;
+        run(async (be) => {
+          try {
+            await be.pairLeader(id, token);
+          } catch (e) {
+            if (e instanceof HuntError && e.code === 'denied') refusedTokens.add(token);
+            throw e;
+          }
+          pairToken = null;
+          pairedNote = l('leadMoved');
+          mine = { s: 'idle' };
+          // The participant list was unreadable before; listen again now that this device leads.
+          membersLoaded = false;
+          watchMembers(id);
+          go(id);
+        }, 'errPair');
+      }
+      return true;
     case 'askRevoke':
       confirming = 'revoke';
       break;
@@ -3386,7 +3576,7 @@ export function handleHuntSubmit(form: HTMLFormElement): boolean {
     const sid = form.dataset.sid || null;
     const outcome = (OUTCOMES.includes(v('outcome') as Outcome) ? v('outcome') : 'unknown') as Outcome;
     const game = GAMES.some((x) => x.key === v('game')) && outcome !== 'miss' ? v('game') : null;
-    const isLead = hunt?.leaderUid === myUid();
+    const isLead = leads(hunt, myUid());
     const lead = isLead ? { uid: v('uid') || NO_SHOOTER, driveId: v('driveId') || null } : {};
     const patch = { outcome, game, note: v('note'), ...lead };
     pokotRun(

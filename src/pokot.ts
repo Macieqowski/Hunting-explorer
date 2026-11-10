@@ -211,3 +211,20 @@ export function outOfSeason(key: string, date: string, voivodeship?: string | nu
 export function pokotTitle(h: { date: string; name: string }): string {
   return `${h.date} pokot ${h.name}`.trim();
 }
+
+/** Boar (any category): their kill sites go on the ASF (African swine fever) paperwork. */
+export const isBoar = (game: string | null) => !!game && game.startsWith('boar_');
+
+/** Coordinates for forms: WGS84 decimal degrees (6 places, ~10 cm) and degrees-minutes-seconds. */
+export function fmtCoords(lat: number, lng: number): { dec: string; dms: string } {
+  const dms = (v: number, pos: string, neg: string) => {
+    const a = Math.abs(v);
+    let d = Math.floor(a);
+    let m = Math.floor((a - d) * 60);
+    let sec = Math.round(((a - d) * 60 - m) * 600) / 10;
+    if (sec >= 60) [sec, m] = [0, m + 1];
+    if (m >= 60) [m, d] = [0, d + 1];
+    return `${d}°${String(m).padStart(2, '0')}′${sec.toFixed(1).padStart(4, '0')}″${v < 0 ? neg : pos}`;
+  };
+  return { dec: `${lat.toFixed(6)}, ${lng.toFixed(6)}`, dms: `${dms(lat, 'N', 'S')} ${dms(lng, 'E', 'W')}` };
+}

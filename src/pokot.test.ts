@@ -124,3 +124,18 @@ describe('outOfSeason', () => {
     expect(gameByKey('nope')).toBeNull();
   });
 });
+
+import { fmtCoords, isBoar } from './pokot';
+
+describe('ASF coordinates', () => {
+  it('recognises every boar category', () => {
+    expect(GAMES.filter((x) => isBoar(x.key)).map((x) => x.key)).toEqual(['boar_male', 'boar_sow', 'boar_yearling', 'boar_piglet']);
+    expect(isBoar(null)).toBe(false);
+  });
+  it('prints decimal degrees and degrees-minutes-seconds', () => {
+    expect(fmtCoords(53.9876543, 18.5)).toEqual({ dec: '53.987654, 18.500000', dms: '53°59′15.6″N 18°30′00.0″E' });
+    expect(fmtCoords(-0.5, -0.25).dms).toBe('0°30′00.0″S 0°15′00.0″W');
+    // rounding up to a whole minute
+    expect(fmtCoords(52.99999, 21).dms).toBe('53°00′00.0″N 21°00′00.0″E');
+  });
+});

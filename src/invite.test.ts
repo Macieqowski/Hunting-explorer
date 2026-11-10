@@ -53,3 +53,19 @@ describe('parseInvites / currentInvite', () => {
 it('inviteLink puts the token after the hunt id', () => {
   expect(inviteLink('https://x.github.io/app/', '-Nabc', 'T'.repeat(22))).toBe(`https://x.github.io/app/#/polowanie/-Nabc/${'T'.repeat(22)}`);
 });
+
+import { leaderPairLink, pairTokenOf, PAIR_MS } from './invite';
+
+describe('leader pairing links', () => {
+  const tok = 'Abc_def-1234567890XYZw';
+  it('are hunt links with a lead. token, told apart from invitations', () => {
+    const url = leaderPairLink('https://x.test/app/', 'h 1', tok);
+    expect(url).toBe(`https://x.test/app/#/polowanie/h%201/lead.${tok}`);
+    expect(pairTokenOf(`lead.${tok}`)).toBe(tok);
+    expect(pairTokenOf(tok)).toBeNull();
+    expect(pairTokenOf('lead.short')).toBeNull();
+    expect(pairTokenOf(undefined)).toBeNull();
+    expect(validToken(`lead.${tok}`)).toBe(false); // never taken for a guest invitation
+  });
+  it('codes last less than the 15 minutes the rules allow', () => expect(PAIR_MS).toBeLessThan(15 * 60e3));
+});

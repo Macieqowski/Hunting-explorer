@@ -54,3 +54,18 @@ export function currentInvite(list: Invite[], now: number): Invite | null {
 
 /** `#/polowanie/<hunt>/<token>`; base is origin + path of the app. */
 export const inviteLink = (base: string, huntId: string, token: string) => `${base}#/polowanie/${encodeURIComponent(huntId)}/${token}`;
+
+// ---- pairing the leader's devices (e.g. set up on a computer, run from the phone)
+
+/** How long a pairing code works (the rules allow 15 minutes). */
+export const PAIR_MS = 10 * 60e3;
+const PAIR_PREFIX = 'lead.';
+
+/** `#/polowanie/<hunt>/lead.<token>`: opened on the phone, it makes that phone one of the leader's devices. */
+export const leaderPairLink = (base: string, huntId: string, token: string) => `${base}#/polowanie/${encodeURIComponent(huntId)}/${PAIR_PREFIX}${token}`;
+
+/** The pairing token in the last part of a hunt link, or null (an invitation token or nothing). */
+export const pairTokenOf = (arg: string | undefined): string | null => {
+  const t = arg?.startsWith(PAIR_PREFIX) ? arg.slice(PAIR_PREFIX.length) : null;
+  return validToken(t) ? t : null;
+};
