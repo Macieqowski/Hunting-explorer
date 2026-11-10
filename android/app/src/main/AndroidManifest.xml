@@ -23,14 +23,15 @@
             </intent-filter>
 
             <!-- Links to the website (invitations, leader pairing codes) open the app.
-                 Verified by public/.well-known/assetlinks.json on www.polowanie.org. -->
+                 Verified by public/.well-known/assetlinks.json on www.polowanie.org.
+                 Only www: polowanie.org answers with a redirect, which Android's check does not
+                 follow, and on Android 11 and older one failed host fails the whole app. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" />
                 <data android:host="www.polowanie.org" />
-                <data android:host="polowanie.org" />
             </intent-filter>
 
         </activity>
