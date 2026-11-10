@@ -108,6 +108,11 @@ describe('guide', () => {
     expect(g.side).toBe('right');
     expect(Math.round(g.bearing)).toBe(270);
   });
+  it('has no side beyond the start of the route', () => {
+    const g = guide(route, at(180, 200), true);
+    expect(g.state).toBe('off');
+    expect(g.side).toBeNull();
+  });
   it('turns at a waypoint', () => {
     const g = guide(route, offsetPoint(at(0, 1000), 90, 50), true);
     expect(distanceM(g.target, route[2])).toBeLessThan(1);

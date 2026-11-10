@@ -18,6 +18,7 @@ export interface GuideText {
   nearEnd: (m: string) => string; // "Careful: hunters' line in 80 m"
   arrived: string; // "End of your route"
   pointArrived: string; // "You are there"
+  pointGo: string; // "Follow the arrow"
   noFix: string; // "Waiting for GPS…"
   noCompass: string; // "No compass: the arrow is relative to north (up = N)"
   compassOn: string; // "Turn on the compass"
@@ -160,7 +161,7 @@ export function guideLine(): string {
 
 function stateText(g: Guidance): string {
   const t = text!;
-  if (target?.kind === 'point') return g.state === 'arrived' ? t.pointArrived : fmtM(g.distM);
+  if (target?.kind === 'point') return g.state === 'arrived' ? t.pointArrived : t.pointGo;
   switch (g.state) {
     case 'toStart':
       return t.toStart;
@@ -195,7 +196,7 @@ function inner(): string {
   return `${head}
     <div class="hg-body${warn ? ' hg-warn' : ''}${g.state === 'arrived' ? ' hg-done' : ''}">
       <div class="hg-dial">${heading == null ? `<span class="hg-n" aria-hidden="true">${t.north}</span>` : ''}<div class="hg-arrow" style="--deg:${deg}deg" aria-hidden="true">
-        <svg viewBox="0 0 100 100" width="96" height="96"><path d="M50 6 82 88 50 70 18 88z"/></svg></div></div>
+        <svg viewBox="0 0 100 100" width="96" height="96"><path d="M50 6 84 48 62 48 62 94 38 94 38 48 16 48z"/></svg></div></div>
       <div class="hg-info"><div class="hg-dist">${fmtM(g.distM)} <span class="muted">${compassPoint(g.bearing)}</span></div>
         <div class="hg-state">${esc(stateText(g))}</div>${fixAcc != null && fixAcc > 30 ? `<div class="small muted">GPS ±${Math.round(fixAcc)} m</div>` : ''}</div>
     </div>${compass}`;

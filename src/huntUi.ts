@@ -422,6 +422,7 @@ const L = {
   meetClear: { pl: 'Usuń z mapy', en: 'Remove from map' },
   meetPick: { pl: 'Dotknij mapy w miejscu zbiórki.', en: 'Tap the map where everyone meets.' },
   navigate: { pl: 'Nawiguj', en: 'Navigate' },
+  navigateMeet: { pl: 'Nawiguj na zbiórkę', en: 'Navigate to the meeting point' },
   meetLabel: { pl: 'Zbiórka', en: 'Meeting point' },
   meetAfter: { pl: 'Zbiórka po miocie', en: 'Meeting point after the drive' },
   pickCancel: { pl: 'Anuluj wskazywanie', en: 'Cancel' },
@@ -460,6 +461,7 @@ const L = {
   gNearEnd: { pl: 'Uwaga: linia myśliwych za', en: "Careful: the hunters' line in" },
   gArrived: { pl: 'Koniec trasy', en: 'End of your route' },
   gPointArrived: { pl: 'Jesteś na miejscu', en: 'You are there' },
+  gPointGo: { pl: 'Idź za strzałką', en: 'Follow the arrow' },
   gNoFix: { pl: 'Czekam na GPS…', en: 'Waiting for GPS…' },
   gNoCompass: { pl: 'Bez kompasu strzałka pokazuje kierunek względem północy (góra = N).', en: 'Without a compass the arrow is relative to north (up = N).' },
   gCompassOn: { pl: 'Włącz kompas', en: 'Turn on the compass' },
@@ -514,6 +516,7 @@ const L = {
   msgSend: { pl: 'Wyślij', en: 'Send' },
   msgSent: { pl: 'Wysłano wiadomość.', en: 'Message sent.' },
   msgAck: { pl: 'Przyjąłem', en: 'Got it' },
+  msgLater: { pl: 'Później', en: 'Later' },
   msgAcked: { pl: 'przyjęte', en: 'received' },
   msgNone: { pl: 'Brak wiadomości.', en: 'No messages.' },
   msgWaiting: { pl: 'nie potwierdzili:', en: 'not confirmed yet:' },
@@ -2158,6 +2161,7 @@ const guideText = (): GuideText => ({
   nearEnd: (m) => `${l('gNearEnd')} ${m}`,
   arrived: l('gArrived'),
   pointArrived: l('gPointArrived'),
+  pointGo: l('gPointGo'),
   noFix: l('gNoFix'),
   noCompass: l('gNoCompass'),
   compassOn: l('gCompassOn'),
@@ -2393,7 +2397,7 @@ function openMsgSheet(m: Message) {
   el.innerHTML = `<div class="hmsg-box"><p class="hmsg-from">${roleIcon('leader', 22)} ${esc(l('msgFromLeader'))} · ${esc(clock(m.ts))}</p>
     <p class="hmsg-text">${esc(m.text)}</p>
     <button type="button" class="btn hmsg-ack" data-msg="ack">${l('msgAck')}</button>
-    <button type="button" class="btn ghost small" data-msg="later">${l('cancel')}</button></div>`;
+    <button type="button" class="btn ghost small hmsg-later" data-msg="later">${l('msgLater')}</button></div>`;
   el.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('[data-msg]');
     if (!b) return;
@@ -2429,7 +2433,7 @@ function renderMeetLine(h: Hunt, isLeader: boolean): string {
           h.meet ? ` <button type="button" class="btn small ghost" data-hunt="meetClear">${l('meetClear')}</button>` : ''
         }`
     : '';
-  const nav = h.meet ? `<a class="btn small" href="${esc(mapsLink(h.meet))}" target="_blank" rel="noopener">⚑ ${l('navigate')}</a>` : '';
+  const nav = h.meet ? `<a class="btn small" href="${esc(mapsLink(h.meet))}" target="_blank" rel="noopener">⚑ ${l('navigateMeet')}</a>` : '';
   if (!nav && !set) return '';
   return `<div class="h-actions hr-meetline">${nav}${set}</div>`;
 }
@@ -2687,6 +2691,9 @@ export function handleHuntClick(el: HTMLElement): boolean {
       if (hunt?.district) saveOfflineCb?.(hunt.district);
       break;
     case 'meetPick':
+      driveEdit = null;
+      standEdit = null;
+      routeEdit = null;
       pickMode = { kind: 'huntMeet' };
       drawCrew();
       setTimeout(() => document.querySelector('.hm-map')?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 0);
@@ -2767,6 +2774,9 @@ export function handleHuntClick(el: HTMLElement): boolean {
     }
     case 'carcassPick':
       if (el.dataset.sid) {
+        driveEdit = null;
+        standEdit = null;
+        routeEdit = null;
         pickMode = { kind: 'carcass', shotId: el.dataset.sid };
         drawCrew();
         setTimeout(() => document.querySelector('.hm-map')?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 0);

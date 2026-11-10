@@ -134,7 +134,9 @@ export function guide(route: Route, me: Pt, started: boolean): Guidance {
   }
   const near = lerp(route[best.seg], route[best.seg + 1], best.t);
   const toEndM = distanceM(near, route[best.seg + 1]) + routeLength(route.slice(best.seg + 1));
-  const side: Guidance['side'] = best.d < 5 ? null : best.cross > 0 ? 'left' : 'right';
+  // Beyond either end of the route "left" or "right" means nothing.
+  const pastEnd = (best.seg === 0 && best.t <= 0) || (best.seg === route.length - 2 && best.t >= 1);
+  const side: Guidance['side'] = best.d < 5 || pastEnd ? null : best.cross > 0 ? 'left' : 'right';
   const dEnd = distanceM(me, end);
   if (!started && distanceM(me, route[0]) > AT_START_M && best.seg === 0 && best.t < 0.05) return mk('toStart', route[0], best.d, side, routeLength(route));
   if (dEnd <= ARRIVED_M) return mk('arrived', end, best.d, side, 0);
