@@ -235,15 +235,6 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; text-transform: uppercase; le
 :root[data-theme='dark'] .leaflet-control-layers,
 :root[data-theme='dark'] .leaflet-bar a { background: var(--surface); color: var(--text); }
 
-@media (max-width: 760px) {
-  .layout { flex-direction: column-reverse; }
-  .panel { width: 100%; max-width: none; height: 52%; border-right: 0; border-top: 1px solid var(--border); }
-  .mapwrap { flex: 1; min-height: 0; }
-  .brand p { display: none; }
-  .content { padding: 10px 16px 24px; }
-  .legend { display: none; }
-}
-
 /* District number labels drawn over the map */
 .dist-label { background: none; border: 0; pointer-events: none; }
 .dist-label > span { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); }
@@ -262,7 +253,7 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; text-transform: uppercase; le
   background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--r-pill);
   padding: 6px 12px; font-size: 0.82rem; box-shadow: var(--shadow); white-space: nowrap; pointer-events: none;
 }
-@media (max-width: 760px) { .zoom-hint { top: auto; bottom: 46px; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; } }
+@media (max-width: 760px) { .zoom-hint { top: auto; bottom: 34px; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; } }
 
 /* Exams */
 .exam-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
@@ -367,42 +358,93 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; text-transform: uppercase; le
 .tbl td.num.ok { color: #16a34a; }
 .tbl td.num.bad { color: #dc2626; }
 
-/* Top-level sections (map / exams / later features) */
+/* The five destinations: in the top bar on a computer, a bar at the bottom on a phone */
 .sections { display: flex; gap: 4px; margin-left: auto; }
 .sections button {
-  border: 0; background: none; color: var(--muted); font: inherit; font-weight: 600; font-size: 0.92rem;
-  padding: 7px 12px; border-radius: var(--r-s); cursor: pointer; white-space: nowrap;
+  border: 0; background: none; color: var(--muted); font: inherit; font-weight: 600; font-size: 0.95rem;
+  min-height: 40px; padding: 7px 14px; border-radius: var(--r-s); cursor: pointer; white-space: nowrap;
 }
 @media (hover: hover) { .sections button:hover { background: var(--surface-2); color: var(--text); } }
-.sections button[aria-current='page'] { background: var(--surface-2); color: var(--accent); }
-/* Page mode: no map, no map tabs, content centred at reading width */
+.sections button[aria-current='page'] { background: var(--accent-soft); color: var(--accent); }
+.topbar-tools { display: flex; gap: 6px; }
+.bottomnav, .sheet-handle, .cur-section { display: none; }
+#map { z-index: 0; }
+/* Page mode: no map; content centred at reading width. "Wiedza" keeps a strip of its four pages. */
 .page-mode .mapwrap, .page-mode .tabs { display: none; }
+.page-mode.area-know .tabs { display: flex; padding: 8px max(8px, calc((100% - 776px) / 2)) 0; }
 .page-mode .panel { width: 100%; max-width: none; height: auto; flex: 1; border: 0; }
 .page-mode .content { padding: 20px max(16px, calc((100% - 760px) / 2)) 48px; }
-/* Phones: sections move into a drop-down menu opened by the ☰ button */
-.menubtn, .menu-scrim, .cur-section { display: none; }
+
 @media (max-width: 760px) {
-  .topbar { position: relative; z-index: 1100; gap: 8px; padding: 8px 8px 8px 14px; }
-  .brand p { display: none; }
+  :root { --peek: 132px; --nav-h: 58px; }
+  .topbar { position: relative; z-index: 1100; gap: 8px; min-height: 48px; padding: 6px 12px 6px 14px; }
+  .brand p, .sections, .topbar-tools { display: none; }
   .brand { flex: 1 1 0; }
   .brand h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 1.15rem; }
+  .brand-mark { width: 26px; height: 26px; }
   .cur-section { display: inline; font-weight: 500; color: var(--muted); }
   .cur-section::before { content: ' · '; }
-  .menubtn {
-    display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: none;
-    border: 1px solid var(--border); background: var(--surface-2); color: var(--text); border-radius: var(--r-s); cursor: pointer;
+  .content { padding: 10px 16px 24px; }
+  .legend { display: none; }
+
+  .bottomnav {
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); position: relative; z-index: 1100; flex: none;
+    background: var(--surface); border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom);
   }
-  .menu-open .menubtn { color: var(--accent); border-color: var(--accent); }
-  .sections {
-    display: none; position: absolute; top: 100%; left: 0; right: 0; margin: 0;
-    flex-direction: column; gap: 2px; padding: 8px; background: var(--surface);
-    border-bottom: 1px solid var(--border); box-shadow: var(--shadow);
+  .bottomnav button {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: var(--nav-h); padding: 6px 2px;
+    border: 0; background: none; color: var(--muted); font: 600 0.72rem/1.1 var(--font-body); cursor: pointer;
   }
-  .menu-open .sections { display: flex; }
-  .sections button { text-align: left; padding: 12px 14px; font-size: 1rem; }
-  .sections button[aria-current='page'] { box-shadow: inset 3px 0 0 var(--accent); }
-  .menu-scrim:not([hidden]) { display: block; position: fixed; inset: 0; z-index: 1050; background: rgb(0 0 0 / 0.3); }
+  .bottomnav button span { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bottomnav .ic { box-sizing: content-box; padding: 2px 16px; border-radius: var(--r-pill); }
+  .bottomnav button[aria-current='page'] { color: var(--accent); }
+  .bottomnav button[aria-current='page'] .ic { background: var(--accent-soft); }
+
+  /* Map area: the map fills the screen and the lists are a pull-up sheet over it (sheet.ts). */
+  .layout { position: relative; display: block; }
+  .mapwrap { position: absolute; inset: 0 0 var(--peek) 0; }
+  .panel {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 600; width: auto; max-width: none; height: var(--peek);
+    border-right: 0; border-radius: var(--r-xl) var(--r-xl) 0 0; box-shadow: 0 -4px 20px rgb(0 0 0 / 0.16); overflow: hidden;
+    transition: height 0.25s ease;
+  }
+  .panel[data-sheet='half'] { height: max(var(--peek), 50%); }
+  .panel[data-sheet='full'] { height: calc(100% - 8px); }
+  .panel.dragging { transition: none; }
+  .sheet-handle {
+    display: flex; align-items: center; justify-content: center; flex: none; width: 100%; height: 24px; padding: 0;
+    border: 0; background: none; cursor: grab; touch-action: none;
+  }
+  .sheet-handle span { width: 40px; height: 4px; border-radius: 2px; background: var(--border-strong); }
+  .tabs { padding-top: 0; }
+  .page-mode .layout { display: flex; }
+  #app.page-mode .panel { position: static; height: auto; border-radius: 0; box-shadow: none; transition: none; }
+  .page-mode .sheet-handle { display: none; }
+  .page-mode.area-know .tabs { padding: 4px 8px 0; }
+  .toast { bottom: calc(var(--nav-h) + 16px + env(safe-area-inset-bottom)); }
+  .app-update { bottom: calc(var(--nav-h) + 12px + env(safe-area-inset-bottom)); }
 }
+/* With the keyboard up there is little height left: the bar steps aside. */
+@media (max-width: 760px) and (max-height: 430px) { .bottomnav { display: none; } }
+:root[data-theme='dark'] .panel { box-shadow: none; }
+@media (max-width: 760px) { :root[data-theme='dark'] .panel { border-top: 1px solid var(--border-strong); } :root[data-theme='dark'] .page-mode .panel { border-top: 0; } }
+
+/* "Więcej": settings and the pages outside everyday use */
+.more h3:first-of-type { margin-top: 1rem; }
+.set-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 10px 0; border-bottom: 1px solid var(--border); font-weight: 600; }
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--r-btn); overflow: hidden; }
+.seg button {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 0; background: none; color: var(--text);
+  font: 600 0.9rem var(--font-body); cursor: pointer;
+}
+.seg button + button { border-left: 1px solid var(--border-strong); }
+.seg button[aria-pressed='true'] { background: var(--accent); color: var(--accent-text); }
+.more-list { list-style: none; margin: 0; padding: 0; }
+.more-list a { display: flex; align-items: center; gap: 14px; min-height: 60px; padding: 10px 4px; border-bottom: 1px solid var(--border); color: var(--text); text-decoration: none; }
+.more-list a > span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.more-list a > .ic:first-child { color: var(--accent); }
+.more-list a > .ic:last-child { color: var(--muted); }
+@media (hover: hover) { .more-list a:hover { background: var(--surface-2); } }
 
 /* Weather */
 :root { --w-day: #fde68a; --w-civil: #f59e0b; --w-nautical: #6366f1; --w-astro: #312e81; --w-night: #111827; }
@@ -1049,13 +1091,9 @@ input[type='checkbox'], input[type='radio'] { width: 18px; height: 18px; accent-
 .w-big > b, .hg-dist, .hs-read, .timer, .result b, .pocket-time, .hr-seatno, .small-kpis b { font-family: var(--font-num); font-weight: var(--num-weight); }
 .badge, .h-status, .in-season, .atlas-pill, .ball-v, .chip { letter-spacing: 0.01em; }
 .sections button, .tabs button { font-family: var(--font-body); }
-/* The look switch: an icon beside the sections on a computer, a full row at the end of the phone menu. */
-.themebtn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; margin-left: 4px; }
+/* The look switch in the top bar (computer); on a phone it is a row in "Więcej". */
+.themebtn { display: inline-flex; align-items: center; justify-content: center; }
 .themebtn span { display: none; }
-@media (max-width: 760px) {
-  .sections .themebtn { justify-content: flex-start; margin: 6px 0 0; padding: 12px 14px; border: 0; border-top: 1px solid var(--border); border-radius: 0; background: none; color: var(--muted); font-size: 1rem; }
-  .sections .themebtn span { display: inline; }
-}
 /* Dark look: thin outlines instead of shadows, and the square corners of the "B" design. */
 :root[data-theme='dark'] .card, :root[data-theme='dark'] .legend, :root[data-theme='dark'] .locate { box-shadow: none; }
 :root[data-theme='dark'] .btn.ghost { border-color: var(--border-strong); }

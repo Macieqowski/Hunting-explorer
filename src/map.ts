@@ -12,7 +12,8 @@ import { WMS } from './tiles';
 
 export interface MapApi {
   map: L.Map;
-  highlight(items: DistrictWithGeometry[], opts?: { fit?: boolean; marker?: L.LatLngExpression }): void;
+  /** `padBottom`: px of the map's lower edge covered by the phone sheet, kept clear when framing. */
+  highlight(items: DistrictWithGeometry[], opts?: { fit?: boolean; marker?: L.LatLngExpression; padBottom?: number }): void;
   clearHighlight(): void;
   rebuildLayerControl(): void;
 }
@@ -118,7 +119,10 @@ export function createMap(el: HTMLElement, onClick: (lat: number, lng: number) =
       if (opts.marker) L.circleMarker(opts.marker, { radius: 6, color: '#fff', weight: 2, fillColor: '#c2410c', fillOpacity: 1, interactive: false }).addTo(hl);
       if (opts.fit && hl.getLayers().length) {
         const b = hl.getBounds();
-        if (b.isValid()) map.flyToBounds(b, { padding: [40, 40], maxZoom: 12, duration: 0.6 });
+        if (b.isValid()) map.flyToBounds(b, { paddingTopLeft: [40, 40], paddingBottomRight: [40, 40 + (opts.padBottom ?? 0)], maxZoom: 12, duration: 0.6 });
+      } else if (opts.marker && opts.padBottom) {
+        // A tapped point must not end up under the sheet that shows its details.
+        map.panInside(opts.marker, { paddingTopLeft: [40, 60], paddingBottomRight: [40, 40 + opts.padBottom] });
       }
     },
   };
