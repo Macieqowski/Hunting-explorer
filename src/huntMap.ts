@@ -41,8 +41,40 @@ export interface ShotView {
   lat: number;
   lng: number;
   kind: 'wound' | 'kill';
+  /** A carcass already collected. */
+  picked?: boolean;
   label: string;
   popup: string; // HTML
+}
+
+/** A beater's route: start, waypoints, end. */
+export interface RouteView {
+  uid: string;
+  pts: { lat: number; lng: number }[];
+  label: string; // the beater's name
+  /** Mine (or the one being edited): drawn bold. */
+  strong: boolean;
+}
+
+/** Editing routes: the selected route's points drag; onSelect fires when another route is tapped. */
+export interface RouteEdit {
+  sel: string | null;
+  onSelect(uid: string): void;
+  onMove(i: number, lat: number, lng: number): void;
+}
+
+/** A meeting point (zbiórka): the hunt's, or one drive's. */
+export interface MeetView {
+  lat: number;
+  lng: number;
+  label: string;
+}
+
+/** A hunter on a stand in the drive in focus: their name next to the seat. */
+export interface SeatView {
+  lat: number;
+  lng: number;
+  label: string;
 }
 
 /** Editing the seats: markers drag, tapping the map adds one. Indexes refer to the list passed to setStands. */
@@ -85,6 +117,13 @@ export interface HuntMap {
   stopDraw(): void;
   /** The moment the wind badge shows by default (the next drive); null = now. */
   setWindTime(t: number | null): void;
+  setRoutes(rs: RouteView[], edit?: RouteEdit | null): void;
+  setMeets(ms: MeetView[]): void;
+  setSeats(ss: SeatView[]): void;
+  /** While set, a tap on the map goes here (picking a point); drawing a drive and editing seats come first. */
+  setTapHandler(fn: ((lat: number, lng: number) => void) | null): void;
+  /** A dashed line from me to where the guidance arrow points. */
+  setGuideLine(from: { lat: number; lng: number } | null, to: { lat: number; lng: number } | null): void;
   invalidate(): void;
   destroy(): void;
 }
@@ -123,6 +162,10 @@ export function createHuntMap(text: HuntMapText): HuntMap {
   const accLayer = L.layerGroup().addTo(map);
   const sightLayer = L.layerGroup().addTo(map);
   const shotLayer = L.layerGroup().addTo(map);
+  const routeLayer = L.layerGroup().addTo(map);
+  const meetLayer = L.layerGroup().addTo(map);
+  const seatLayer = L.layerGroup().addTo(map);
+  const guideLayer = L.layerGroup().addTo(map);
   const markerLayer = L.featureGroup().addTo(map);
   const markers = new Map<string, { marker: L.Marker; acc: L.Circle | null; pos: Position; info: PersonInfo; me: boolean; cls: string }>();
   let districtId: number | null = null;
@@ -231,8 +274,10 @@ export function createHuntMap(text: HuntMapText): HuntMap {
     windDrives();
   };
   let standEdit: StandEdit | null = null;
+  let tapHandler: ((lat: number, lng: number) => void) | null = null;
   map.on('click', (e: L.LeafletMouseEvent) => {
     if (!draw && standEdit) return standEdit.onAdd(e.latlng.lat, e.latlng.lng);
+    if (!draw && tapHandler) return tapHandler(e.latlng.lat, e.latlng.lng);
     if (!draw) return;
     draw.area.push([e.latlng.lat, e.latlng.lng]);
     drawEditor();
@@ -401,7 +446,7 @@ export function createHuntMap(text: HuntMapText): HuntMap {
         L.marker([s.lat, s.lng], {
           icon: L.divIcon({
             className: 'hm-icon',
-            html: `<div class="hp-marker hp-${s.kind}"><span aria-hidden="true">${s.kind === 'wound' ? '!' : '✕'}</span><span class="hm-label">${esc(s.label)}</span></div>`,
+            html: `<div class="hp-marker hp-${s.kind}${s.picked ? ' hp-picked' : ''}"><span aria-hidden="true">${s.kind === 'wound' ? '!' : '✕'}</span><span class="hm-label">${esc(s.label)}</span></div>`,
             iconSize: [0, 0],
           }),
           zIndexOffset: s.kind === 'wound' ? 900 : -400,
@@ -498,6 +543,93 @@ export function createHuntMap(text: HuntMapText): HuntMap {
       map.invalidateSize();
       drawLayer.clearLayers();
       drawDrives();
+    },
+
+    setRoutes(rs, edit = null) {
+      routeLayer.clearLayers();
+      el.classList.toggle('hm-route-editing', !!edit);
+      const color = ROLE_COLOR.beater;
+      // Weak ones first, so the bold (mine, or selected) is drawn on top.
+      for (const r of [...rs].sort((a, b) => Number(a.strong) - Number(b.strong))) {
+        if (!r.pts.length) continue;
+        const sel = edit?.sel === r.uid;
+        const strong = r.strong || sel;
+        const line = L.polyline(r.pts, { color, weight: strong ? 5 : 2.5, opacity: strong ? 0.95 : 0.6, dashArray: strong ? undefined : '8 6', interactive: !!edit && !sel });
+        if (edit && !sel) line.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          edit.onSelect(r.uid);
+        });
+        line.addTo(routeLayer);
+        // Arrowheads along the way show the direction to walk.
+        for (let i = 0; i + 1 < r.pts.length; i++) {
+          const a = r.pts[i];
+          const b = r.pts[i + 1];
+          if (distanceM(a, b) < 60) continue;
+          const mid = { lat: (a.lat + b.lat) / 2, lng: (a.lng + b.lng) / 2 };
+          const deg = (Math.atan2((b.lng - a.lng) * Math.cos((a.lat * Math.PI) / 180), b.lat - a.lat) * 180) / Math.PI;
+          L.marker(mid, {
+            icon: L.divIcon({ className: 'hm-icon', html: `<div class="hr-arrow${strong ? ' strong' : ''}" style="--deg:${Math.round(deg)}deg">▲</div>`, iconSize: [0, 0] }),
+            interactive: false,
+            keyboard: false,
+            zIndexOffset: -1500,
+          }).addTo(routeLayer);
+        }
+        const end = (i: number, cls: string, title: string, html = '') =>
+          L.marker(r.pts[i], {
+            icon: L.divIcon({ className: 'hm-icon', html: `<div class="hr-pt ${cls}${strong ? ' strong' : ''}">${html}</div>`, iconSize: [0, 0] }),
+            title,
+            draggable: sel,
+            interactive: sel || !edit,
+            keyboard: false,
+            zIndexOffset: sel ? 2600 : -1200,
+          });
+        r.pts.forEach((_, i) => {
+          const first = i === 0;
+          const last = i === r.pts.length - 1;
+          if (!first && !last && !sel) return;
+          const m = end(i, first ? 'hr-start' : last ? 'hr-end' : 'hr-mid', `${r.label}${first ? ' ▶' : last ? ' ■' : ''}`, first ? `<span class="hm-label">${esc(r.label)}</span>` : '');
+          if (sel)
+            m.on('dragend', () => {
+              const p = m.getLatLng();
+              edit!.onMove(i, p.lat, p.lng);
+            });
+          else if (!edit) m.bindPopup(`<strong>${esc(r.label)}</strong><br>${first ? '▶' : '■'}`);
+          m.addTo(routeLayer);
+        });
+      }
+    },
+
+    setMeets(ms) {
+      meetLayer.clearLayers();
+      for (const m of ms)
+        L.marker([m.lat, m.lng], {
+          icon: L.divIcon({ className: 'hm-icon', html: `<div class="hr-meet"><span aria-hidden="true">⚑</span><span class="hm-label">${esc(m.label)}</span></div>`, iconSize: [0, 0] }),
+          title: m.label,
+          zIndexOffset: -300,
+        })
+          .bindPopup(`<strong>${esc(m.label)}</strong>`)
+          .addTo(meetLayer);
+    },
+
+    setSeats(ss) {
+      seatLayer.clearLayers();
+      for (const s of ss)
+        L.marker([s.lat, s.lng], {
+          icon: L.divIcon({ className: 'hm-icon', html: `<div class="hr-seat">${esc(s.label)}</div>`, iconSize: [0, 0] }),
+          interactive: false,
+          keyboard: false,
+          zIndexOffset: -900,
+        }).addTo(seatLayer);
+    },
+
+    setTapHandler(fn) {
+      tapHandler = fn;
+      el.classList.toggle('hm-picking', !!fn);
+    },
+
+    setGuideLine(from, to) {
+      guideLayer.clearLayers();
+      if (from && to) L.polyline([from, to], { color: '#0f766e', weight: 3, dashArray: '4 8', interactive: false }).addTo(guideLayer);
     },
 
     setWindTime: (t) => {

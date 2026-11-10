@@ -99,6 +99,9 @@
         "pokotTitles": {
           ".validate": "newData.isBoolean()"
         },
+        "meet": {
+          ".validate": "newData.isString() && newData.val().length <= 40 && newData.val().matches(/^-?[0-9.]+,-?[0-9.]+$/)"
+        },
         "$other": {
           ".validate": false
         }
@@ -206,6 +209,9 @@
           },
           "endedAt": {
             ".validate": "newData.isNumber() && (newData.val() === now || newData.val() === data.val()) && newData.parent().child('startedAt').isNumber() && newData.val() >= newData.parent().child('startedAt').val()"
+          },
+          "meet": {
+            ".validate": "newData.isString() && newData.val().length <= 40 && newData.val().matches(/^-?[0-9.]+,-?[0-9.]+$/)"
           },
           "$other": {
             ".validate": false
@@ -367,6 +373,117 @@
           },
           "lng": {
             ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "routes": {
+      "$h": {
+        ".read": "auth != null && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed'",
+        ".write": "auth != null && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid",
+        "$d": {
+          "$uid": {
+            ".validate": "newData.isString() && newData.val().length <= 800 && newData.val().matches(/^-?[0-9.]+,-?[0-9.]+(;-?[0-9.]+,-?[0-9.]+)+$/)"
+          }
+        }
+      }
+    },
+    "seats": {
+      "$h": {
+        ".read": "auth != null && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed'",
+        ".write": "auth != null && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid",
+        "$d": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed' && root.child('participants/' + $h + '/' + auth.uid + '/role').val().matches(/^(leader|hunter)$/) && root.child('drives/' + $h + '/' + $d).exists()",
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 20"
+          }
+        }
+      }
+    },
+    "phones": {
+      "$h": {
+        ".read": "auth != null && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed'",
+        ".write": "auth != null && !newData.exists() && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid",
+        "$uid": {
+          ".write": "auth != null && ((auth.uid === $uid && newData.parent().parent().parent().child('participants/' + $h + '/' + $uid).exists()) || (auth.uid === $uid && !newData.exists()) || (!newData.exists() && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid))",
+          ".validate": "newData.isString() && newData.val().matches(/^[+]?[0-9]{9,15}$/)"
+        }
+      }
+    },
+    "transport": {
+      "$h": {
+        ".read": "auth != null && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed'",
+        ".write": "auth != null && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid",
+        "$k": {
+          ".validate": "$k.matches(/^(boar|deer)$/) && (newData.hasChildren(['uid']) || newData.hasChildren(['name', 'phone']))",
+          "uid": {
+            ".validate": "newData.isString() && root.child('participants/' + $h + '/' + newData.val()).exists() && !newData.parent().hasChild('name') && !newData.parent().hasChild('phone')"
+          },
+          "name": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40"
+          },
+          "phone": {
+            ".validate": "newData.isString() && newData.val().matches(/^[+]?[0-9]{9,15}$/)"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "messages": {
+      "$h": {
+        ".read": "auth != null && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed'",
+        ".write": "auth != null && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid",
+        "$m": {
+          ".validate": "newData.hasChildren(['text', 'to', 'ts'])",
+          "text": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200"
+          },
+          "to": {
+            ".validate": "newData.isString() && newData.val().matches(/^(all|hunter|beater|transport|u:[A-Za-z0-9_-]{1,128})$/)"
+          },
+          "ts": {
+            ".validate": "newData.val() === now || (data.exists() && newData.val() === data.val())"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "msgAcks": {
+      "$h": {
+        ".read": "auth != null && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed'",
+        ".write": "auth != null && !newData.exists() && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid",
+        "$m": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed' && root.child('messages/' + $h + '/' + $m).exists()",
+            ".validate": "newData.val() === now"
+          }
+        }
+      }
+    },
+    "carcasses": {
+      "$h": {
+        ".read": "auth != null && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed'",
+        ".write": "auth != null && !newData.exists() && root.child('hunts/' + $h + '/leaderUid').val() === auth.uid",
+        "$s": {
+          ".write": "auth != null && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed' && root.child('shots/' + $h + '/' + $s).exists() && (root.child('hunts/' + $h + '/leaderUid').val() === auth.uid || root.child('shots/' + $h + '/' + $s + '/uid').val() === auth.uid || root.child('transport/' + $h + '/boar/uid').val() === auth.uid || root.child('transport/' + $h + '/deer/uid').val() === auth.uid)",
+          "lat": {
+            ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90 && newData.parent().child('lng').isNumber()"
+          },
+          "lng": {
+            ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180 && newData.parent().child('lat').isNumber()"
+          },
+          "pickedBy": {
+            ".validate": "newData.isString() && (newData.val() === auth.uid || (data.exists() && newData.val() === data.val())) && newData.parent().child('pickedAt').isNumber()"
+          },
+          "pickedAt": {
+            ".validate": "newData.isNumber() && (newData.val() === now || (data.exists() && newData.val() === data.val())) && newData.parent().child('pickedBy').isString()"
           },
           "$other": {
             ".validate": false

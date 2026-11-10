@@ -6,6 +6,7 @@ import { getLang, tt } from './i18n';
 import {
   validateHunt,
   validPersonName,
+  cleanText,
   sortHunts,
   countRoles,
   nextStatuses,
@@ -42,7 +43,38 @@ import { currentInvite, inviteExpiry, inviteLink, validToken, type Invite } from
 import type { District } from './bdl';
 import { fetchDistrictsAtPoint } from './bdl';
 import { fold, districtSlug } from './data';
-import { createHuntMap, type HuntMap, type PersonInfo, type DriveView, type SightView, type ShotView } from './huntMap';
+import { createHuntMap, type HuntMap, type PersonInfo, type DriveView, type SightView, type ShotView, type RouteView, type MeetView, type SeatView } from './huntMap';
+import {
+  spreadRoutes,
+  focusDrive,
+  standForSeat,
+  cleanSeat,
+  cleanPhone,
+  fmtPhone,
+  carcasses as listCarcasses,
+  pickupOrder,
+  myCarcassKinds,
+  mapsLink,
+  smsLink,
+  msgFor,
+  recipients,
+  cleanMessage,
+  POPUP_MS,
+  PRESETS,
+  BUZZ,
+  CARCASS_KINDS,
+  CREW_LIMITS,
+  type Pt,
+  type Route,
+  type Transport,
+  type Message,
+  type MsgTo,
+  type CarcassMark,
+  type CarcassKind,
+  type Carcass,
+  type Carrier,
+} from './huntCrew';
+import { setGuide, guideCardHtml, guideLine, enableCompass, type GuideText, type GuideTarget } from './huntGuide';
 import { Sharer } from './huntShare';
 import { openPocket, updatePocket } from './huntPocket';
 import { roleIcon, speciesIcon, standIcon } from './huntIcons';
@@ -374,6 +406,126 @@ const L = {
   shotUnknownGame: { pl: 'Nie wiem', en: 'Not sure' },
   shotSaved: { pl: 'Strzał zapisany', en: 'Shot logged' },
   shotWoundAlert: { pl: 'Postrzał', en: 'Wounded game' },
+  fPhone: { pl: 'Telefon (opcjonalnie)', en: 'Phone (optional)' },
+  fPhoneHint: { pl: 'Zobaczą go tylko potwierdzeni uczestnicy tego polowania, przez 7 dni po jego końcu.', en: 'Only confirmed participants of this hunt see it, until 7 days after it ends.' },
+  errPhone: { pl: 'Nieprawidłowy numer telefonu (9–15 cyfr).', en: 'Invalid phone number (9–15 digits).' },
+  phone: { pl: 'Telefon', en: 'Phone' },
+  phoneNone: { pl: 'nie podano', en: 'not given' },
+  phoneEdit: { pl: 'Zmień', en: 'Change' },
+  phoneAdd: { pl: 'Dodaj numer', en: 'Add number' },
+  phoneSave: { pl: 'Zapisz', en: 'Save' },
+  phoneDel: { pl: 'Usuń numer', en: 'Remove number' },
+  call: { pl: 'Zadzwoń', en: 'Call' },
+  meet: { pl: 'Zbiórka na mapie', en: 'Meeting point on the map' },
+  meetSet: { pl: '⚑ Wskaż zbiórkę na mapie', en: '⚑ Mark the meeting point on the map' },
+  meetMove: { pl: '⚑ Przesuń zbiórkę', en: '⚑ Move the meeting point' },
+  meetClear: { pl: 'Usuń z mapy', en: 'Remove from map' },
+  meetPick: { pl: 'Dotknij mapy w miejscu zbiórki.', en: 'Tap the map where everyone meets.' },
+  navigate: { pl: 'Nawiguj', en: 'Navigate' },
+  navigateMeet: { pl: 'Nawiguj na zbiórkę', en: 'Navigate to the meeting point' },
+  meetLabel: { pl: 'Zbiórka', en: 'Meeting point' },
+  meetAfter: { pl: 'Zbiórka po miocie', en: 'Meeting point after the drive' },
+  pickCancel: { pl: 'Anuluj wskazywanie', en: 'Cancel' },
+  routes: { pl: 'Trasy', en: 'Routes' },
+  routesTitle: { pl: 'Trasy naganiaczy', en: 'Beater routes' },
+  routeNone: { pl: 'brak trasy', en: 'no route' },
+  routePts: { pl: 'pkt', en: 'pts' },
+  routeHint: {
+    pl: 'Wybierz naganiacza i stukaj mapę: pierwszy punkt to start, ostatni to koniec trasy. Punkty można przeciągać.',
+    en: 'Pick a beater and tap the map: the first point is the start, the last one the end. Points can be dragged.',
+  },
+  routeSpread: { pl: 'Rozłóż tyralierę', en: 'Spread the line' },
+  routeSpreadHint: {
+    pl: 'Zaznacz naganiaczy, potem stuknij 2 końce linii startu i 2 końce linii końca. Trasy rozłożą się równo.',
+    en: 'Tick the beaters, then tap both ends of the start line and both ends of the end line. Routes are spread evenly.',
+  },
+  routeSpreadStep: { pl: 'Punkt', en: 'Point' },
+  routeSpreadStart: { pl: 'linia startu', en: 'start line' },
+  routeSpreadEnd: { pl: 'linia końca', en: 'end line' },
+  routeSpreadNone: { pl: 'Zaznacz co najmniej jednego naganiacza.', en: 'Tick at least one beater.' },
+  routeMeet: { pl: '⚑ Zbiórka po miocie', en: '⚑ Meeting point after' },
+  routeMeetHint: { pl: 'Dotknij mapy w miejscu zbiórki po tym miocie.', en: 'Tap the map where everyone meets after this drive.' },
+  routeMeetClear: { pl: 'Usuń zbiórkę po miocie', en: 'Remove the meeting point' },
+  routeUndo: { pl: '↶ Cofnij punkt', en: '↶ Undo point' },
+  routeDel: { pl: 'Usuń trasę', en: 'Delete route' },
+  routeSave: { pl: 'Zapisz trasy', en: 'Save routes' },
+  routeSaved: { pl: 'Zapisano trasy.', en: 'Routes saved.' },
+  routeNoBeaters: { pl: 'Na polowanie nie zapisał się jeszcze żaden naganiacz.', en: 'No beaters have signed up yet.' },
+  routeMine: { pl: 'Twoja trasa', en: 'Your route' },
+  routeGuide: { pl: '➤ Prowadź mnie', en: '➤ Guide me' },
+  gToStart: { pl: 'Idź na start trasy', en: 'Go to the start of your route' },
+  gOnRoute: { pl: 'Na trasie · do końca', en: 'On your route · to the end:' },
+  gOffL: { pl: 'w lewo od trasy, wróć', en: 'left of your route, go back' },
+  gOffR: { pl: 'w prawo od trasy, wróć', en: 'right of your route, go back' },
+  gOff: { pl: 'od trasy, wróć', en: 'off your route, go back' },
+  gNearEnd: { pl: 'Uwaga: linia myśliwych za', en: "Careful: the hunters' line in" },
+  gArrived: { pl: 'Koniec trasy', en: 'End of your route' },
+  gPointArrived: { pl: 'Jesteś na miejscu', en: 'You are there' },
+  gPointGo: { pl: 'Idź za strzałką', en: 'Follow the arrow' },
+  gNoFix: { pl: 'Czekam na GPS…', en: 'Waiting for GPS…' },
+  gNoCompass: { pl: 'Bez kompasu strzałka pokazuje kierunek względem północy (góra = N).', en: 'Without a compass the arrow is relative to north (up = N).' },
+  gCompassOn: { pl: 'Włącz kompas', en: 'Turn on the compass' },
+  gOffBtn: { pl: 'Wyłącz', en: 'Turn off' },
+  gToCarcass: { pl: 'Do tuszy', en: 'To the carcass' },
+  seat: { pl: 'Stanowisko', en: 'Stand' },
+  seatMine: { pl: 'Twoje stanowisko', en: 'Your stand' },
+  seatIn: { pl: 'w miocie', en: 'in drive' },
+  seatHint: { pl: 'Wpisz numer z wylosowanej kartki albo wybierz zwyżkę.', en: 'Enter the number from your lottery card or pick a seat.' },
+  seatPh: { pl: 'np. 9A', en: 'e.g. 9A' },
+  seatSave: { pl: 'Zapisz', en: 'Save' },
+  seatChange: { pl: 'Zmień', en: 'Change' },
+  seats: { pl: 'Stanowiska myśliwych', en: "Hunters' stands" },
+  seatsMissing: { pl: 'bez stanowiska', en: 'without a stand' },
+  seatsSave: { pl: 'Zapisz stanowiska', en: 'Save stands' },
+  seatsSaved: { pl: 'Zapisano stanowiska.', en: 'Stands saved.' },
+  seatNoDrive: { pl: 'Stanowiska wpisuje się do miotu; dodaj najpierw mioty.', en: 'Stands are entered per drive; add the drives first.' },
+  transport: { pl: 'Transport tusz', en: 'Carcass transport' },
+  tr_boar: { pl: 'Dziki', en: 'Wild boar' },
+  tr_deer: { pl: 'Zwierzyna płowa', en: 'Deer' },
+  trNone: { pl: 'nie wyznaczono', en: 'nobody yet' },
+  trEdit: { pl: 'Wyznacz', en: 'Assign' },
+  trNobody: { pl: '— nikt —', en: '— nobody —' },
+  trOutside: { pl: 'Osoba spoza aplikacji…', en: 'Someone outside the app…' },
+  trName: { pl: 'Imię i nazwisko', en: 'Name' },
+  trSaved: { pl: 'Zapisano transport.', en: 'Transport saved.' },
+  trYou: { pl: 'Zbierasz tusze:', en: 'You collect:' },
+  trErr: { pl: 'Podaj imię i poprawny numer telefonu osoby spoza aplikacji.', en: 'Enter the name and a valid phone number of the person outside the app.' },
+  carcasses: { pl: 'Tusze do zabrania', en: 'Carcasses to collect' },
+  cNone: { pl: 'Brak tusz do zabrania.', en: 'No carcasses to collect.' },
+  cWait: { pl: 'po zakończeniu miotu', en: 'after the drive ends' },
+  cPicked: { pl: 'zabrana', en: 'collected' },
+  cPick: { pl: '✓ Zabrane', en: '✓ Collected' },
+  cUnpick: { pl: 'Cofnij', en: 'Undo' },
+  cHere: { pl: '📍 Leży tutaj', en: '📍 It lies here' },
+  cOnMap: { pl: 'Wskaż na mapie', en: 'Mark on the map' },
+  cPickHint: { pl: 'Dotknij mapy tam, gdzie leży tusza.', en: 'Tap the map where the carcass lies.' },
+  cShow: { pl: 'Mapa', en: 'Map' },
+  cNoPos: { pl: 'miejsce nieznane', en: 'location unknown' },
+  cSrcSeat: { pl: 'stanowisko strzelca', en: "shooter's stand" },
+  cSms: { pl: 'SMS z listą', en: 'Text the list' },
+  cAlert: { pl: 'Do zabrania', en: 'To collect' },
+  cSmsHead: { pl: 'Tusze do zabrania', en: 'Carcasses to collect' },
+  messages: { pl: 'Wiadomości', en: 'Messages' },
+  msgFromLeader: { pl: 'Wiadomość od prowadzącego', en: 'Message from the hunt leader' },
+  msgTo: { pl: 'Do', en: 'To' },
+  to_all: { pl: 'Wszyscy', en: 'Everyone' },
+  to_hunter: { pl: 'Myśliwi', en: 'Hunters' },
+  to_beater: { pl: 'Naganiacze', en: 'Beaters' },
+  to_transport: { pl: 'Transport tusz', en: 'Carcass transport' },
+  msgText: { pl: 'Treść', en: 'Text' },
+  msgSend: { pl: 'Wyślij', en: 'Send' },
+  msgSent: { pl: 'Wysłano wiadomość.', en: 'Message sent.' },
+  msgAck: { pl: 'Przyjąłem', en: 'Got it' },
+  msgLater: { pl: 'Później', en: 'Later' },
+  msgAcked: { pl: 'przyjęte', en: 'received' },
+  msgNone: { pl: 'Brak wiadomości.', en: 'No messages.' },
+  msgWaiting: { pl: 'nie potwierdzili:', en: 'not confirmed yet:' },
+  msgDel: { pl: 'Usuń', en: 'Delete' },
+  msgHint: {
+    pl: 'Wiadomość dotrze do telefonów z otwartą aplikacją (także w trybie kieszeni). Nie zastępuje sygnałów rogiem ani radia.',
+    en: 'Messages reach phones with the app open (pocket mode too). They do not replace horn signals or radio.',
+  },
+  msgEmpty: { pl: 'Wpisz treść wiadomości.', en: 'Type the message.' },
 } as const;
 const l = (k: keyof typeof L) => tt(L[k]);
 
@@ -546,6 +698,41 @@ let seenWounds: Set<string> | null = null;
 /** Pokot row being edited: a shot id, 'new' (leader adds game) or `del:<id>`. */
 let shotEdit: string | null = null;
 let pokotError = '';
+
+// ---- crew planning: routes, stands, phones, transport, messages, carcasses
+let routes = new Map<string, Map<string, Route>>();
+let seats = new Map<string, Map<string, string>>();
+let phones = new Map<string, string>();
+let transport: Transport = {};
+let messages: Message[] = [];
+let acks = new Map<string, Map<string, number>>();
+let marks = new Map<string, CarcassMark>();
+let crewUnsubs: Unsubscribe[] = [];
+/** Messages already seen (popped up or there at the first load), so only new ones buzz. */
+let seenMsgs: Set<string> | null = null;
+/** Messages closed on this device without acknowledging (the sheet does not come back). */
+const shelvedMsgs = new Set<string>();
+/** Ready carcasses already announced to me as a carrier; null until the first check. */
+let seenCarcasses: Set<string> | null = null;
+/** The leader's route editor for one drive. */
+let routeEdit: {
+  driveId: string;
+  routes: Map<string, Route>;
+  sel: string | null;
+  mode: 'route' | 'spread' | 'meet';
+  spread: Pt[];
+  spreadUids: Set<string>;
+  meet: Pt | null;
+  dirty: boolean;
+} | null = null;
+/** Picking a point on the map for the hunt's meeting point or a carcass. */
+let pickMode: { kind: 'huntMeet' } | { kind: 'carcass'; shotId: string } | null = null;
+/** Drive whose route guidance I turned off; carcass I asked to be guided to. */
+let guideDismissed: string | null = null;
+let guideCarcass: string | null = null;
+let transportEdit = false;
+let phoneEdit = false;
+let seatEdit = false;
 const SHARE_KEY = 'huntSharing';
 
 const NAME_KEY = 'huntPersonName';
@@ -614,6 +801,25 @@ function stopLive() {
   shots = [];
   shotSpots = new Map();
   seenWounds = null;
+  crewUnsubs.forEach((u) => u());
+  crewUnsubs = [];
+  routes = new Map();
+  seats = new Map();
+  phones = new Map();
+  transport = {};
+  messages = [];
+  acks = new Map();
+  marks = new Map();
+  seenMsgs = null;
+  seenCarcasses = null;
+  routeEdit = null;
+  pickMode = null;
+  guideDismissed = null;
+  guideCarcass = null;
+  transportEdit = false;
+  seatEdit = false;
+  closeMsgSheet();
+  setGuide(null, guideText(), () => {});
   shotEdit = null;
   closeShotSheet();
   closePokotPrint();
@@ -683,6 +889,43 @@ function syncLive() {
       },
       () => (spotsUnsub = null),
     );
+    const be = conn.be;
+    crewUnsubs = [
+      be.watchRoutes(id!, (r) => {
+        routes = r;
+        drawCrew();
+        syncGuide();
+        rerender();
+      }, () => {}),
+      be.watchSeats(id!, (x) => {
+        seats = x;
+        drawCrew();
+        rerender();
+      }, () => {}),
+      be.watchPhones(id!, (x) => {
+        phones = x;
+        rerender();
+      }, () => {}),
+      be.watchTransport(id!, (t) => {
+        transport = t;
+        checkCarcasses();
+        rerender();
+      }, () => {}),
+      be.watchMessages(id!, (ms) => {
+        messages = ms;
+        onMessages();
+      }, () => {}),
+      be.watchAcks(id!, (a) => {
+        acks = a;
+        onMessages();
+      }, () => {}),
+      be.watchCarcasses(id!, (m) => {
+        marks = m;
+        drawShots();
+        checkCarcasses();
+        rerender();
+      }, () => {}),
+    ];
     ticker = setInterval(() => {
       hmap?.refreshAges(now());
       drawSightings();
@@ -721,6 +964,10 @@ function onDrives(ds: Drive[]) {
   }
   lastActive = actId;
   if (driveEdit?.id && !drives.some((d) => d.id === driveEdit!.id)) driveEdit = null; // deleted meanwhile
+  if (routeEdit && !drives.some((d) => d.id === routeEdit!.driveId)) routeEdit = null;
+  drawCrew();
+  syncGuide();
+  checkCarcasses();
   rerender();
   updatePocket();
 }
@@ -870,6 +1117,7 @@ function onShots(ss: Shot[]) {
     }
   } else seenWounds = new Set(wounds.map((w) => w.id));
   if (shotEdit && shotEdit !== 'new' && !ss.some((x) => shotEdit === x.id || shotEdit === `del:${x.id}`)) shotEdit = null;
+  checkCarcasses();
   drawShots();
   rerender();
 }
@@ -877,8 +1125,11 @@ function onShots(ss: Shot[]) {
 function drawShots() {
   if (!hmap) return;
   const views: ShotView[] = [];
+  // Big game kills show where the carcass lies (moved by hand, or the shooter's stand), faded once collected.
+  const cs = new Map(allCarcasses().map((c) => [c.shotId, c]));
   for (const x of shots) {
-    const at = shotSpots.get(x.id);
+    const c = cs.get(x.id);
+    const at = c?.at ?? shotSpots.get(x.id);
     if (!at || (x.outcome !== 'wound' && x.outcome !== 'kill')) continue;
     const label = `${shotLabel(x)}${x.outcome === 'wound' ? ` · ${outcomeName('wound')}` : ''}`;
     views.push({
@@ -886,8 +1137,9 @@ function drawShots() {
       lat: at.lat,
       lng: at.lng,
       kind: x.outcome,
+      picked: !!c?.pickedBy,
       label,
-      popup: `<strong>${esc(label)}</strong><br>${esc(personName(x.uid))}<br>${esc(clock(x.ts))}${x.note ? `<br>${esc(x.note)}` : ''}`,
+      popup: `<strong>${esc(label)}</strong><br>${esc(personName(x.uid))}<br>${esc(clock(x.ts))}${x.note ? `<br>${esc(x.note)}` : ''}${c?.pickedBy ? `<br>✓ ${esc(l('cPicked'))} · ${esc(personName(c.pickedBy))}` : ''}`,
     });
   }
   hmap.setShots(views);
@@ -1069,6 +1321,8 @@ export function mountHuntMap() {
   drawPositions();
   drawSightings();
   drawShots();
+  drawCrew();
+  syncGuide();
   if (showTracks) m.setTracks(lastTracks, people());
   updateLiveText();
 }
@@ -1140,8 +1394,9 @@ function pocketStatus() {
   const on = !!sharer?.active;
   const sentAgo = sharer?.lastSentAt ? `${l('lastSent')} ${ago(Date.now() - sharer.lastSentAt)}` : '';
   const act = activeDrive(drives);
+  const g = guideLine();
   return on
-    ? { ok: true, title: sharer!.state === 'on' ? l('shareOn') : l('shareStarting'), detail: [act ? `${l('dNow')}: ${act.name}` : hunt?.name, sentAgo].filter(Boolean).join(' · ') }
+    ? { ok: true, title: g || (sharer!.state === 'on' ? l('shareOn') : l('shareStarting')), detail: [act ? `${l('dNow')}: ${act.name}` : hunt?.name, sentAgo].filter(Boolean).join(' · ') }
     : { ok: false, title: l('pocketStopped'), detail: l('pocketStoppedDetail') };
 }
 
@@ -1521,7 +1776,14 @@ function renderLive(h: Hunt, me: Participant): string {
           canShoot ? `<button type="button" class="btn hs-report hp-fire" data-hunt="shotFire" aria-label="${esc(l('shotHint'))}"><span class="hp-fire-icon" aria-hidden="true">✛</span> ${l('shot')}</button>` : ''
         }</div>`
       : '';
-  return `<h3>${l('mapTitle')}</h3>${t}${report}${share}${renderDrives(h, h.leaderUid === myUid())}${drawing ? '' : renderStands(h.leaderUid === myUid())}
+  const isLead = h.leaderUid === myUid();
+  const planning = !!routeEdit && isLead;
+  const picking = pickMode
+    ? `<div class="notice hr-pickbar"><span>${l(pickMode.kind === 'huntMeet' ? 'meetPick' : 'cPickHint')}</span><button type="button" class="btn small ghost" data-hunt="pickCancel">${l('pickCancel')}</button></div>`
+    : '';
+  const mine = drawing || planning ? '' : `${h.status === 'live' ? renderMyRoute(me) : ''}${h.status !== 'ended' ? renderMySeat(me) : ''}`;
+  const msgs = isLead ? '' : renderMessages(false, h);
+  return `<h3>${l('mapTitle')}</h3>${t}${mine}${msgs}${report}${share}${renderDrives(h, isLead)}${drawing || planning ? '' : `${isLead ? renderSeatsLeader() : ''}${renderStands(isLead)}`}
     <div class="hm-bar"${drawing ? ' hidden' : ''}><div class="hm-counts">${liveCounts()}</div>
       <div class="hm-tools">
         ${iShare ? `<button type="button" class="btn small ghost" data-hunt="centerMe">◎ ${l('centerMe')}</button>` : ''}
@@ -1530,8 +1792,8 @@ function renderLive(h: Hunt, me: Participant): string {
         <button type="button" class="btn small ghost" data-hunt="gpx">${l('exportGpx')}</button>
         ${h.district && saveOfflineCb ? `<button type="button" class="btn small ghost" data-hunt="saveOffline">⤓ ${l('saveOffline')}</button>` : ''}
       </div></div>
-    <div class="hm-slot"></div>
-    ${drawing ? '' : `<h4>${l('sightings')}</h4><div class="hs-list">${sightListHtml()}</div>${renderPokot(pokotCtx(h))}`}`;
+    ${picking}<div class="hm-slot"></div>
+    ${drawing || planning ? '' : `${renderCarcasses(isLead)}${isLead ? renderMessages(true, h) : ''}<h4>${l('sightings')}</h4><div class="hs-list">${sightListHtml()}</div>${renderPokot(pokotCtx(h))}`}`;
 }
 
 const clock = (ms: number) => new Date(ms).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
@@ -1543,6 +1805,7 @@ function renderDrives(h: Hunt, isLeader: boolean): string {
   if (act) strip = `<div class="hd-now"><span class="hd-dot" aria-hidden="true"></span><strong>${l('dNow')}: ${esc(act.name)}</strong> <span>· ${l('dUntil')} ${esc(act.end)}</span></div>`;
   else if (next && h.status === 'live') strip = `<div class="hd-now hd-next">${l('dNext')}: <strong>${esc(next.name)}</strong> · ${esc(next.start)}</div>`;
   if (driveEdit && isLeader) return `${strip}${renderDriveForm()}`;
+  if (routeEdit && isLeader) return `${strip}${renderRouteEditor()}`;
   const row = (d: Drive, i: number) => {
     const st = driveState(d);
     const when =
@@ -1563,7 +1826,7 @@ function renderDrives(h: Hunt, isLeader: boolean): string {
         confirming === `drive:${d.id}`
           ? `<button type="button" class="btn small danger" data-hunt="driveDelete" data-drive="${esc(d.id)}"${btnBusy()}>${l('dDeleteSure')}</button>
              <button type="button" class="btn small ghost" data-hunt="unconfirm">${l('cancel')}</button>`
-          : `${startEnd}<button type="button" class="btn small ghost" data-hunt="driveEdit" data-drive="${esc(d.id)}">${l('editDrive')}</button>
+          : `${startEnd}<button type="button" class="btn small ghost" data-hunt="routeEdit" data-drive="${esc(d.id)}">${l('routes')}${routes.get(d.id)?.size ? ` (${routes.get(d.id)!.size})` : ''}</button><button type="button" class="btn small ghost" data-hunt="driveEdit" data-drive="${esc(d.id)}">${l('editDrive')}</button>
              <button type="button" class="btn small ghost" data-hunt="askDriveDelete" data-drive="${esc(d.id)}" aria-label="${l('remove')} ${esc(d.name)}">✕</button>`;
     }
     return `<li class="hd-drive hd-${st}"><span class="hd-num">${i + 1}</span>
@@ -1751,6 +2014,7 @@ function renderHunt(): string {
         ${h.district ? `<dt>${l('district')}</dt><dd><a href="#/obwod/${esc(h.district.slug)}" data-nav="district" data-slug="${esc(h.district.slug)}">${esc(h.district.label)}</a></dd>` : ''}
         <dt>${l('leader')}</dt><dd>${roleIcon('leader', 16)} ${esc(h.leaderName)}</dd>
       </dl>
+      ${me?.status === 'confirmed' ? renderMeetLine(h, isLeader) : ''}
       ${h.notes ? `<p class="h-notes">${esc(h.notes).replace(/\n/g, '<br>')}</p>` : ''}
     </article>`;
   if (editing && isLeader) return `${back}${renderHuntForm('edit')}`;
@@ -1761,7 +2025,8 @@ function renderHunt(): string {
   }
   syncLive();
   if (isLeader) watchInvites(h.id);
-  return `${back}${info}${renderMe(me, isLeader)}${renderLive(h, me)}${isLeader ? renderInvite(h) : ''}${renderMembers(uid, isLeader)}${isLeader ? renderManage(h) : ''}`;
+  const crew = me.status === 'confirmed' ? renderTransport(isLeader) : '';
+  return `${back}${info}${renderMe(me, isLeader)}${renderLive(h, me)}${crew}${isLeader ? renderInvite(h) : ''}${renderMembers(uid, isLeader)}${isLeader ? renderManage(h) : ''}`;
 }
 
 function renderJoin(h: Hunt): string {
@@ -1775,6 +2040,7 @@ function renderJoin(h: Hunt): string {
     ${guest ? `<p class="small">${l('guestHint')}</p>` : ''}
     <fieldset class="h-roles"><legend>${l('fRole')}</legend>${radio('hunter')}${radio('beater')}</fieldset>
     ${field('join', 'pname', l('fYourName'), storedName(), { max: LIMITS.name, req: true, hint: l('fYourNameHint'), auto: 'name' })}
+    ${field('join', 'phone', l('fPhone'), '', { type: 'tel', auto: 'tel', hint: l('fPhoneHint') })}
     ${guest ? '' : field('join', 'pass', l('fPass'), '', { req: true, hint: l('fPassHint'), auto: 'off' })}
     ${errorBox()}
     <div class="h-actions"><button type="submit" class="btn"${btnBusy()}>${l('join')}</button></div>
@@ -1790,7 +2056,7 @@ function renderMe(me: Participant, isLeader: boolean): string {
       : `<button type="button" class="btn ghost" data-hunt="askWithdraw">${l('withdraw')}</button>`;
   return `<div class="notice h-me">${roleIcon(me.role, 22)}<div><strong>${l('youAre')} ${l(`r_${me.role}`).toLocaleLowerCase(locale())}</strong>
       ${me.status === 'registered' ? `<br><span class="small">${l('youPending')}</span>` : ''}</div>
-      ${withdraw ? `<div class="h-actions">${withdraw}</div>` : ''}</div>${!isLeader ? errorBox() : ''}`;
+      ${withdraw ? `<div class="h-actions">${withdraw}</div>` : ''}</div>${me.status === 'confirmed' ? renderPhone() : ''}${!isLeader ? errorBox() : ''}`;
 }
 
 function renderInvite(h: Hunt): string {
@@ -1852,9 +2118,13 @@ function renderMembers(uid: string, isLeader: boolean): string {
              <button type="button" class="btn small ghost" data-hunt="role" data-uid="${esc(p.uid)}" data-to="${p.role === 'hunter' ? 'beater' : 'hunter'}"${btnBusy()}>${l(p.role === 'hunter' ? 'makeBeater' : 'makeHunter')}</button>
              <button type="button" class="btn small ghost" data-hunt="askRemove" data-uid="${esc(p.uid)}">${l('remove')}</button>`
         : '';
+    const fd = focus();
+    const seat = fd && p.role !== 'beater' ? seats.get(fd.id)?.get(p.uid) : undefined;
+    const carries = myCarcassKinds(transport, p.uid);
+    const ph = phones.get(p.uid);
     return `<li class="h-person${p.status === 'registered' ? ' pending' : ''}">${roleIcon(p.role)}
-      <span class="h-pname">${esc(p.name)}${p.uid === uid ? ` <span class="muted">(${l('you')})</span>` : ''}
-        ${p.status === 'registered' ? `<small class="muted">${l('pending')}</small>` : ''}</span>
+      <span class="h-pname">${esc(p.name)}${p.uid === uid ? ` <span class="muted">(${l('you')})</span>` : ''}${seat ? ` <span class="hr-badge" title="${esc(l('seat'))}">${standIcon('zwyzka', false, 12)} ${esc(seat)}</span>` : ''}${carries.length ? ` <span class="hr-badge hr-badge-tr">${esc(carries.map(kindName).join(', '))}</span>` : ''}
+        ${p.status === 'registered' ? `<small class="muted">${l('pending')}</small>` : ''}${ph && p.uid !== uid ? `<small>${telLink(ph)}</small>` : ''}</span>
       ${controls ? `<span class="h-pctl">${controls}</span>` : ''}</li>`;
   };
   const group = (role: 'hunter' | 'beater') => {
@@ -1882,6 +2152,525 @@ function renderManage(h: Hunt): string {
     <div class="h-actions h-danger">${del}</div>`;
 }
 
+// ---------------------------------------------------------------- crew: routes, stands, transport, messages
+
+const guideText = (): GuideText => ({
+  toStart: l('gToStart'),
+  onRoute: (m) => `${l('gOnRoute')} ${m}`,
+  off: (m, side) => `${m} ${l(side === 'left' ? 'gOffL' : side === 'right' ? 'gOffR' : 'gOff')}`,
+  nearEnd: (m) => `${l('gNearEnd')} ${m}`,
+  arrived: l('gArrived'),
+  pointArrived: l('gPointArrived'),
+  pointGo: l('gPointGo'),
+  noFix: l('gNoFix'),
+  noCompass: l('gNoCompass'),
+  compassOn: l('gCompassOn'),
+  calibrate: l('sightCalibrate'),
+  off_: l('gOffBtn'),
+  north: 'N',
+});
+
+const fmtDist = (m: number) => (m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`);
+const meName = () => members?.find((p) => p.uid === myUid());
+const isLeaderNow = () => !!hunt && hunt.leaderUid === myUid();
+const beaters = () => (members ?? []).filter((p) => p.role === 'beater');
+const shooters = () => (members ?? []).filter((p) => p.role === 'hunter' || p.role === 'leader');
+const kindName = (k: CarcassKind) => l(k === 'boar' ? 'tr_boar' : 'tr_deer');
+const driveName = (id: string | null) => drives.find((d) => d.id === id)?.name ?? '';
+/** The drive routes and stands are shown for: running, else next planned, else last held. */
+const focus = () => focusDrive(drives);
+/** The drive a beater or hunter prepares for now: running or next planned, never one already held. */
+const upcoming = () => {
+  const f = focus();
+  return f && f.endedAt == null ? f : null;
+};
+
+function carrierOf(k: CarcassKind): { name: string; phone: string | null; uid: string | null } | null {
+  const c: Carrier | undefined = transport[k];
+  if (!c) return null;
+  if ('uid' in c) return { name: personName(c.uid), phone: phones.get(c.uid) ?? null, uid: c.uid };
+  return { name: c.name, phone: c.phone, uid: null };
+}
+
+/** Position of a hunter's stand in a drive, from the seat they wrote and the shown high seats. */
+function seatAt(uid: string, driveId: string | null): Pt | null {
+  if (!driveId) return null;
+  const seat = seats.get(driveId)?.get(uid);
+  const st = seat ? standForSeat(seat, shownStands()) : null;
+  return st ? { lat: st.lat, lng: st.lng } : null;
+}
+
+const allCarcasses = (): Carcass[] => listCarcasses(shots, shotSpots, marks, drives, seatAt);
+
+/** Carcasses this person deals with: the leader all, a carrier their kind, a shooter their own. */
+function myCarcasses(): Carcass[] {
+  const uid = myUid();
+  const kinds = myCarcassKinds(transport, uid);
+  const all = allCarcasses();
+  if (isLeaderNow()) return all;
+  return all.filter((c) => kinds.includes(c.kind) || c.shooter === uid);
+}
+
+/** Tell a carrier when carcasses of their kind become ready (their drive ended). */
+function checkCarcasses() {
+  const uid = myUid();
+  const kinds = myCarcassKinds(transport, uid);
+  const ready = allCarcasses().filter((c) => c.ready && !c.pickedBy && kinds.includes(c.kind));
+  if (!seenCarcasses) {
+    // Wait for shots and transport to load before the first (silent) look.
+    if (shotsUnsub && kinds.length) seenCarcasses = new Set(ready.map((c) => c.shotId));
+    return;
+  }
+  const fresh = ready.filter((c) => !seenCarcasses!.has(c.shotId));
+  fresh.forEach((c) => seenCarcasses!.add(c.shotId));
+  if (!fresh.length) return;
+  navigator.vibrate?.([...BUZZ.carcass]);
+  const counts = new Map<string, number>();
+  for (const c of fresh) {
+    const name = gameName(c.game).split(' – ')[0];
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+  const drv = [...new Set(fresh.map((c) => driveName(c.driveId)).filter(Boolean))].join(', ');
+  showToast(`${l('cAlert')}: ${[...counts].map(([n, k]) => (k > 1 ? `${k} × ${n}` : n)).join(', ')}${drv ? ` (${drv})` : ''}`, undefined, 'sight', 20_000);
+}
+
+/** Text message body listing carcasses to collect, with map links. */
+function carcassSms(list: Carcass[]): string {
+  const lines = list.map((c, i) => `${i + 1}. ${gameName(c.game)}${c.driveId ? ` (${driveName(c.driveId)})` : ''}: ${c.at ? mapsLink(c.at) : l('cNoPos')}`);
+  return `${l('cSmsHead')} – ${hunt?.name ?? ''}\n${lines.join('\n')}`;
+}
+
+/** Routes, meeting points and stands on the map, and where a map tap goes. */
+function drawCrew() {
+  if (!hmap) return;
+  const e = routeEdit;
+  const ppl = people();
+  const label = (uid: string) => ppl.get(uid)?.name ?? '?';
+  if (e) {
+    const views: RouteView[] = [...e.routes].map(([uid, pts]) => ({ uid, pts, label: label(uid), strong: false }));
+    if (e.mode === 'spread' && e.spread.length) views.push({ uid: '__spread', pts: e.spread, label: `${l('routeSpreadStep')} ${e.spread.length}/4`, strong: true });
+    hmap.setRoutes(views, {
+      sel: e.mode === 'route' ? e.sel : null,
+      onSelect: (uid) => {
+        if (!e.routes.has(uid)) return;
+        e.sel = uid;
+        e.mode = 'route';
+        rerender();
+      },
+      onMove: (i, lat, lng) => {
+        const r = e.sel ? e.routes.get(e.sel) : null;
+        if (!r || !r[i]) return;
+        r[i] = { lat: +lat.toFixed(6), lng: +lng.toFixed(6) };
+        e.dirty = true;
+        drawCrew();
+      },
+    });
+  } else {
+    const f = focus();
+    const rs = f ? routes.get(f.id) : undefined;
+    hmap.setRoutes(rs ? [...rs].map(([uid, pts]) => ({ uid, pts, label: label(uid), strong: uid === myUid() })) : []);
+  }
+  const meets: MeetView[] = [];
+  if (hunt?.meet) meets.push({ ...hunt.meet, label: l('meetLabel') });
+  const f = e ? drives.find((d) => d.id === e.driveId) : focus();
+  const dm = e ? e.meet : f?.meet;
+  if (dm && f) meets.push({ ...dm, label: `${l('meetLabel')} · ${f.name}` });
+  hmap.setMeets(meets);
+  const seatViews: SeatView[] = [];
+  const sd = focus();
+  for (const [uid, seat] of (sd && seats.get(sd.id)) || []) {
+    const st = standForSeat(seat, shownStands());
+    if (st) seatViews.push({ lat: st.lat, lng: st.lng, label: label(uid) });
+  }
+  hmap.setSeats(seatViews);
+  hmap.setTapHandler(e || pickMode ? onMapTap : null);
+}
+
+function onMapTap(lat: number, lng: number) {
+  const p = { lat: +lat.toFixed(6), lng: +lng.toFixed(6) };
+  const e = routeEdit;
+  if (e) {
+    if (e.mode === 'meet') {
+      e.meet = p;
+      e.mode = 'route';
+      e.dirty = true;
+    } else if (e.mode === 'spread') {
+      e.spread.push(p);
+      if (e.spread.length === 4) {
+        const uids = beaters().filter((b) => e.spreadUids.has(b.uid)).map((b) => b.uid);
+        const [a1, a2, b1, b2] = e.spread;
+        spreadRoutes(a1, a2, b1, b2, uids.length).forEach((r, i) => e.routes.set(uids[i], r));
+        e.spread = [];
+        e.mode = 'route';
+        e.sel = uids[0] ?? null;
+        e.dirty = true;
+      }
+    } else if (e.sel) {
+      const r = e.routes.get(e.sel) ?? [];
+      if (r.length >= CREW_LIMITS.routePoints) return;
+      r.push(p);
+      e.routes.set(e.sel, r);
+      e.dirty = true;
+    }
+    drawCrew();
+    rerender();
+    return;
+  }
+  const pm = pickMode;
+  const id = watched;
+  if (!pm || !id) return;
+  pickMode = null;
+  if (pm.kind === 'huntMeet') run((be) => be.setHuntMeet(id, p));
+  else run((be) => be.moveCarcass(id, pm.shotId, p));
+  drawCrew();
+}
+
+/** Point the guidance at my route in the running (or next) drive, or at the carcass I chose. */
+let guideKey = '';
+function syncGuide() {
+  const t = guideTarget();
+  setGuide(t, guideText(), (g, me) => hmap?.setGuideLine(g ? me : null, g ? g.target : null));
+  // The card is part of the page: show or drop it when the target changes.
+  const key = t ? `${t.kind}|${t.title}` : '';
+  if (key !== guideKey) {
+    guideKey = key;
+    queueMicrotask(rerender);
+  }
+}
+
+function guideTarget(): GuideTarget | null {
+  const h = hunt;
+  if (!h || h.status !== 'live' || routeEdit) return null;
+  if (guideCarcass) {
+    const c = allCarcasses().find((x) => x.shotId === guideCarcass);
+    if (c?.at && !c.pickedBy) return { kind: 'point', at: c.at, title: `${l('gToCarcass')}: ${gameName(c.game)}` };
+    guideCarcass = null;
+  }
+  const d = upcoming();
+  const r = d ? routes.get(d.id)?.get(myUid()) : undefined;
+  if (d && r && guideDismissed !== d.id) return { kind: 'route', route: r, started: d.startedAt != null, title: `${l('routeMine')} · ${d.name}` };
+  return null;
+}
+
+// ---- messages
+
+let msgSheet: HTMLElement | null = null;
+let msgSheetId: string | null = null;
+
+function closeMsgSheet() {
+  msgSheet?.remove();
+  msgSheet = null;
+  msgSheetId = null;
+}
+
+const toName = (to: MsgTo) => (to.startsWith('u:') ? personName(to.slice(2)) : l(`to_${to as 'all' | 'hunter' | 'beater' | 'transport'}`));
+
+/** Messages for me not yet acknowledged, newest first. */
+function myUnacked(): Message[] {
+  const me = meName();
+  if (!me) return [];
+  return messages.filter((m) => msgFor(m, me, transport) && !acks.get(m.id)?.has(me.uid));
+}
+
+function onMessages() {
+  const t = now();
+  const pending = myUnacked().filter((m) => t - m.ts < POPUP_MS && !shelvedMsgs.has(m.id));
+  const fresh = seenMsgs ? pending.filter((m) => !seenMsgs!.has(m.id)) : [];
+  if (!seenMsgs) seenMsgs = new Set(messages.map((m) => m.id));
+  else messages.forEach((m) => seenMsgs!.add(m.id));
+  if (fresh.length) navigator.vibrate?.([...BUZZ.message]);
+  const show = pending[0];
+  if (show && show.id !== msgSheetId) openMsgSheet(show);
+  else if (!show) closeMsgSheet();
+  rerender();
+  updatePocket();
+}
+
+/** Full-screen message with one big button; above the pocket screen, so it can be acknowledged from the pocket. */
+function openMsgSheet(m: Message) {
+  closeMsgSheet();
+  const el = document.createElement('div');
+  el.className = 'hmsg-sheet';
+  el.setAttribute('role', 'alertdialog');
+  el.setAttribute('aria-modal', 'true');
+  el.setAttribute('aria-label', l('msgFromLeader'));
+  el.innerHTML = `<div class="hmsg-box"><p class="hmsg-from">${roleIcon('leader', 22)} ${esc(l('msgFromLeader'))} · ${esc(clock(m.ts))}</p>
+    <p class="hmsg-text">${esc(m.text)}</p>
+    <button type="button" class="btn hmsg-ack" data-msg="ack">${l('msgAck')}</button>
+    <button type="button" class="btn ghost small hmsg-later" data-msg="later">${l('msgLater')}</button></div>`;
+  el.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-msg]');
+    if (!b) return;
+    const id = watched;
+    if (b.dataset.msg === 'ack' && id && conn.s === 'ready') {
+      const be = conn.be;
+      b.setAttribute('disabled', '');
+      be.ackMessage(id, m.id).then(
+        () => closeMsgSheet(),
+        (err) => {
+          b.removeAttribute('disabled');
+          showToast(errText(err));
+        },
+      );
+    } else if (b.dataset.msg === 'later') {
+      shelvedMsgs.add(m.id);
+      closeMsgSheet();
+      onMessages();
+    }
+  });
+  document.body.append(el);
+  msgSheet = el;
+  msgSheetId = m.id;
+}
+
+// ---- rendering
+
+function renderMeetLine(h: Hunt, isLeader: boolean): string {
+  const set = isLeader
+    ? pickMode?.kind === 'huntMeet'
+      ? `<span class="small hr-picking">${l('meetPick')}</span> <button type="button" class="btn small ghost" data-hunt="pickCancel">${l('pickCancel')}</button>`
+      : `<button type="button" class="btn small ghost" data-hunt="meetPick">${l(h.meet ? 'meetMove' : 'meetSet')}</button>${
+          h.meet ? ` <button type="button" class="btn small ghost" data-hunt="meetClear">${l('meetClear')}</button>` : ''
+        }`
+    : '';
+  const nav = h.meet ? `<a class="btn small" href="${esc(mapsLink(h.meet))}" target="_blank" rel="noopener">⚑ ${l('navigateMeet')}</a>` : '';
+  if (!nav && !set) return '';
+  return `<div class="h-actions hr-meetline">${nav}${set}</div>`;
+}
+
+/** My phone number: shown, or a small form to add or change it. */
+function renderPhone(): string {
+  const mine = phones.get(myUid());
+  if (phoneEdit)
+    return `<form class="h-form hr-phone" data-hunt-form="phone" novalidate>
+      ${field('phone', 'phone', l('fPhone'), mine ?? '', { type: 'tel', auto: 'tel', hint: l('fPhoneHint') })}
+      <div class="h-actions"><button type="submit" class="btn small"${btnBusy()}>${l('phoneSave')}</button>
+      ${mine ? `<button type="button" class="btn small ghost" data-hunt="phoneDel"${btnBusy()}>${l('phoneDel')}</button>` : ''}
+      <button type="button" class="btn small ghost" data-hunt="phoneCancel">${l('cancel')}</button></div></form>`;
+  return `<div class="small hr-phone">☎ ${l('phone')}: ${mine ? `<strong>${esc(fmtPhone(mine))}</strong>` : `<span class="muted">${l('phoneNone')}</span>`}
+    <button type="button" class="btn small ghost" data-hunt="phoneEdit">${l(mine ? 'phoneEdit' : 'phoneAdd')}</button></div>`;
+}
+
+const telLink = (p: string) => `<a class="h-tel" href="tel:${esc(p)}" title="${esc(l('call'))}">☎ ${esc(fmtPhone(p))}</a>`;
+
+/** Who collects carcasses; the leader assigns them. */
+function renderTransport(isLeader: boolean): string {
+  if (transportEdit && isLeader) {
+    const sel = (k: CarcassKind) => {
+      const c = transport[k];
+      const cur = draft.get(`transport.${k}Sel`) ?? (c ? ('uid' in c ? c.uid : '__out') : '');
+      const opts = [`<option value="">${l('trNobody')}</option>`]
+        .concat((members ?? []).map((p) => `<option value="${esc(p.uid)}"${cur === p.uid ? ' selected' : ''}>${esc(p.name)}</option>`))
+        .concat(`<option value="__out"${cur === '__out' ? ' selected' : ''}>${l('trOutside')}</option>`)
+        .join('');
+      const out = c && !('uid' in c) ? c : null;
+      return `<fieldset class="hr-tr"><legend>${kindName(k)}</legend>
+        <select name="${k}Sel" data-hunt-field="transport" aria-label="${esc(kindName(k))}">${opts}</select>
+        ${cur === '__out' ? `<div class="h-row">${field('transport', `${k}Name`, l('trName'), out?.name ?? '', { max: CREW_LIMITS.transportName })}${field('transport', `${k}Phone`, l('phone'), out?.phone ?? '', { type: 'tel' })}</div>` : ''}
+      </fieldset>`;
+    };
+    return `<h3>${l('transport')}</h3><form class="card h-form" data-hunt-form="transport" novalidate>${CARCASS_KINDS.map(sel).join('')}${errorBox()}
+      <div class="h-actions"><button type="submit" class="btn small"${btnBusy()}>${l('save')}</button>
+      <button type="button" class="btn small ghost" data-hunt="transportCancel">${l('cancel')}</button></div></form>`;
+  }
+  const rows = CARCASS_KINDS.map((k) => {
+    const c = carrierOf(k);
+    return `<li><strong>${kindName(k)}:</strong> ${c ? `${esc(c.name)}${c.uid === myUid() ? ` <span class="muted">(${l('you')})</span>` : ''} ${c.phone ? telLink(c.phone) : ''}` : `<span class="muted">${l('trNone')}</span>`}</li>`;
+  }).join('');
+  return `<h3>${l('transport')}</h3><ul class="hr-trlist">${rows}</ul>${isLeader ? `<button type="button" class="btn small ghost" data-hunt="transportEdit">${l('trEdit')}</button>` : ''}`;
+}
+
+/** Carcasses for the leader, the carriers and the shooters, nearest first. */
+function renderCarcasses(isLeader: boolean): string {
+  const list = myCarcasses();
+  const uid = myUid();
+  const kinds = myCarcassKinds(transport, uid);
+  if (!list.length && !isLeader && !kinds.length) return '';
+  const me = myPos();
+  const ready = pickupOrder(list.filter((c) => c.ready && !c.pickedBy), me);
+  const waiting = list.filter((c) => !c.ready && !c.pickedBy);
+  const picked = list.filter((c) => c.pickedBy);
+  const row = (c: Carcass) => {
+    const canPick = isLeader || kinds.includes(c.kind);
+    const canMove = isLeader || c.shooter === uid;
+    const where = c.at
+      ? `${me ? `${fmtDist(distanceM(me, c.at))} ${compassPoint(bearingTo(me, c.at))}` : ''}${c.src === 'seat' ? ` · ${l('cSrcSeat')}` : ''}`
+      : l('cNoPos');
+    const btns: string[] = [];
+    if (c.at && !c.pickedBy) {
+      btns.push(`<button type="button" class="btn small" data-hunt="carcassGuide" data-sid="${esc(c.shotId)}">${l('routeGuide')}</button>`);
+      btns.push(`<a class="btn small ghost" href="${esc(mapsLink(c.at))}" target="_blank" rel="noopener">${l('navigate')}</a>`);
+      btns.push(`<button type="button" class="btn small ghost" data-hunt="carcassShow" data-sid="${esc(c.shotId)}">${l('cShow')}</button>`);
+    }
+    if (canMove && !c.pickedBy) {
+      btns.push(`<button type="button" class="btn small ghost" data-hunt="carcassHere" data-sid="${esc(c.shotId)}"${btnBusy()}>${l('cHere')}</button>`);
+      btns.push(
+        pickMode?.kind === 'carcass' && pickMode.shotId === c.shotId
+          ? `<button type="button" class="btn small ghost" data-hunt="pickCancel">${l('pickCancel')}</button>`
+          : `<button type="button" class="btn small ghost" data-hunt="carcassPick" data-sid="${esc(c.shotId)}">${l('cOnMap')}</button>`,
+      );
+    }
+    if (canPick && c.ready && !c.pickedBy) btns.push(`<button type="button" class="btn small" data-hunt="carcassTaken" data-sid="${esc(c.shotId)}"${btnBusy()}>${l('cPick')}</button>`);
+    if (c.pickedBy && (isLeader || c.pickedBy === uid)) btns.push(`<button type="button" class="btn small ghost" data-hunt="carcassUntaken" data-sid="${esc(c.shotId)}"${btnBusy()}>${l('cUnpick')}</button>`);
+    const state = c.pickedBy ? `✓ ${l('cPicked')} · ${esc(personName(c.pickedBy))}${c.pickedAt ? ` · ${clock(c.pickedAt)}` : ''}` : c.ready ? where : `${l('cWait')}`;
+    return `<li class="hc-item${c.pickedBy ? ' hc-picked' : c.ready ? ' hc-ready' : ''}"><div><strong>${esc(gameName(c.game))}</strong>
+      <span class="muted small">· ${esc(personName(c.shooter))}${c.driveId ? ` · ${esc(driveName(c.driveId))}` : ''} · ${esc(kindName(c.kind))}</span></div>
+      <div class="small">${state}</div>${btns.length ? `<div class="h-actions">${btns.join('')}</div>` : ''}</li>`;
+  };
+  // Text the list to a carrier (for one outside the app, the only way to reach them).
+  const sms = (isLeader ? CARCASS_KINDS : [])
+    .map((k) => {
+      const c = carrierOf(k);
+      const todo = ready.filter((x) => x.kind === k);
+      return c?.phone && todo.length
+        ? `<a class="btn small ghost" href="${esc(smsLink(c.phone, carcassSms(todo)))}">✉ ${l('cSms')}: ${esc(c.name)} (${todo.length})</a>`
+        : '';
+    })
+    .join('');
+  const you = kinds.length ? `<p class="small">${l('trYou')} <strong>${kinds.map(kindName).join(', ')}</strong></p>` : '';
+  const all = [...ready, ...waiting, ...picked];
+  return `<h4>${l('carcasses')} <span class="muted">(${ready.length})</span></h4>${you}
+    ${all.length ? `<ul class="hc-list">${all.map(row).join('')}</ul>` : `<p class="muted small">${l('cNone')}</p>`}
+    ${sms ? `<div class="h-actions">${sms}</div>` : ''}`;
+}
+
+const bearingTo = (a: Pt, b: Pt) => {
+  const r = Math.PI / 180;
+  const y = Math.sin((b.lng - a.lng) * r) * Math.cos(b.lat * r);
+  const x = Math.cos(a.lat * r) * Math.sin(b.lat * r) - Math.sin(a.lat * r) * Math.cos(b.lat * r) * Math.cos((b.lng - a.lng) * r);
+  return ((Math.atan2(y, x) / r) % 360 + 360) % 360;
+};
+
+/** A hunter's own stand in the drive to come, typed from the lottery card. */
+function renderMySeat(me: Participant): string {
+  if (me.role === 'beater' || me.status !== 'confirmed') return '';
+  const d = upcoming();
+  if (!d) return '';
+  const cur = seats.get(d.id)?.get(me.uid) ?? '';
+  const names = sortStands(shownStands()).map((s) => `<option value="${esc(s.name)}"></option>`).join('');
+  if (cur && !seatEdit)
+    return `<div class="hr-seatcard card"><span>${standIcon('zwyzka', false, 20)} ${l('seatMine')} ${l('seatIn')} <strong>${esc(d.name)}</strong>: <strong class="hr-seatno">${esc(cur)}</strong></span>
+      <button type="button" class="btn small ghost" data-hunt="seatEdit">${l('seatChange')}</button></div>`;
+  return `<form class="hr-seatcard card h-form" data-hunt-form="seat" data-drive="${esc(d.id)}" novalidate>
+    <label class="h-field"><span>${standIcon('zwyzka', false, 18)} ${l('seatMine')} ${l('seatIn')} <strong>${esc(d.name)}</strong></span>
+    <input type="text" name="seat" maxlength="${CREW_LIMITS.seat}" list="hr-seat-names" value="${esc(draft.get('seat.seat') ?? cur)}" data-hunt-field="seat" placeholder="${esc(l('seatPh'))}" autocomplete="off" />
+    <small class="muted">${l('seatHint')}</small></label><datalist id="hr-seat-names">${names}</datalist>
+    <div class="h-actions"><button type="submit" class="btn small"${btnBusy()}>${l('seatSave')}</button>${cur ? `<button type="button" class="btn small ghost" data-hunt="seatCancel">${l('cancel')}</button>` : ''}</div></form>`;
+}
+
+/** Leader: everyone's stand in the drive in focus, editable, with who is missing. */
+function renderSeatsLeader(): string {
+  const d = focus();
+  const hs = shooters().filter((p) => p.status === 'confirmed' && p.role === 'hunter');
+  if (!hs.length) return '';
+  if (!d) return `<details class="hd-box"><summary><strong>${l('seats')}</strong></summary><p class="muted small">${l('seatNoDrive')}</p></details>`;
+  const m = seats.get(d.id) ?? new Map<string, string>();
+  const missing = hs.filter((p) => !m.has(p.uid)).length;
+  const rows = hs
+    .map(
+      (p) => `<li><label><span>${roleIcon('hunter', 16)} ${esc(p.name)}</span>
+      <input type="text" name="s_${esc(p.uid)}" maxlength="${CREW_LIMITS.seat}" list="hr-seat-names-l" value="${esc(m.get(p.uid) ?? '')}" placeholder="—" /></label></li>`,
+    )
+    .join('');
+  const names = sortStands(shownStands()).map((s) => `<option value="${esc(s.name)}"></option>`).join('');
+  return `<details class="hd-box hr-seats"><summary><strong>${l('seats')}</strong> <span class="muted">· ${esc(d.name)} · ${missing ? `${missing} ${l('seatsMissing')}` : '✓'}</span></summary>
+    <form class="h-form" data-hunt-form="seats" data-drive="${esc(d.id)}" novalidate><ul class="hr-seatlist">${rows}</ul><datalist id="hr-seat-names-l">${names}</datalist>
+    <div class="h-actions"><button type="submit" class="btn small"${btnBusy()}>${l('seatsSave')}</button></div></form></details>`;
+}
+
+/** A beater's own route in the drive to come: where it starts, and the guidance switch. */
+function renderMyRoute(me: Participant): string {
+  const d = upcoming();
+  const r = d ? routes.get(d.id)?.get(me.uid) : undefined;
+  const g = guideCardHtml();
+  if (g) return g;
+  if (!d || !r || hunt?.status !== 'live') return '';
+  const pos = myPos();
+  return `<div class="hr-seatcard card"><span>${roleIcon('beater', 18)} ${l('routeMine')} · <strong>${esc(d.name)}</strong>${pos ? ` · ▶ ${fmtDist(distanceM(pos, r[0]))}` : ''}</span>
+    <button type="button" class="btn small" data-hunt="guideOn">${l('routeGuide')}</button></div>`;
+}
+
+/** Leader: draw the beaters' routes and the meeting point of one drive. */
+function renderRouteEditor(): string {
+  const e = routeEdit!;
+  const d = drives.find((x) => x.id === e.driveId);
+  const bs = beaters();
+  const hint = e.mode === 'spread' ? `${l('routeSpreadHint')} <strong>${l('routeSpreadStep')} ${e.spread.length + 1}/4: ${l(e.spread.length < 2 ? 'routeSpreadStart' : 'routeSpreadEnd')}</strong>` : e.mode === 'meet' ? l('routeMeetHint') : l('routeHint');
+  const list = bs.length
+    ? `<ul class="hr-beaters">${bs
+        .map((b) => {
+          const r = e.routes.get(b.uid);
+          const on = e.sel === b.uid && e.mode === 'route';
+          const tick =
+            e.mode === 'spread'
+              ? `<input type="checkbox" data-route-spread="${esc(b.uid)}"${e.spreadUids.has(b.uid) ? ' checked' : ''} aria-label="${esc(b.name)}">`
+              : '';
+          return `<li class="${on ? 'hr-on' : ''}">${tick}<button type="button" data-hunt="routeSel" data-uid="${esc(b.uid)}">${roleIcon('beater', 16)} <span>${esc(b.name)}</span>
+            <small class="muted">${r ? `${r.length} ${l('routePts')} · ${fmtDist(routeLen(r))}` : l('routeNone')}</small></button></li>`;
+        })
+        .join('')}</ul>`
+    : `<p class="muted small">${l('routeNoBeaters')}</p>`;
+  const sel = e.sel && e.mode === 'route' ? e.routes.get(e.sel) : null;
+  return `<div class="card hr-edit"><strong>${l('routesTitle')} · ${esc(d?.name ?? '')}</strong>
+    <p class="small${e.mode !== 'route' ? ' hr-picking' : ''}">${hint}</p>
+    ${list}
+    <div class="h-actions">
+      ${e.sel && e.mode === 'route' ? `<button type="button" class="btn small ghost" data-hunt="routeUndo"${sel?.length ? '' : ' disabled'}>${l('routeUndo')}</button>
+      <button type="button" class="btn small ghost danger-text" data-hunt="routeDel"${sel ? '' : ' disabled'}>${l('routeDel')}</button>` : ''}
+      <button type="button" class="btn small ghost" data-hunt="routeSpread" aria-pressed="${e.mode === 'spread'}"${bs.length ? '' : ' disabled'}>${l('routeSpread')}</button>
+      <button type="button" class="btn small ghost" data-hunt="routeMeet" aria-pressed="${e.mode === 'meet'}">${l('routeMeet')}</button>
+      ${e.meet ? `<button type="button" class="btn small ghost" data-hunt="routeMeetClear">${l('routeMeetClear')}</button>` : ''}
+    </div>
+    ${errorBox()}
+    <div class="h-actions"><button type="button" class="btn small" data-hunt="routeSave"${btnBusy()}>${l('routeSave')}</button>
+      <button type="button" class="btn small ghost" data-hunt="routeCancel">${l('cancel')}</button></div></div>`;
+}
+
+const routeLen = (r: Route) => r.slice(1).reduce((s, p, i) => s + distanceM(r[i], p), 0);
+
+/** Leader: compose and history with who acknowledged; others: messages meant for them. */
+function renderMessages(isLeader: boolean, h: Hunt): string {
+  const confirmed = (members ?? []).filter((p) => p.status === 'confirmed');
+  const t = now();
+  if (!isLeader) {
+    const me = meName();
+    const mine = me ? messages.filter((m) => msgFor(m, me, transport)).slice(0, 5) : [];
+    if (!mine.length) return '';
+    return `<h4>${l('messages')}</h4><ul class="hmsg-list">${mine
+      .map((m) => {
+        const ok = acks.get(m.id)?.has(myUid());
+        return `<li><span class="muted small">${clock(m.ts)}</span> ${esc(m.text)} ${
+          ok ? `<span class="small hmsg-ok">✓ ${l('msgAcked')}</span>` : `<button type="button" class="btn small" data-hunt="msgAck" data-mid="${esc(m.id)}">${l('msgAck')}</button>`
+        }</li>`;
+      })
+      .join('')}</ul>`;
+  }
+  const to = (draft.get('msg.to') ?? 'all') as MsgTo;
+  const opt = (v: string, label: string) => `<option value="${esc(v)}"${to === v ? ' selected' : ''}>${esc(label)}</option>`;
+  const opts = [opt('all', l('to_all')), opt('hunter', l('to_hunter')), opt('beater', l('to_beater')), opt('transport', l('to_transport'))]
+    .concat(confirmed.filter((p) => p.uid !== myUid()).map((p) => opt(`u:${p.uid}`, `→ ${p.name}`)))
+    .join('');
+  const presets = (getLang() === 'pl' ? PRESETS.pl : PRESETS.en).map((p, i) => `<button type="button" class="btn small ghost" data-hunt="msgPreset" data-i="${i}">${esc(p)}</button>`).join('');
+  const hist = messages.slice(0, 10).map((m) => {
+    const rc = recipients(m, confirmed, transport);
+    const got = acks.get(m.id) ?? new Map();
+    const missing = rc.filter((p) => !got.has(p.uid));
+    return `<li><div><span class="muted small">${clock(m.ts)} · ${l('msgTo')}: ${esc(toName(m.to))}</span>
+      <span class="hmsg-count${missing.length ? '' : ' all'}">✓ ${rc.length - missing.length}/${rc.length}</span>
+      <button type="button" class="btn small ghost" data-hunt="msgDel" data-mid="${esc(m.id)}" aria-label="${l('msgDel')}">✕</button></div>
+      <div>${esc(m.text)}</div>${missing.length && t - m.ts < 6 * 3600e3 ? `<div class="small muted">${l('msgWaiting')} ${missing.map((p) => esc(p.name)).join(', ')}</div>` : ''}</li>`;
+  });
+  return `<details class="hd-box hmsg-box"${h.status === 'live' ? ' open' : ''}><summary><strong>✉ ${l('messages')}</strong> <span class="muted">(${messages.length})</span></summary>
+    <form class="h-form hmsg-form" data-hunt-form="msg" novalidate>
+      <label class="h-field"><span>${l('msgTo')}</span><select name="to" data-hunt-field="msg">${opts}</select></label>
+      <div class="hmsg-presets">${presets}</div>
+      ${field('msg', 'text', l('msgText'), '', { max: CREW_LIMITS.message })}
+      <div class="h-actions"><button type="submit" class="btn"${btnBusy()}>${l('msgSend')}</button></div>
+      <p class="small muted">${l('msgHint')}</p>
+    </form>
+    ${hist.length ? `<ul class="hmsg-list">${hist.join('')}</ul>` : `<p class="muted small">${l('msgNone')}</p>`}</details>`;
+}
+
 const appBase = () => `${location.origin}${location.pathname}`;
 const inviteUrl = (id: string) => `${appBase()}#/polowanie/${id}`;
 /** The link the share button sends: the invitation if there is one. */
@@ -1901,6 +2690,206 @@ export function handleHuntClick(el: HTMLElement): boolean {
     case 'saveOffline':
       if (hunt?.district) saveOfflineCb?.(hunt.district);
       break;
+    case 'meetPick':
+      driveEdit = null;
+      standEdit = null;
+      routeEdit = null;
+      pickMode = { kind: 'huntMeet' };
+      drawCrew();
+      setTimeout(() => document.querySelector('.hm-map')?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 0);
+      break;
+    case 'meetClear':
+      if (id) run((be) => be.setHuntMeet(id, null));
+      return true;
+    case 'pickCancel':
+      pickMode = null;
+      drawCrew();
+      break;
+    case 'phoneEdit':
+      phoneEdit = true;
+      clearDraft('phone');
+      break;
+    case 'phoneCancel':
+      phoneEdit = false;
+      formError = '';
+      break;
+    case 'phoneDel':
+      if (id)
+        run(async (be) => {
+          await be.setPhone(id, null);
+          phoneEdit = false;
+        });
+      return true;
+    case 'transportEdit':
+      transportEdit = true;
+      clearDraft('transport');
+      formError = '';
+      break;
+    case 'transportCancel':
+      transportEdit = false;
+      clearDraft('transport');
+      formError = '';
+      break;
+    case 'seatEdit':
+      seatEdit = true;
+      clearDraft('seat');
+      break;
+    case 'seatCancel':
+      seatEdit = false;
+      clearDraft('seat');
+      break;
+    case 'guideOn':
+      guideDismissed = null;
+      syncGuide();
+      break;
+    case 'guideOff':
+      if (guideCarcass) guideCarcass = null;
+      else guideDismissed = upcoming()?.id ?? null;
+      syncGuide();
+      break;
+    case 'guideCompass':
+      enableCompass();
+      return true;
+    case 'carcassGuide':
+      guideCarcass = el.dataset.sid ?? null;
+      syncGuide();
+      setTimeout(() => document.querySelector('.hg-card')?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 0);
+      break;
+    case 'carcassShow': {
+      const c = allCarcasses().find((x) => x.shotId === el.dataset.sid);
+      if (c?.at) {
+        hmap?.centerOnPoint(c.at.lat, c.at.lng);
+        document.querySelector('.hm-map')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+      return true;
+    }
+    case 'carcassHere': {
+      const sid = el.dataset.sid;
+      if (id && sid)
+        run(async (be) => {
+          const p = await getFix();
+          await be.moveCarcass(id, sid, p);
+        });
+      return true;
+    }
+    case 'carcassPick':
+      if (el.dataset.sid) {
+        driveEdit = null;
+        standEdit = null;
+        routeEdit = null;
+        pickMode = { kind: 'carcass', shotId: el.dataset.sid };
+        drawCrew();
+        setTimeout(() => document.querySelector('.hm-map')?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 0);
+      }
+      break;
+    case 'carcassTaken':
+    case 'carcassUntaken':
+      if (id && el.dataset.sid) run((be) => be.pickCarcass(id, el.dataset.sid!, action === 'carcassTaken'));
+      return true;
+    case 'routeEdit': {
+      const d = drives.find((x) => x.id === el.dataset.drive);
+      if (!d) break;
+      driveEdit = null;
+      standEdit = null;
+      pickMode = null;
+      formError = '';
+      const copy = new Map([...(routes.get(d.id) ?? new Map<string, Route>())].map(([u, r]) => [u, r.map((p) => ({ ...p }))]));
+      const bs = beaters();
+      routeEdit = { driveId: d.id, routes: copy, sel: bs[0]?.uid ?? null, mode: 'route', spread: [], spreadUids: new Set(bs.map((b) => b.uid)), meet: d.meet, dirty: false };
+      syncGuide();
+      setTimeout(() => {
+        drawCrew();
+        document.querySelector('.hr-edit')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      }, 0);
+      break;
+    }
+    case 'routeSel':
+      if (routeEdit) {
+        routeEdit.sel = uid;
+        routeEdit.mode = 'route';
+        routeEdit.spread = [];
+        const r = routeEdit.routes.get(uid);
+        if (r?.length) hmap?.centerOnPoint(r[0].lat, r[0].lng);
+        drawCrew();
+      }
+      break;
+    case 'routeUndo':
+      if (routeEdit?.sel) {
+        const r = routeEdit.routes.get(routeEdit.sel);
+        r?.pop();
+        if (r && !r.length) routeEdit.routes.delete(routeEdit.sel);
+        routeEdit.dirty = true;
+        drawCrew();
+      }
+      break;
+    case 'routeDel':
+      if (routeEdit?.sel) {
+        routeEdit.routes.delete(routeEdit.sel);
+        routeEdit.dirty = true;
+        drawCrew();
+      }
+      break;
+    case 'routeSpread':
+      if (routeEdit) {
+        routeEdit.mode = routeEdit.mode === 'spread' ? 'route' : 'spread';
+        routeEdit.spread = [];
+        drawCrew();
+      }
+      break;
+    case 'routeMeet':
+      if (routeEdit) {
+        routeEdit.mode = routeEdit.mode === 'meet' ? 'route' : 'meet';
+        routeEdit.spread = [];
+        drawCrew();
+      }
+      break;
+    case 'routeMeetClear':
+      if (routeEdit) {
+        routeEdit.meet = null;
+        routeEdit.dirty = true;
+        drawCrew();
+      }
+      break;
+    case 'routeCancel':
+      routeEdit = null;
+      formError = '';
+      drawCrew();
+      syncGuide();
+      break;
+    case 'routeSave': {
+      const e = routeEdit;
+      if (!e || !id) break;
+      const d = drives.find((x) => x.id === e.driveId);
+      run(async (be) => {
+        const keep = new Map([...e.routes].filter(([, r]) => r.length >= 2));
+        await be.saveRoutes(id, e.driveId, keep);
+        const before = d?.meet ? `${d.meet.lat},${d.meet.lng}` : '';
+        const after = e.meet ? `${e.meet.lat},${e.meet.lng}` : '';
+        if (before !== after) await be.setDriveMeet(id, e.driveId, e.meet);
+        if (routeEdit === e) routeEdit = null;
+        showToast(l('routeSaved'));
+        drawCrew();
+        syncGuide();
+      });
+      return true;
+    }
+    case 'msgPreset': {
+      const list = getLang() === 'pl' ? PRESETS.pl : PRESETS.en;
+      const text = list[+el.dataset.i!] ?? '';
+      draft.set('msg.text', text);
+      const input = document.querySelector<HTMLInputElement>('.hmsg-form [name="text"]');
+      if (input) {
+        input.value = text;
+        input.focus();
+      }
+      return true;
+    }
+    case 'msgDel':
+      if (id && el.dataset.mid) run((be) => be.deleteMessage(id, el.dataset.mid!));
+      return true;
+    case 'msgAck':
+      if (id && el.dataset.mid) run((be) => be.ackMessage(id, el.dataset.mid!));
+      return true;
     case 'reconnect':
       conn = { s: 'idle' };
       connect();
@@ -2296,6 +3285,14 @@ function clearDraft(form: string) {
 }
 
 export function handleHuntInput(el: HTMLElement): boolean {
+  const rs = el.dataset.routeSpread;
+  if (rs !== undefined) {
+    if (routeEdit) {
+      if ((el as HTMLInputElement).checked) routeEdit.spreadUids.add(rs);
+      else routeEdit.spreadUids.delete(rs);
+    }
+    return true;
+  }
   const sf = el.dataset.standField;
   if (sf) {
     const e = standEdit;
@@ -2322,7 +3319,7 @@ export function handleHuntInput(el: HTMLElement): boolean {
   if (!form) return false;
   const input = el as HTMLInputElement;
   draft.set(`${form}.${input.name}`, input.value);
-  if (input.name === 'districtQ') rerender();
+  if (input.name === 'districtQ' || (form === 'transport' && input.name.endsWith('Sel'))) rerender();
   return true;
 }
 
@@ -2399,6 +3396,80 @@ export function handleHuntSubmit(form: HTMLFormElement): boolean {
           : be.addShotFor(id, v('uid') || NO_SHOOTER, { outcome, game, note: v('note'), driveId: v('driveId') || null }).then(() => {}),
       () => (shotEdit = null),
     );
+  } else if (kind === 'phone' && watched) {
+    const id = watched;
+    const phone = cleanPhone(v('phone'));
+    if (!phone) {
+      badFields.add('phone');
+      formError = l('errPhone');
+      rerender();
+      return true;
+    }
+    run(async (be) => {
+      await be.setPhone(id, phone);
+      phoneEdit = false;
+      clearDraft('phone');
+    });
+  } else if (kind === 'transport' && watched) {
+    const id = watched;
+    const t: Transport = {};
+    for (const k of CARCASS_KINDS) {
+      const sel = v(`${k}Sel`);
+      if (sel === '__out') {
+        const phone = cleanPhone(v(`${k}Phone`));
+        const name = cleanText(v(`${k}Name`), CREW_LIMITS.transportName);
+        if (!phone || name.length < 2) {
+          formError = l('trErr');
+          rerender();
+          return true;
+        }
+        t[k] = { name, phone };
+      } else if (sel) t[k] = { uid: sel };
+    }
+    run(async (be) => {
+      await be.saveTransport(id, t);
+      transportEdit = false;
+      clearDraft('transport');
+      showToast(l('trSaved'));
+    });
+  } else if (kind === 'seat' && watched) {
+    const id = watched;
+    const driveId = form.dataset.drive!;
+    const seat = cleanSeat(v('seat'));
+    run(async (be) => {
+      await be.setSeat(id, driveId, myUid(), seat || null);
+      seatEdit = false;
+      clearDraft('seat');
+    });
+  } else if (kind === 'seats' && watched) {
+    const id = watched;
+    const driveId = form.dataset.drive!;
+    const cur = seats.get(driveId) ?? new Map<string, string>();
+    const changes: [string, string][] = [];
+    for (const p of shooters()) {
+      const input = form.elements.namedItem(`s_${p.uid}`) as HTMLInputElement | null;
+      if (!input) continue;
+      const val = cleanSeat(input.value);
+      if (val !== (cur.get(p.uid) ?? '')) changes.push([p.uid, val]);
+    }
+    run(async (be) => {
+      for (const [who, val] of changes) await be.setSeat(id, driveId, who, val || null);
+      showToast(l('seatsSaved'));
+    });
+  } else if (kind === 'msg' && watched) {
+    const id = watched;
+    const text = cleanMessage(v('text'));
+    const to = (v('to') || 'all') as MsgTo;
+    if (!text) {
+      formError = l('msgEmpty');
+      rerender();
+      return true;
+    }
+    run(async (be) => {
+      await be.sendMessage(id, text, to);
+      draft.delete('msg.text');
+      showToast(l('msgSent'));
+    });
   } else if (kind === 'club') {
     if (!v('pass').trim()) {
       badFields.add('pass');
@@ -2417,8 +3488,10 @@ export function handleHuntSubmit(form: HTMLFormElement): boolean {
     const token = myGuestToken();
     if (!validPersonName(v('pname'))) badFields.add('pname');
     if (!token && !v('pass').trim()) badFields.add('pass');
+    const phone = v('phone').trim() ? cleanPhone(v('phone')) : null;
+    if (v('phone').trim() && !phone) badFields.add('phone');
     if (badFields.size) {
-      formError = !validPersonName(v('pname')) ? l('errPersonName') : l('errPass');
+      formError = !validPersonName(v('pname')) ? l('errPersonName') : badFields.has('phone') ? l('errPhone') : l('errPass');
       rerender();
       return true;
     }
@@ -2426,7 +3499,7 @@ export function handleHuntSubmit(form: HTMLFormElement): boolean {
     run(async (be) => {
       if (token) {
         try {
-          await be.joinByInvite(id, v('pname'), role, token);
+          await be.joinByInvite(id, v('pname'), role, token, phone);
         } catch (e) {
           // Expired or revoked: fall back to the passphrase form.
           if (e instanceof HuntError && e.code === 'denied') {
@@ -2438,7 +3511,7 @@ export function handleHuntSubmit(form: HTMLFormElement): boolean {
         guestToken = null;
         // Drop the token from the address bar, so it is not shared further by accident.
         go(id);
-      } else await be.join(id, v('pname'), role, v('pass'));
+      } else await be.join(id, v('pname'), role, v('pass'), phone);
       clearDraft('join');
       mine = { s: 'idle' };
       // The participant list was unreadable before joining; listen again now that we are in.

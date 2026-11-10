@@ -38,7 +38,7 @@ let stopCompass: () => void = () => {};
 export const reportOpen = () => !!sheet;
 
 /** Ask for motion sensors on iPhones; must run inside the tap that opens the sheet. */
-function askPermission(): Promise<boolean> {
+export function askPermission(): Promise<boolean> {
   const api = (window.DeviceOrientationEvent as unknown as PermissionAPI | undefined)?.requestPermission;
   if (!api) return Promise.resolve(true);
   // Only a clear "denied" means no compass; anything else ("granted", or "prompt" in some
@@ -53,7 +53,7 @@ function askPermission(): Promise<boolean> {
  * Listen to the compass. cb gets a smoothed heading from magnetic north and whether the
  * sensor asks for calibration. Returns a stop function.
  */
-function listenCompass(cb: (deg: number, needsCalibration: boolean) => void): () => void {
+export function listenCompass(cb: (deg: number, needsCalibration: boolean) => void): () => void {
   let x = 0;
   let y = 0;
   let have = false;

@@ -5,6 +5,7 @@
 import type { Shot, ShotInput, ShotSpot } from './pokot';
 import type { Stand } from './stands';
 import type { Invite } from './invite';
+import type { CarcassMark, Message, MsgTo, Pt, Route, Transport } from './huntCrew';
 import type { Drive, DriveInput, Sighting, SightingInput, Hunt, HuntInput, HuntStatus, Participant, Position, Role, TrackPoint } from './hunt';
 
 export type Unsubscribe = () => void;
@@ -19,9 +20,10 @@ export interface HuntBackend {
   watchHunt(id: string, cb: (h: Hunt | null) => void, onError: (e: Error) => void): Unsubscribe;
   /** Only participants can read the list; for anyone else onDenied fires. */
   watchParticipants(id: string, cb: (ps: Participant[]) => void, onDenied: () => void): Unsubscribe;
-  join(id: string, name: string, role: Exclude<Role, 'leader'>, passphrase: string): Promise<void>;
+  /** `phone` (optional) is stored with the sign-up, readable by confirmed participants only. */
+  join(id: string, name: string, role: Exclude<Role, 'leader'>, passphrase: string, phone?: string | null): Promise<void>;
   /** Sign up with an invitation token instead of the club passphrase (still unconfirmed). */
-  joinByInvite(id: string, name: string, role: Exclude<Role, 'leader'>, token: string): Promise<void>;
+  joinByInvite(id: string, name: string, role: Exclude<Role, 'leader'>, token: string, phone?: string | null): Promise<void>;
   /** Leader only: the hunt's invitation links. */
   watchInvites(id: string, cb: (list: Invite[]) => void, onDenied: () => void): Unsubscribe;
   /** Leader only: replace all invitation links with a new one valid until `exp`; returns its token. */
@@ -82,6 +84,35 @@ export interface HuntBackend {
   /** Leader only, after the hunt ended: freeze (or unfreeze) the pokot. */
   lockPokot(id: string, locked: boolean): Promise<void>;
   setPokotTitles(id: string, on: boolean): Promise<void>;
+
+  // ---- crew planning (see huntCrew.ts)
+  /** Leader: the hunt's meeting point on the map (null removes it). */
+  setHuntMeet(id: string, at: Pt | null): Promise<void>;
+  /** Leader: where everyone gathers after a drive. */
+  setDriveMeet(id: string, driveId: string, at: Pt | null): Promise<void>;
+  /** Beater routes of every drive: driveId → uid → route. */
+  watchRoutes(id: string, cb: (r: Map<string, Map<string, Route>>) => void, onDenied: () => void): Unsubscribe;
+  /** Leader: replace all routes of one drive. */
+  saveRoutes(id: string, driveId: string, routes: Map<string, Route>): Promise<void>;
+  /** Hunters' stands per drive: driveId → uid → stand name/number. */
+  watchSeats(id: string, cb: (s: Map<string, Map<string, string>>) => void, onDenied: () => void): Unsubscribe;
+  /** My stand (or, for the leader, anyone's); null clears it. */
+  setSeat(id: string, driveId: string, uid: string, seat: string | null): Promise<void>;
+  watchPhones(id: string, cb: (p: Map<string, string>) => void, onDenied: () => void): Unsubscribe;
+  /** My phone number; null removes it. */
+  setPhone(id: string, phone: string | null): Promise<void>;
+  watchTransport(id: string, cb: (t: Transport) => void, onDenied: () => void): Unsubscribe;
+  saveTransport(id: string, t: Transport): Promise<void>;
+  /** Leader's messages, newest first. */
+  watchMessages(id: string, cb: (ms: Message[]) => void, onDenied: () => void): Unsubscribe;
+  sendMessage(id: string, text: string, to: MsgTo): Promise<void>;
+  deleteMessage(id: string, msgId: string): Promise<void>;
+  watchAcks(id: string, cb: (a: Map<string, Map<string, number>>) => void, onDenied: () => void): Unsubscribe;
+  ackMessage(id: string, msgId: string): Promise<void>;
+  /** Where carcasses lie (when moved by hand) and who took them. */
+  watchCarcasses(id: string, cb: (m: Map<string, CarcassMark>) => void, onDenied: () => void): Unsubscribe;
+  moveCarcass(id: string, shotId: string, at: Pt): Promise<void>;
+  pickCarcass(id: string, shotId: string, picked: boolean): Promise<void>;
 }
 
 /** Errors the UI explains in words. */
