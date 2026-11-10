@@ -173,7 +173,7 @@
         ".write": "auth != null && !newData.exists() && (root.child('hunts/' + $h + '/leaderUid').val() === auth.uid || root.child('hunts/' + $h + '/leaders/' + auth.uid).isString())",
         "$uid": {
           ".write": "auth != null && ((auth.uid === $uid && (!newData.exists() || (root.child('hunts/' + $h + '/status').val() === 'live' && root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed'))) || (!newData.exists() && (root.child('hunts/' + $h + '/leaderUid').val() === auth.uid || root.child('hunts/' + $h + '/leaders/' + auth.uid).isString())))",
-          ".validate": "newData.hasChildren(['lat', 'lng', 'ts', 'role'])",
+          ".validate": "newData.hasChildren(['lat', 'lng', 'ts'])",
           "lat": {
             ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
           },

@@ -20,6 +20,7 @@ import {
   type HuntDistrict,
   type Position,
   shouldPurge,
+  heartbeatFor,
   toGpx,
   gpxFileName,
   type TrackPoint,
@@ -1482,15 +1483,15 @@ function startSharing() {
   if (!sharer || sharer.huntId !== id)
     sharer = new Sharer(id, {
       publish: async (fix, track) => {
-        const role = members?.find((p) => p.uid === be.uid)?.role ?? 'hunter';
         try {
-          await be.publishPosition(id, fix, role, track);
+          await be.publishPosition(id, fix, track);
         } catch (e) {
           // Refused by the rules: the hunt ended or I was removed. Stop instead of retrying forever.
           if (e instanceof HuntError && e.code === 'denied') throw Object.assign(new Error(l('shareNotLive')), { stop: true });
           throw e;
         }
       },
+      heartbeatMs: () => heartbeatFor(members?.find((p) => p.uid === be.uid)?.role ?? 'hunter'),
       clear: () => be.clearPosition(id),
       onChange: () => {
         rerender();

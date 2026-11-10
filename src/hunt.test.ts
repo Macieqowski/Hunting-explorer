@@ -1,4 +1,4 @@
-import { toGpx, gpxFileName, freshness, distanceM, sendDecision, shouldPurge, parsePositions, parseTracks, STALE_MS, LOST_MS, HEARTBEAT_MS, RETENTION_MS, validateHunt, huntWindow, sortHunts, sortParticipants, countRoles, parseHunt, parseParticipants, cleanText, validPersonName, nextStatuses, validateDrive, encodeArea, decodeArea, sortDrives, driveState, activeDrive, nextDriveDefaults, parseDrives, splitByDrive, parseSightings, compassPoint, bearing, angleDiff, offsetPoint, headingToward, sightLook, headingFromOrientation, declination, type Hunt } from './hunt';
+import { toGpx, gpxFileName, freshness, distanceM, sendDecision, shouldPurge, parsePositions, parseTracks, STALE_MS, LOST_MS, HEARTBEAT_MS, HUNTER_HEARTBEAT_MS, heartbeatFor, roundCoord, RETENTION_MS, validateHunt, huntWindow, sortHunts, sortParticipants, countRoles, parseHunt, parseParticipants, cleanText, validPersonName, nextStatuses, validateDrive, encodeArea, decodeArea, sortDrives, driveState, activeDrive, nextDriveDefaults, parseDrives, splitByDrive, parseSightings, compassPoint, bearing, angleDiff, offsetPoint, headingToward, sightLook, headingFromOrientation, declination, type Hunt } from './hunt';
 
 const base: Hunt = {
   id: 'x',
@@ -95,6 +95,23 @@ describe('location sharing', () => {
     expect(sendDecision(last, { lat: 52.0003, lng: 21.0, acc: 5 }, 5000)).toEqual({ send: true, track: true });
     expect(sendDecision(last, { lat: 52.0001, lng: 21.0, acc: 5 }, HEARTBEAT_MS)).toEqual({ send: true, track: false });
   });
+  it('gives hunters a slower heartbeat than beaters', () => {
+    expect(heartbeatFor('beater')).toBe(HEARTBEAT_MS);
+    expect(heartbeatFor('hunter')).toBe(HUNTER_HEARTBEAT_MS);
+    expect(heartbeatFor('leader')).toBe(HUNTER_HEARTBEAT_MS);
+    expect(HUNTER_HEARTBEAT_MS).toBeLessThan(STALE_MS);
+    const last = { ...at, at: 0 };
+    const still = { lat: 52.0001, lng: 21.0, acc: 5 };
+    expect(sendDecision(last, still, HEARTBEAT_MS, HUNTER_HEARTBEAT_MS).send).toBe(false);
+    expect(sendDecision(last, still, HUNTER_HEARTBEAT_MS, HUNTER_HEARTBEAT_MS)).toEqual({ send: true, track: false });
+    // Movement is still sent right away.
+    expect(sendDecision(last, { lat: 52.0003, lng: 21.0, acc: 5 }, 5000, HUNTER_HEARTBEAT_MS)).toEqual({ send: true, track: true });
+  });
+  it('rounds stored coordinates to about a metre', () => {
+    expect(roundCoord(52.123456789)).toBe(52.12346);
+    expect(roundCoord(-0.000004)).toBe(-0);
+    expect(distanceM({ lat: 52.123456789, lng: 21.987654321 }, { lat: roundCoord(52.123456789), lng: roundCoord(21.987654321) })).toBeLessThan(1);
+  });
   it('does not treat GPS jitter within the accuracy as movement', () => {
     expect(sendDecision({ ...at, at: 0 }, { lat: 52.0004, lng: 21.0, acc: 80 }, 1000).track).toBe(false);
   });
@@ -109,8 +126,10 @@ describe('location sharing', () => {
     expect(shouldPurge({ status: 'live', endedAt: 0 }, RETENTION_MS)).toBe(false);
   });
   it('parses positions and tracks', () => {
-    expect(parsePositions({ a: { lat: 1, lng: 2, ts: 3, role: 'beater' }, b: { lat: 'x' } })).toEqual([
-      { uid: 'a', lat: 1, lng: 2, acc: null, ts: 3, role: 'beater' },
+    // 'a' is from an older app that still sends the role, 'c' is the slim record.
+    expect(parsePositions({ a: { lat: 1, lng: 2, ts: 3, role: 'beater' }, b: { lat: 'x' }, c: { lat: 4, lng: 5, ts: 6, acc: 7 } })).toEqual([
+      { uid: 'a', lat: 1, lng: 2, acc: null, ts: 3 },
+      { uid: 'c', lat: 4, lng: 5, acc: 7, ts: 6 },
     ]);
     const tr = parseTracks({ a: { p2: { lat: 2, lng: 2, ts: 2 }, p1: { lat: 1, lng: 1, ts: 1 } } });
     expect(tr.get('a')!.map((p) => p.ts)).toEqual([1, 2]);
@@ -126,7 +145,7 @@ describe('GPX export', () => {
     ['a', [{ lat: 52, lng: 21, ts: 0 }, { lat: 52.001, lng: 21.001, ts: 60000 }]],
     ['gone', [{ lat: 1, lng: 1, ts: 0 }]],
   ]);
-  const gpx = toGpx('Dziki', tracks, [{ uid: 'b', lat: 52.1, lng: 21.1, acc: 5, ts: 0, role: 'beater' }], people, (r) => r);
+  const gpx = toGpx('Dziki', tracks, [{ uid: 'b', lat: 52.1, lng: 21.1, acc: 5, ts: 0 }], people, (r) => r);
   it('writes one track per known participant and waypoints for last positions', () => {
     expect(gpx).toContain('<gpx version="1.1"');
     expect(gpx.match(/<trk>/g)).toHaveLength(1);
