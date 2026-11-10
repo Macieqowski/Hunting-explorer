@@ -1,5 +1,5 @@
 import './style.css';
-import { fetchAllDistricts, fetchDistrictsAtPoint, fetchDistrictsByIds, BDL_WMS_DISTRICTS, type District } from './bdl';
+import { fetchDistrictsAtPoint, fetchDistrictsByIds, BDL_WMS_DISTRICTS, type District } from './bdl';
 import {
   groupClubs,
   statsBy,
@@ -24,6 +24,7 @@ import { speciesForSeason } from './atlas';
 import { initOffline, onOfflineChange } from './offline';
 import { initOfflineUi, renderOffline, handleOfflineEvent, startDraft } from './offlineUi';
 import type { AreaTarget } from './offline';
+import { loadDistrictList, checkDistrictUpdate, type DistrictList, type SnapshotMeta } from './districtData';
 import { isApp, publicHref, copyText, initDeepLinks, appVersion, checkForAppUpdate, dismissUpdate, APK_URL } from './platform';
 
 // ---------------------------------------------------------------- helpers
@@ -45,6 +46,8 @@ type View =
 
 const state = {
   districts: [] as District[],
+  /** Which built-in or downloaded list is in use; null = loaded straight from BDL. */
+  dataMeta: null as SnapshotMeta | null,
   clubs: [] as Club[],
   clubsByKey: new Map<string, Club>(),
   loaded: false,
@@ -644,7 +647,9 @@ function showUpdateBanner(version: string, url: string) {
 function renderAppBox(pl: boolean) {
   if (isApp())
     return `<section class="app-box"><h2>${pl ? 'Aplikacja' : 'App'}</h2>
-      <p>${pl ? 'Wersja' : 'Version'} ${esc(installedVersion ?? '…')}</p>
+      <p>${pl ? 'Wersja' : 'Version'} ${esc(installedVersion ?? '…')}${
+        state.dataMeta ? `<br><span class="muted small">${pl ? 'Lista kół i obwodów: stan na' : 'Club and district list as of'} ${esc(state.dataMeta.date)}</span>` : ''
+      }</p>
       <p><button type="button" class="btn ghost" data-action="appUpdate">${pl ? 'Sprawdź aktualizację' : 'Check for updates'}</button></p></section>`;
   return pl
     ? `<section class="app-box"><h2>Aplikacja na Androida</h2>
@@ -670,10 +675,13 @@ function renderAbout() {
     ${
       pl
         ? `<h2>Skąd pochodzą dane?</h2>
-      <p>Granice obwodów łowieckich oraz informacje o dzierżawcach i zarządcach pobierane są na żywo z publicznej usługi
+      <p>Granice obwodów łowieckich oraz informacje o dzierżawcach i zarządcach pochodzą z publicznej usługi
       <a href="https://www.bdl.lasy.gov.pl/portal/obwody-lowieckie" target="_blank" rel="noopener">Banku Danych o Lasach</a> (BDL), prowadzonego przez
       Biuro Urządzania Lasu i Geodezji Leśnej na zlecenie Ministra Klimatu i Środowiska. Granice obwodów pochodzą z uchwał sejmików województw
       (urzędów marszałkowskich), a dane o dzierżawcach z Polskiego Związku Łowieckiego i Lasów Państwowych. BDL aktualizuje je raz w roku wraz z rocznymi planami łowieckimi.</p>
+      <p>Granice na mapie są pobierane z BDL na bieżąco. Listę kół i obwodów (dzierżawcy, numery, powierzchnie) strona i aplikacja mają zapisaną u siebie i odświeżają ją z BDL co tydzień${
+        state.dataMeta ? `; obecna lista jest ze stanu na ${esc(state.dataMeta.date)}` : ''
+      }.</p>
       <p>„Koła” w aplikacji to dzierżawcy obwodów zgrupowani po nazwie. Ta sama nazwa zapisana na różne sposoby może pojawić się jako osobne pozycje.</p>
       <h2>Warstwy dodatkowe</h2>
       <ul><li><b>Nadleśnictwa</b> – granice nadleśnictw Lasów Państwowych.</li>
@@ -681,10 +689,13 @@ function renderAbout() {
       <li><b>Zagrożenie pożarowe</b> – bieżący stopień zagrożenia pożarowego lasów.</li></ul>
       <h2>Przydatne linki</h2>`
         : `<h2>Where does the data come from?</h2>
-      <p>Hunting district boundaries and leaseholder information are loaded live from the public service of the
+      <p>Hunting district boundaries and leaseholder information come from the public service of the
       <a href="https://www.bdl.lasy.gov.pl/portal/obwody-lowieckie" target="_blank" rel="noopener">Forest Data Bank (BDL)</a>, run by the Forest Management and Geodesy Bureau
       for the Polish Ministry of Climate and Environment. Boundaries come from voivodeship assembly resolutions (marshal offices); leaseholder data comes from the
       Polish Hunting Association (PZŁ) and State Forests. BDL refreshes it once a year with the annual hunting plans.</p>
+      <p>Map boundaries are loaded from BDL as you go. The club and district list (leaseholders, numbers, areas) is kept by the website and the app and refreshed from BDL weekly${
+        state.dataMeta ? `; the current list is as of ${esc(state.dataMeta.date)}` : ''
+      }.</p>
       <p>“Clubs” in this app are leaseholders grouped by name. The same club spelled differently may appear twice.</p>
       <h2>Extra layers</h2>
       <ul><li><b>Forest districts</b> – State Forests forest district (nadleśnictwo) boundaries.</li>
@@ -810,15 +821,23 @@ content.addEventListener('click', (e) => {
     case 'retry':
       load();
       break;
-    case 'appUpdate':
+    case 'appUpdate': {
       el.setAttribute('disabled', '');
-      void checkForAppUpdate(showUpdateBanner, true).then((r) => {
+      const pl = getLang() === 'pl';
+      void Promise.all([
+        checkForAppUpdate(showUpdateBanner, true),
+        updateDistricts(true).then(
+          (changed) => (changed ? 'newer' : 'current'),
+          () => 'error' as const,
+        ),
+      ]).then(([app, data]) => {
         el.removeAttribute('disabled');
-        const pl = getLang() === 'pl';
-        if (r === 'current') toast(pl ? 'Masz najnowszą wersję aplikacji.' : 'You have the latest version of the app.');
-        if (r === 'error') toast(pl ? 'Nie udało się sprawdzić. Brak internetu?' : 'Could not check. No internet?');
+        if (app === 'error' || data === 'error') toast(pl ? 'Nie udało się sprawdzić. Brak internetu?' : 'Could not check. No internet?');
+        else if (app === 'current' && data === 'current')
+          toast(pl ? 'Masz najnowszą wersję aplikacji i danych.' : 'You have the latest app and data.');
       });
       break;
+    }
     case 'weatherHere':
       if (state.view.kind === 'point') {
         showWeatherAt(state.view.lat, state.view.lng);
@@ -911,25 +930,45 @@ $('#locate').addEventListener('click', () => {
 
 // ---------------------------------------------------------------- boot
 
+function useDistricts(list: DistrictList) {
+  state.districts = list.districts;
+  state.dataMeta = list.meta;
+  state.clubs = groupClubs(state.districts);
+  state.clubsByKey = new Map(state.clubs.map((c) => [c.key, c]));
+}
+
 async function load() {
   state.error = '';
   state.progress = [0, 0];
   render();
   try {
-    state.districts = await fetchAllDistricts((a, b) => {
-      state.progress = [a, b];
-      if (!state.loaded) render();
-    });
-    state.clubs = groupClubs(state.districts);
-    state.clubsByKey = new Map(state.clubs.map((c) => [c.key, c]));
+    useDistricts(
+      await loadDistrictList((a, b) => {
+        state.progress = [a, b];
+        if (!state.loaded) render();
+      }),
+    );
     state.loaded = true;
     render();
     // Re-run map effects for deep links that needed the data.
     if (state.view.kind === 'district' || state.view.kind === 'club') onViewMapEffects(state.view);
+    void updateDistricts(false).catch(() => {
+      /* no internet: the built-in list stays */
+    });
   } catch (e) {
     state.error = (e as Error).message;
     render();
   }
+}
+
+/** App only: takes a newer district list from www.polowanie.org. True when it changed. */
+async function updateDistricts(force: boolean): Promise<boolean> {
+  const list = await checkDistrictUpdate(state.dataMeta, force);
+  if (!list) return false;
+  useDistricts(list);
+  render();
+  toast(getLang() === 'pl' ? `Zaktualizowano listę kół i obwodów (stan na ${list.meta!.date}).` : `Club and district list updated (as of ${list.meta!.date}).`);
+  return true;
 }
 
 // ---------------------------------------------------------------- offline

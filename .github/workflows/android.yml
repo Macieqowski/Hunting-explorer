@@ -16,6 +16,8 @@ on:
       - 'android/**'
       - 'capacitor.config.ts'
       - 'src/platform.ts'
+      - 'src/native.ts'
+      - 'scripts/snapshot-districts.mjs'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/android.yml'
@@ -72,6 +74,8 @@ jobs:
           echo "Wersja $v (kod $code), wydanie: $release"
 
       - run: npm ci
+      - name: Club and district list from BDL
+        run: node scripts/snapshot-districts.mjs
       - name: Build the web app
         run: npm run build
         env:
