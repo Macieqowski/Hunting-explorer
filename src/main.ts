@@ -23,7 +23,7 @@ import { SEASONS, isOpen, effective, formatRanges, yearFrac, openOnlyIn, type Se
 import { renderExams, handleExamClick, handleExamChange, drillSpecies } from './examUi';
 import { renderWeather, handleWeatherClick, handleWeatherInput, handleWeatherSubmit, showWeatherAt } from './weatherUi';
 import { renderBallistics, handleBallisticsClick, handleBallisticsChange, handleBallisticsSubmit } from './ballisticsUi';
-import { renderHunts, handleHuntClick, handleHuntInput, handleHuntSubmit, handleHuntChange, leaveHunts, mountHuntMap } from './huntUi';
+import { renderHunts, handleHuntClick, handleHuntInput, handleHuntSubmit, handleHuntChange, leaveHunts, mountHuntMap, huntBack } from './huntUi';
 import { renderAtlas, handleAtlasClick, handleAtlasInput, setAtlasVoivodeship } from './atlasUi';
 import { speciesForSeason } from './atlas';
 import { initOffline, onOfflineChange } from './offline';
@@ -791,6 +791,10 @@ $('#tabs').addEventListener('click', (e) => {
   mapApi.clearHighlight();
   if (sheet.get() === 'peek') sheet.set('half');
   navigate({ kind: 'tab', tab: b.dataset.tab as Tab });
+});
+// Escape closes what is on top: the hunt's field-mode list, then field mode itself.
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && areaOf(state.view) === 'hunt' && !document.querySelector('.hs-sheet, .hmsg-sheet, #pp-root') && huntBack()) e.preventDefault();
 });
 // Typing in a search field needs the room: the sheet opens fully.
 content.addEventListener('focusin', (e) => {

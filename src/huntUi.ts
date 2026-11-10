@@ -581,6 +581,31 @@ const L = {
     en: 'Messages reach phones with the app open (pocket mode too). They do not replace horn signals or radio.',
   },
   msgEmpty: { pl: 'Wpisz treść wiadomości.', en: 'Type the message.' },
+  // hunt page tabs and field mode
+  tabField: { pl: 'Teren', en: 'Field' },
+  tabInfo: { pl: 'Informacje', en: 'Details' },
+  tabPeople: { pl: 'Uczestnicy', en: 'People' },
+  tabPokot: { pl: 'Pokot', en: 'Bag' },
+  huntTabs: { pl: 'Części polowania', en: 'Parts of the hunt' },
+  fmOn: { pl: 'Tryb terenowy', en: 'Field mode' },
+  fmHint: { pl: 'Mapa na cały ekran i duże przyciski. Na czas miotu.', en: 'Full-screen map and big buttons. For the drive.' },
+  fmExit: { pl: 'Wyjdź z trybu terenowego', en: 'Leave field mode' },
+  fmSeat: { pl: 'Stanowisko', en: 'Stand' },
+  fmRoute: { pl: 'Trasa', en: 'Route' },
+  fmRouteSet: { pl: 'wyznaczona', en: 'set' },
+  fmDrive: { pl: 'Miot', en: 'Drive' },
+  fmLoc: { pl: 'Lokalizacja', en: 'Location' },
+  fmLocOn: { pl: 'wysyłana', en: 'sharing' },
+  fmLocStarting: { pl: 'łączenie…', en: 'starting…' },
+  fmLocOff: { pl: 'wyłączona', en: 'off' },
+  fmShareAsk: {
+    pl: 'Nie udostępniasz położenia: prowadzący i inni uczestnicy nie widzą Cię na mapie.',
+    en: 'You are not sharing your location: the leader and the others cannot see you on the map.',
+  },
+  fmNear: { pl: 'Sąsiednie stanowiska', en: 'Neighbouring stands' },
+  fmClose: { pl: 'Zamknij', en: 'Close' },
+  fmPocket: { pl: 'Kieszeń', en: 'Pocket' },
+  fmPendingPokot: { pl: 'Pokot zobaczysz, gdy prowadzący potwierdzi Twój udział.', en: 'You will see the bag once the leader confirms you.' },
 } as const;
 const l = (k: keyof typeof L) => tt(L[k]);
 
@@ -799,6 +824,46 @@ let seatEdit = false;
 const SHARE_KEY = 'huntSharing';
 
 const NAME_KEY = 'huntPersonName';
+// ---- the hunt page: four tabs, and the full-screen field mode for the drive
+type HTab = 'field' | 'info' | 'people' | 'pokot';
+let htab: HTab = 'field';
+type FieldPanel = 'msgs' | 'people' | 'drives' | 'pokot';
+/** Field mode: the map fills the screen, with the few things needed during a drive around it. */
+let fieldMode = false;
+/** What is pulled up over the map in field mode. */
+let fieldPanel: FieldPanel | null = null;
+let fieldPanelScroll = 0;
+const FIELD_KEY = 'huntFieldMode';
+/** Field mode is remembered for the hunt, so it comes back after the phone reloads the page. */
+function setFieldMode(on: boolean) {
+  fieldMode = on;
+  fieldPanel = null;
+  fieldPanelScroll = 0;
+  try {
+    if (on && watched) localStorage.setItem(FIELD_KEY, watched);
+    else localStorage.removeItem(FIELD_KEY);
+  } catch {
+    /* no storage: it lasts until the page is closed */
+  }
+}
+const rememberedField = (): string | null => {
+  try {
+    return localStorage.getItem(FIELD_KEY);
+  } catch {
+    return null;
+  }
+};
+/** True while the field-mode screen is what the person sees (Android's back button closes it first). */
+export function huntBack(): boolean {
+  if (!fieldMode || !document.querySelector('.hf')) return false;
+  if (fieldPanel) fieldPanel = null;
+  else setFieldMode(false);
+  rerender();
+  return true;
+}
+/** These actions point at something on the map, so whatever covers it steps aside. */
+const MAP_ACTIONS = new Set(['carcassShow', 'carcassPick', 'carcassGuide', 'sightShow', 'standShow', 'meetPick', 'centerMe', 'fitAll']);
+
 const storedName = () => {
   try {
     return localStorage.getItem(NAME_KEY) ?? '';
@@ -1391,6 +1456,8 @@ export function mountHuntMap() {
   syncGuide();
   if (showTracks) m.setTracks(lastTracks, people());
   updateLiveText();
+  const body = document.querySelector('.hf-panel-body');
+  if (body) body.scrollTop = fieldPanelScroll;
 }
 
 let lastTracks: Map<string, TrackPoint[]> | null = null;
@@ -1448,6 +1515,8 @@ function updateLiveText() {
   if (el) el.innerHTML = liveCounts();
   const sent = document.querySelector('.h-share-sent');
   if (sent && sharer?.lastSentAt) sent.textContent = `${l('lastSent')} ${ago(Date.now() - sharer.lastSentAt)}`;
+  const timer = document.querySelector<HTMLElement>('.hf-timer[data-since]');
+  if (timer) timer.textContent = fieldElapsed(+timer.dataset.since!);
   updatePocket();
 }
 
@@ -1617,6 +1686,10 @@ function setRoute(id: string | null) {
   leadOpen = null;
   pairCode = null;
   pairedNote = null;
+  htab = 'field';
+  fieldPanel = null;
+  fieldPanelScroll = 0;
+  fieldMode = !!id && rememberedField() === id;
   if (id) subscribe(id);
   else mine = { s: 'idle' };
 }
@@ -1823,7 +1896,7 @@ function renderLive(h: Hunt, me: Participant): string {
       share = `<div class="h-share on" role="status"><span class="h-share-dot" aria-hidden="true"></span>
         <div><strong>${st === 'on' ? l('shareOn') : l('shareStarting')}</strong><br><small class="h-share-sent muted"></small>
         <small class="muted">${l(isApp() ? 'shareInBackground' : 'shareKeepOpen')}</small></div>
-        <div class="h-share-btns"><button type="button" class="btn" data-hunt="pocket" title="${esc(l('pocketHint'))}">${l('pocket')}</button>
+        <div class="h-share-btns"><button type="button" class="btn" data-hunt="pocket" title="${esc(l('pocketHint'))}">${l('fmPocket')}</button>
         <button type="button" class="btn danger" data-hunt="shareStop">${l('shareStop')}</button></div></div>`;
     else {
       const problem =
@@ -1855,7 +1928,16 @@ function renderLive(h: Hunt, me: Participant): string {
     : '';
   const mine = drawing || planning || remote ? '' : `${h.status === 'live' ? renderMyRoute(me) : ''}${h.status !== 'ended' ? renderMySeat(me) : ''}`;
   const msgs = isLead ? '' : renderMessages(false, h);
-  return `<h3>${l('mapTitle')}</h3>${t}${mine}${msgs}${report}${share}${renderDrives(h, isLead)}${drawing || planning ? '' : `${isLead ? renderSeatsLeader() : ''}${renderStands(isLead)}`}
+  const enter =
+    h.status === 'live' && !remote && !drawing && !planning
+      ? `<button type="button" class="hf-enter" data-hunt="fieldOn">${ic('expand', 22)}<span><strong>${l('fmOn')}</strong><small>${l('fmHint')}</small></span>${ic('chevron', 20)}</button>`
+      : '';
+  // Starting the hunt is the leader's next step on the day, so it is offered here too, not only under "Informacje".
+  const start =
+    isLead && !drawing && !planning && (h.status === 'open' || h.status === 'closed')
+      ? `<div class="h-actions h-startbar"><button type="button" class="btn" data-hunt="status" data-to="live"${btnBusy()}>${l('to_live')}</button></div>`
+      : '';
+  return `${t}${isLead ? '' : errorBox()}${enter}${start}${mine}${msgs}${report}${share}${renderDrives(h, isLead)}${drawing || planning ? '' : `${isLead ? renderSeatsLeader() : ''}${renderStands(isLead)}`}
     <div class="hm-bar"${drawing ? ' hidden' : ''}><div class="hm-counts">${liveCounts()}</div>
       <div class="hm-tools">
         ${iShare ? `<button type="button" class="btn small ghost" data-hunt="centerMe">${ic('locate', 16)} ${l('centerMe')}</button>` : ''}
@@ -1865,12 +1947,114 @@ function renderLive(h: Hunt, me: Participant): string {
         ${h.district && saveOfflineCb ? `<button type="button" class="btn small ghost" data-hunt="saveOffline">${ic('download', 16)} ${l('saveOffline')}</button>` : ''}
       </div></div>
     ${picking}<div class="hm-slot"></div>
-    ${drawing || planning ? '' : `${renderCarcasses(isLead)}${isLead ? renderMessages(true, h) : ''}<h4>${l('sightings')}</h4><div class="hs-list">${sightListHtml()}</div>${renderPokot(pokotCtx(h))}`}`;
+    ${drawing || planning ? '' : `${renderCarcasses(isLead)}${isLead ? renderMessages(true, h) : ''}<h4>${l('sightings')}</h4><div class="hs-list">${sightListHtml()}</div>`}`;
+}
+
+const fieldElapsed = (since: number) => `${Math.max(0, Math.floor((now() - since) / 60e3))} min`;
+
+/** Who stands on the numbers next to mine in the drive to come ("6 Piotr · 8 Adam"). */
+function seatNeighbours(me: Participant): string {
+  const d = upcoming();
+  const m = d ? seats.get(d.id) : undefined;
+  const mineSeat = m?.get(me.uid)?.trim() ?? '';
+  if (!m || !/^\d+$/.test(mineSeat)) return '';
+  const near = [...m]
+    .filter(([u, seat]) => u !== me.uid && /^\d+$/.test(seat.trim()) && Math.abs(+seat - +mineSeat) === 1)
+    .sort((a, b) => +a[1] - +b[1])
+    .map(([u, seat]) => `<strong>${esc(seat.trim())} ${esc(personName(u))}</strong>`);
+  return near.length ? `${l('fmNear')}: ${near.join(' · ')}` : '';
+}
+
+/**
+ * Field mode: what a hunter or beater needs during a drive and nothing else. The map fills the
+ * screen; above it the drive, the stand and whether the position is being sent; below it the
+ * big buttons. Lists (people, drives, pokot, messages) pull up over the map and close again.
+ */
+function renderField(h: Hunt, me: Participant, isLead: boolean): string {
+  const act = activeDrive(drives);
+  const next = drives.find((d) => driveState(d) === 'planned');
+  const title = act ? act.name : next ? `${l('dNext')}: ${next.name}` : h.name;
+  const timer = act?.startedAt
+    ? `<span class="hf-timer" data-since="${act.startedAt}">${fieldElapsed(act.startedAt)}</span>`
+    : next
+      ? `<span class="hf-timer">${esc(next.start)}</span>`
+      : '';
+  const st = sharer && sharer.huntId === h.id ? sharer.state : 'off';
+  const sharing = st === 'on' || st === 'starting';
+  const d = upcoming();
+  const seat = d ? seats.get(d.id)?.get(me.uid) : undefined;
+  const route = d ? routes.get(d.id)?.get(me.uid) : undefined;
+  const cur = act ?? next;
+  const driveNo = cur ? `${drives.indexOf(cur) + 1}/${drives.length}` : drives.length ? `${drives.length}/${drives.length}` : '—';
+  const cell = (panel: FieldPanel, label: string, value: string, cls = '') =>
+    `<button type="button" data-hunt="fieldPanel" data-panel="${panel}"><small>${label}</small><b class="${cls}">${value}</b></button>`;
+  const first = me.role === 'beater' ? cell('drives', l('fmRoute'), route ? l('fmRouteSet') : '—') : cell('drives', l('fmSeat'), seat ? esc(seat) : '—', 'hf-seat');
+  const loc = `<div class="hf-loc${sharing ? ' on' : ''}"><small>${l('fmLoc')}</small><b><span class="hf-dot" aria-hidden="true"></span>${l(st === 'on' ? 'fmLocOn' : st === 'starting' ? 'fmLocStarting' : 'fmLocOff')}</b></div>`;
+  const problem =
+    st === 'denied' ? l(isApp() ? 'shareDeniedApp' : 'shareDenied') : st === 'unavailable' ? l('shareUnavailable') : st === 'error' ? `${l('shareStopped')} ${sharer?.error ?? ''}` : '';
+  const ask = sharing
+    ? ''
+    : `<div class="hf-ask" role="status"><span>${esc(problem || l('fmShareAsk'))}</span><button type="button" class="btn small" data-hunt="shareStart">${l('shareStart')}</button></div>`;
+  const t =
+    toast && Date.now() < toast.until
+      ? `<div class="hd-toast" role="alert"><span>${esc(toast.text)}</span>${toast.undo ? `<button type="button" class="btn small" data-hunt="${toast.undoKind === 'shot' ? 'shotUndo' : 'sightUndo'}" data-sid="${esc(toast.undo)}">${l('sightUndo')}</button>` : ''}</div>`
+      : '';
+  const picking = pickMode
+    ? `<div class="notice hr-pickbar"><span>${l(pickMode.kind === 'huntMeet' ? 'meetPick' : 'cPickHint')}</span><button type="button" class="btn small ghost" data-hunt="pickCancel">${l('pickCancel')}</button></div>`
+    : '';
+  const canShoot = me.role !== 'beater';
+  const unread = isLead ? 0 : myUnacked().length;
+  const near = canShoot ? seatNeighbours(me) : '';
+  const panelTitle: Record<FieldPanel, string> = { msgs: l('messages'), people: l('participants'), drives: l('drives'), pokot: l('tabPokot') };
+  let panel = '';
+  if (fieldPanel) {
+    fieldPanelScroll = document.querySelector('.hf-panel-body')?.scrollTop ?? fieldPanelScroll;
+    const body =
+      fieldPanel === 'msgs'
+        ? renderMessages(isLead, h) || `<p class="muted">${l('msgNone')}</p>`
+        : fieldPanel === 'people'
+          ? renderMembers(myUid(), isLead)
+          : fieldPanel === 'drives'
+            ? `${renderDrives(h, isLead, true)}${isLead ? renderSeatsLeader() : renderMySeat(me)}`
+            : `${renderCarcasses(isLead)}${renderPokot(pokotCtx(h))}<h4>${l('sightings')}</h4><div class="hs-list">${sightListHtml()}</div>`;
+    panel = `<div class="hf-scrim" data-hunt="fieldPanel" data-panel=""></div>
+      <section class="hf-panel" role="dialog" aria-label="${esc(panelTitle[fieldPanel])}">
+        <header><h3>${esc(panelTitle[fieldPanel])}</h3><button type="button" class="btn small ghost" data-hunt="fieldPanel" data-panel="">${ic('x', 16)} ${l('fmClose')}</button></header>
+        <div class="hf-panel-body hf-p-${fieldPanel}">${!isLead || fieldPanel === 'msgs' || fieldPanel === 'pokot' ? errorBox() : ''}${body}</div>
+      </section>`;
+  }
+  const iShare = !!sharer?.active && sharer.huntId === h.id;
+  return `<div class="hf">
+    <header class="hf-top${act ? ' live' : ''}">
+      <button type="button" class="hf-exit" data-hunt="fieldOff" aria-label="${esc(l('fmExit'))}" title="${esc(l('fmExit'))}">${ic('back', 24)}</button>
+      <h2>${act ? '<span class="hd-dot" aria-hidden="true"></span>' : ''}<span>${esc(title)}</span></h2>${timer}
+      ${iShare ? `<button type="button" class="hf-pocket" data-hunt="pocket" title="${esc(l('pocketHint'))}">${l('fmPocket')}</button>` : ''}
+    </header>
+    <div class="hf-info">${first}${cell('drives', l('fmDrive'), driveNo)}${loc}</div>
+    ${ask}${t}${picking}${renderMyRoute(me)}
+    <div class="hf-map"><div class="hm-slot"></div>
+      ${iShare ? `<button type="button" class="hf-center" data-hunt="centerMe" aria-label="${esc(l('centerMe'))}" title="${esc(l('centerMe'))}">${ic('locate', 22)}</button>` : ''}
+    </div>
+    <footer class="hf-bottom">
+      ${near ? `<p class="hf-near">${near}</p>` : ''}
+      <div class="hf-actions${canShoot ? '' : ' hf-two'}">
+        <button type="button" class="hf-btn hf-game" data-hunt="sightOpen" aria-label="${esc(l('sightReportHint'))}">${speciesIcon('boar', 34)}<span>${l('sightReport')}</span></button>
+        ${canShoot ? `<button type="button" class="hf-btn hf-shot" data-hunt="shotFire" aria-label="${esc(l('shotHint'))}">${ic('crosshair', 34)}<span>${l('shot')}</span></button>` : ''}
+        <button type="button" class="hf-btn" data-hunt="fieldPanel" data-panel="msgs">${ic('message', 34)}<span>${l('messages')}</span>${unread ? `<span class="hf-badge">${unread}</span>` : ''}</button>
+      </div>
+      <div class="hf-links">
+        <button type="button" data-hunt="fieldPanel" data-panel="people">${l('participants')}</button>
+        <button type="button" data-hunt="fieldPanel" data-panel="drives">${l('drives')} ${driveNo === '—' ? '' : driveNo}</button>
+        <button type="button" data-hunt="fieldPanel" data-panel="pokot">${l('tabPokot')}</button>
+      </div>
+    </footer>
+    ${panel}
+  </div>`;
 }
 
 const clock = (ms: number) => new Date(ms).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
 
-function renderDrives(h: Hunt, isLeader: boolean): string {
+function renderDrives(h: Hunt, isLeader: boolean, forceOpen = false): string {
   const act = activeDrive(drives);
   const next = drives.find((d) => driveState(d) === 'planned');
   let strip = '';
@@ -1913,7 +2097,7 @@ function renderDrives(h: Hunt, isLeader: boolean): string {
       ? `<button type="button" class="btn small" data-hunt="driveNew">${l('addDrive')}</button>`
       : `<p class="muted small">${l('dMax')}</p>`
     : '';
-  const open = driveListOpen ?? (isLeader || h.status !== 'live' || !drives.length);
+  const open = forceOpen || (driveListOpen ?? (isLeader || h.status !== 'live' || !drives.length));
   return `${strip}<details class="hd-box"${open ? ' open' : ''}><summary data-hunt="driveList" data-open="${open}"><strong>${l('drives')}</strong> <span class="muted">(${drives.length})</span></summary>
     ${list}${add}${isLeader ? errorBox() : ''}</details>`;
 }
@@ -2079,8 +2263,8 @@ function renderHunt(): string {
   const isLeader = leads(h, uid);
   const remote = isLeader && !!members && !members.some((p) => p.uid === uid);
   const me: Participant | undefined = members?.find((p) => p.uid === uid) ?? (remote ? { uid, name: h.leaderName, role: 'leader', status: 'confirmed', joinedAt: 0 } : undefined);
-  const info = `<article class="card h-head">
-      <div class="h-title"><h2>${esc(h.name)}</h2>${statusBadge(h.status)}</div>
+  const info = (withTitle: boolean) => `<article class="card h-head">
+      ${withTitle ? `<div class="h-title"><h2>${esc(h.name)}</h2>${statusBadge(h.status)}</div>` : ''}
       <dl class="kv">
         <dt>${l('when')}</dt><dd>${esc(fmtDate(h.date))}<br>${esc(h.start)}–${esc(h.end)}</dd>
         ${h.place ? `<dt>${l('where')}</dt><dd>${esc(h.place)}</dd>` : ''}
@@ -2091,18 +2275,38 @@ function renderHunt(): string {
       ${h.notes ? `<p class="h-notes">${esc(h.notes).replace(/\n/g, '<br>')}</p>` : ''}
     </article>`;
   if (editing && isLeader) return `${back}${renderHuntForm('edit')}`;
-  if (!membersLoaded) return `${back}${info}<p class="muted">${l('loading')}</p>`;
+  if (!membersLoaded) return `${back}${info(true)}<p class="muted">${l('loading')}</p>`;
   const pairing = pairToken && pairToken.id === h.id ? renderPairAsk(h) : '';
   if (!me) {
     syncLive();
-    return `${back}${info}${pairing || renderJoin(h)}`;
+    return `${back}${info(true)}${pairing || renderJoin(h)}`;
   }
   syncLive();
   if (isLeader) watchInvites(h.id);
-  const crew = me.status === 'confirmed' ? renderTransport(isLeader) : '';
+  const confirmed = me.status === 'confirmed';
+  // Drawing on the map or picking a point on it happens on the map's tab.
+  if (driveEdit || routeEdit || standEdit || pickMode) htab = 'field';
+  if (fieldMode && confirmed && h.status === 'live' && !remote && !driveEdit && !routeEdit && !standEdit) return renderField(h, me, isLeader);
+  const crew = confirmed ? renderTransport(isLeader) : '';
   const meBox = remote ? renderRemoteLead(h) : renderMe(me, isLeader);
   const leadBox = isLeaderDevice(h, uid) ? renderLeadDevices(h) : isDeputy(h, uid) ? `<div class="notice small">${l('deputyYou')}</div>` : '';
-  return `${back}${info}${pairing}${meBox}${leadBox}${renderLive(h, me)}${crew}${isLeader ? renderInvite(h) : ''}${renderMembers(uid, isLeader)}${isLeader ? renderManage(h) : ''}`;
+  const head = `<div class="h-title h-top"><h2>${esc(h.name)}</h2>${statusBadge(h.status)}</div>
+    <p class="muted small h-when">${esc(fmtDate(h.date, false))}, ${esc(h.start)}–${esc(h.end)}${h.place ? ` · ${esc(h.place)}` : ''}</p>`;
+  const ps = members ?? [];
+  const pending = isLeader ? ps.filter((p) => p.status === 'registered').length : 0;
+  const tab = (id: HTab, label: string, extra = '') =>
+    `<button type="button" role="tab" data-hunt="htab" data-pane="${id}" aria-selected="${htab === id}">${label}${extra}</button>`;
+  const tabs = `<div class="h-tabs" role="tablist" aria-label="${esc(l('huntTabs'))}">${tab('field', l('tabField'))}${tab('info', l('tabInfo'))}${tab(
+    'people',
+    l('tabPeople'),
+    pending ? ` <span class="h-tabbadge">${pending}</span>` : ` <span class="h-tabcount">${ps.length}</span>`,
+  )}${tab('pokot', l('tabPokot'))}</div>`;
+  const pane = (id: HTab, html: string) => `<section class="h-pane" data-hpane="${id}"${htab === id ? '' : ' hidden'}>${html}</section>`;
+  return `${back}${head}${pairing}${tabs}
+    ${pane('field', renderLive(h, me))}
+    ${pane('info', `${info(false)}${leadBox}${crew}${isLeader ? `${renderManage(h)}${errorBox()}` : ''}`)}
+    ${pane('people', `${meBox}${isLeader ? renderInvite(h) : ''}${renderMembers(uid, isLeader)}`)}
+    ${pane('pokot', confirmed ? renderPokot(pokotCtx(h)) : `<div class="notice">${l('fmPendingPokot')}</div>`)}`;
 }
 
 function renderJoin(h: Hunt): string {
@@ -2833,7 +3037,25 @@ export function handleHuntClick(el: HTMLElement): boolean {
   if (!action) return false;
   const id = watched;
   const uid = el.dataset.uid ?? '';
+  if (fieldPanel && MAP_ACTIONS.has(action)) {
+    fieldPanel = null;
+    rerender();
+  }
   switch (action) {
+    case 'htab':
+      htab = el.dataset.pane as HTab;
+      break;
+    case 'fieldOn':
+      setFieldMode(true);
+      break;
+    case 'fieldOff':
+      setFieldMode(false);
+      htab = 'field';
+      break;
+    case 'fieldPanel':
+      fieldPanel = (el.dataset.panel as FieldPanel) || null;
+      fieldPanelScroll = 0;
+      break;
     case 'saveOffline':
       if (hunt?.district) saveOfflineCb?.(hunt.district);
       break;
