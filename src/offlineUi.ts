@@ -21,7 +21,7 @@ import {
   type SavedArea,
   type StorageInfo,
 } from './offline';
-import { boxKm2, type Box, type Detail } from './tiles';
+import { boxKm2, DETAILS, isDetail, type Box, type Detail } from './tiles';
 import { isApp } from './platform';
 import { fetchDistrictsAtPoint, fetchDistrictsByIds, fetchOutlinesInBounds, type District, type DistrictWithGeometry } from './bdl';
 import { districtMatches, fold, searchTerms, type Club } from './data';
@@ -103,6 +103,13 @@ const L = {
   detail: { pl: 'Dokładność', en: 'Detail' },
   d16: { pl: 'Standardowa (zoom 16)', en: 'Standard (zoom 16)' },
   d17: { pl: 'Dokładniejsze zdjęcie lotnicze (zoom 17)', en: 'Closer aerial photo (zoom 17)' },
+  d18: { pl: 'Najdokładniejsze zdjęcie lotnicze (zoom 18)', en: 'Closest aerial photo (zoom 18)' },
+  d18TooBig: { pl: 'Za duży obszar na zoom 18 (ponad 2 GB) – wybierz mniej obwodów.', en: 'Too large for zoom 18 (over 2 GB) – choose fewer districts.' },
+  detailHint: {
+    pl: 'Bliżej niż zapisany zoom mapa powiększa zapisane zdjęcie od razu, a gdy jest internet, podmienia je na ostrzejsze.',
+    en: 'Closer than the saved zoom the map enlarges the saved photo straight away, and with internet swaps in a sharper one.',
+  },
+  about: { pl: 'ok.', en: 'about' },
   download: { pl: 'Pobierz', en: 'Download' },
   cancel: { pl: 'Anuluj', en: 'Cancel' },
   tooBig: { pl: 'Za mało wolnego miejsca na ten obszar.', en: 'Not enough free space for this area.' },
@@ -130,6 +137,13 @@ const L = {
 const l = (k: keyof typeof L) => tt(L[k]);
 const esc = (s: unknown) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+/** Download time, roughly: "ok. 12 min", "ok. 1 godz. 20 min". */
+const mins = (m: number) => {
+  if (m < 1) return '< 1 min';
+  const r = Math.round(m);
+  const h = Math.floor(r / 60);
+  return `${l('about')} ${h ? `${h} ${getLang() === 'pl' ? 'godz.' : 'h'} ` : ''}${r % 60 || !h ? `${r % 60} min` : ''}`.trim();
+};
 const mb = (bytes: number) => (bytes >= 1e9 ? `${fmtNum(bytes / 1e9, 1)} GB` : `${fmtNum(Math.max(bytes / 1e6, 0.1), bytes < 1e7 ? 1 : 0)} MB`);
 
 export interface OfflineUiHost {
@@ -149,6 +163,8 @@ let host: OfflineUiHost = { rerender: () => {}, mapBox: () => null, showBoxes: (
 
 /** Most districts saved together: a district is ~60 MB at zoom 16. */
 export const MAX_PICK = 30;
+/** Largest save at zoom 18, in bytes: a district is about 250 MB, 2 GB nearly two hours' download. */
+const MAX_D18_BYTES = 2e9;
 const PICK_RESULTS = 40;
 const PICK_CLUBS = 6;
 /** Largest map view whose districts are listed for picking, in km² (about 25 districts). */
@@ -412,8 +428,10 @@ function renderDraft(): string {
   const free = storage?.quota != null && storage.usage != null ? storage.quota - storage.usage : null;
   const opt = (v: Detail) => {
     const e = draftEstimate(d, v);
-    return `<label class="off-opt"><input type="radio" name="offDetail" data-offline="detail" value="${v}"${detail === v ? ' checked' : ''} />
-      <span>${l(v === 16 ? 'd16' : 'd17')} <b>~${mb(e.mb * 1e6 * 1.048576)}</b></span></label>`;
+    const bytes = e.mb * 1.048576e6;
+    const off = v === 18 && bytes > MAX_D18_BYTES;
+    return `<label class="off-opt${off ? ' disabled' : ''}"><input type="radio" name="offDetail" data-offline="detail" value="${v}"${detail === v && !off ? ' checked' : ''}${off ? ' disabled' : ''} />
+      <span>${l(`d${v}`)} <b>~${mb(bytes)}</b> <span class="muted">· ${mins(e.minutes)}</span>${off ? `<br><span class="muted small">${l('d18TooBig')}</span>` : ''}</span></label>`;
   };
   const need = draftEstimate(d, detail).mb * 1.048576e6;
   const tooBig = free != null && need > free * 0.9;
@@ -421,7 +439,7 @@ function renderDraft(): string {
     <p class="eyebrow">${l('newArea')}</p>
     <h3>${esc(d.name)}</h3>
     <p class="muted small">${d.ids.length > 1 || d.kind === 'club' ? `${l('districtsN')}: ${d.ids.length} · ` : ''}${fmtNum(draftKm2(d))} km²</p>
-    <fieldset class="off-detail"><legend>${l('detail')}</legend>${opt(16)}${opt(17)}</fieldset>
+    <fieldset class="off-detail"><legend>${l('detail')}</legend>${DETAILS.map(opt).join('')}<p class="muted small">${l('detailHint')}</p></fieldset>
     ${tooBig ? `<p class="notice error small">${l('tooBig')}</p>` : ''}
     <div class="actions"><button type="button" class="btn" data-offline="save"${tooBig || !navigator.onLine ? ' disabled' : ''}>${l('download')}</button>${cancel}</div>
   </div>`;
@@ -519,7 +537,10 @@ export function handleOfflineEvent(el: HTMLElement): boolean {
       break;
     }
     case 'detail':
-      detail = Number((el as HTMLInputElement).value) === 17 ? 17 : 16;
+      {
+        const v = Number((el as HTMLInputElement).value);
+        detail = isDetail(v) ? v : 16;
+      }
       break;
     case 'save':
       if (draft?.s === 'ready') {
