@@ -1158,3 +1158,23 @@ input[type='checkbox'], input[type='radio'] { width: 18px; height: 18px; accent-
 .hg-tip { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0 0; padding: 9px 11px; border-radius: var(--r-m); background: var(--surface-2); font-size: 0.88rem !important; }
 .hg-tip > .ic { flex: none; margin-top: 2px; color: var(--accent); }
 @media (max-width: 420px) { .hg-ui { white-space: normal; } }
+
+/* Offline: choosing districts to save */
+.off-pick .searchbar { margin: 8px 0; }
+.off-pick-list { list-style: none; padding: 0; margin: 6px 0; display: grid; gap: 2px; max-height: 50vh; overflow-y: auto; }
+.off-pick-row { display: flex; gap: 10px; align-items: flex-start; padding: 8px 4px; border-radius: var(--r-s); cursor: pointer; min-height: 44px; }
+.off-pick-row:hover { background: var(--accent-soft); }
+.off-pick-row.disabled { opacity: 0.5; cursor: default; }
+.off-pick-row input { margin-top: 4px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+.off-pick-row strong { display: block; font-size: 0.95rem; }
+.off-pick-row .meta { display: block; font-size: 0.82rem; color: var(--muted); }
+.off-pick-head { display: flex; align-items: center; gap: 8px; margin: 10px 0 4px; }
+.off-pick-chosen { list-style: none; padding: 0; margin: 0 0 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+.off-pick-chosen .chip { display: inline-flex; align-items: center; gap: 4px; }
+.off-pick-chosen .chip button { border: 0; background: none; color: inherit; font-size: 1.1rem; line-height: 1; padding: 0 2px; cursor: pointer; min-width: 24px; min-height: 24px; }
+.off-pick-sub { font-weight: 600; color: var(--muted); margin: 10px 0 4px; }
+.off-pick-clubs { list-style: none; padding: 0; margin: 0 0 6px; display: grid; gap: 6px; }
+.off-pick-club { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r-s); }
+.off-pick-club > span { flex: 1 1 180px; min-width: 0; }
+.off-pick-club strong { display: block; font-size: 0.95rem; }
+.off-pick-club .meta { display: block; font-size: 0.82rem; color: var(--muted); }

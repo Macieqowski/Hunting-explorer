@@ -8,6 +8,8 @@ import {
   countByType,
   clubKey,
   fold,
+  districtMatches,
+  searchTerms,
   holderType,
   districtSlug,
   findBySlug,
@@ -29,7 +31,7 @@ import { renderHunts, handleHuntClick, handleHuntInput, handleHuntSubmit, handle
 import { renderAtlas, handleAtlasClick, handleAtlasInput, setAtlasVoivodeship } from './atlasUi';
 import { speciesForSeason } from './atlas';
 import { initOffline, onOfflineChange } from './offline';
-import { initOfflineUi, renderOffline, handleOfflineEvent, startDraft } from './offlineUi';
+import { initOfflineUi, renderOffline, handleOfflineEvent, handleOfflineInput, pickActive, pickAtPoint, startDraft } from './offlineUi';
 import type { AreaTarget } from './offline';
 import { loadDistrictList, checkDistrictUpdate, type DistrictList, type SnapshotMeta } from './districtData';
 import { isApp, publicHref, copyText, initDeepLinks, appVersion, checkForAppUpdate, dismissUpdate, onBackButton, minimizeApp, APK_URL } from './platform';
@@ -102,7 +104,11 @@ app.innerHTML = `
   <nav class="bottomnav" id="bottomnav"></nav>`;
 
 const content = $('#content');
-const mapApi: MapApi = createMap($('#map'), (lat, lng) => navigate({ kind: 'point', lat, lng }));
+const mapApi: MapApi = createMap($('#map'), (lat, lng) => {
+  // While districts are being chosen for offline maps, a tap ticks the district there.
+  if (state.view.kind === 'tab' && state.view.tab === 'offline' && pickActive()) return pickAtPoint(lat, lng);
+  navigate({ kind: 'point', lat, lng });
+});
 
 // The five destinations: a bar at the bottom on a phone, at the top on a computer (see nav.ts).
 // "map" keeps the map with its lists; every other area is a full-width page without the map.
@@ -375,18 +381,10 @@ function renderClubList() {
 }
 
 function renderDistrictList() {
-  const q = fold(state.q.districts.trim());
-  const terms = q.split(/\s+/).filter(Boolean);
+  const terms = searchTerms(state.q.districts);
   const list = state.districts
     .filter(matchFilters)
-    .filter(
-      (d) =>
-        !terms.length ||
-        terms.every((tm) =>
-          (d.hunt_dist_nr === tm) ||
-          fold([d.lease_holder_name, d.inspectorate_name, d.district_name, d.county_name, d.reg_mng_board_name].join(' ')).includes(tm),
-        ),
-    )
+    .filter((d) => districtMatches(d, terms))
     .sort((a, b) => (a.county_name ?? '').localeCompare(b.county_name ?? '', 'pl') || Number(a.hunt_dist_nr) - Number(b.hunt_dist_nr));
   return `<div class="searchbar"><input type="search" data-q="districts" placeholder="${esc(t('searchDistricts'))}" value="${esc(state.q.districts)}" aria-label="${esc(t('searchDistricts'))}" /></div>
     ${filterSelects(true)}
@@ -942,6 +940,7 @@ content.addEventListener('input', (e) => {
   if (handleWeatherInput(el)) return;
   if (el instanceof HTMLInputElement && handleAtlasInput(el, render)) return;
   if (handleHuntInput(el)) return;
+  if (handleOfflineInput(el)) return;
   const k = el.dataset.q as 'clubs' | 'districts' | undefined;
   if (!k) return;
   state.q[k] = el.value;
@@ -1066,6 +1065,9 @@ initOfflineUi({
     }
     if (s < n) mapApi.map.flyToBounds([[s, w], [n, e]], { duration: 0.6 });
   },
+  districts: () => (state.loaded ? state.districts : []),
+  clubs: () => (state.loaded ? state.clubs : []),
+  highlight: (items) => (items.length ? mapApi.highlight(items) : mapApi.clearHighlight()),
 });
 let offlineRenderTimer: ReturnType<typeof setTimeout> | undefined;
 onOfflineChange(() => {
