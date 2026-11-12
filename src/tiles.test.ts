@@ -1,4 +1,4 @@
-import { boxKm2, estimate, tileLister, latToY, lngToX, padBox, savePlan, tileBBox, tilesForBoxes, wmsTileUrl, WMS, type Box } from './tiles';
+import { boxKm2, estimate, tileLister, latToY, lngToX, padBox, savePlan, tileBBox, tilesForBoxes, wmsBlockUrl, wmsTileUrl, WMS, type Box } from './tiles';
 
 describe('tile math', () => {
   it('finds the slippy tile of a point (Warsaw, z12)', () => {
@@ -63,5 +63,21 @@ describe('tile math', () => {
   it('only saves layers whose terms allow it', () => {
     for (const p of savePlan(17)) expect(p.def.cache).toBe(true);
     expect(WMS.fire.cache).toBe(false);
+  });
+});
+
+describe('wmsBlockUrl', () => {
+  it('asks for n×n tiles in one image covering exactly their boxes', () => {
+    const u = new URL(wmsBlockUrl(WMS.ortho, 16, 36844, 21256, 4));
+    expect(u.searchParams.get('width')).toBe('1024');
+    expect(u.searchParams.get('height')).toBe('1024');
+    const bbox = u.searchParams.get('bbox')!.split(',').map(Number);
+    const tl = tileBBox(16, 36844, 21256);
+    const br = tileBBox(16, 36847, 21259);
+    expect(bbox).toEqual([tl[0], br[1], br[2], tl[3]].map((v) => +v.toFixed(2)));
+  });
+  it('keeps the other parameters of the single-tile URL', () => {
+    const one = wmsTileUrl(WMS.ortho, 12, 10, 20).replace(/&width.*$/, '');
+    expect(wmsBlockUrl(WMS.ortho, 12, 10, 20, 4).startsWith(one)).toBe(true);
   });
 });
