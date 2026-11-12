@@ -9,7 +9,7 @@ import {
   setTransport,
   type DistrictWithGeometry,
 } from './bdl';
-import { fetchLayerTile } from './cachedLayer';
+import { fetchLayerBlock, fetchLayerTile } from './cachedLayer';
 import {
   deleteArea,
   getAreaKeys,
@@ -262,18 +262,29 @@ function queue(id: string, refresh: boolean) {
 async function download(id: string, refresh: boolean, job: Job) {
   let a = areas.find((x) => x.id === id);
   if (!a || job.cancelled) return;
-  const tiles: string[] = [];
-  const defOf = new Map<string, WmsDef>();
-  const list = tileLister(tileAreaOf(a));
-  for (const p of savePlan(a.detail))
-    for (const [z, x, y] of list(p.minZ, p.maxZ)) {
-      const u = wmsTileUrl(p.def, z, x, y);
-      tiles.push(u);
-      defOf.set(u, p.def);
-    }
+  // Work comes in units: one tile, or for layers drawn in blocks, the tiles of one n×n block.
+  type Unit = { def: WmsDef; z: number; x: number; y: number; n: number; tiles: { url: string; x: number; y: number }[] };
+  const units: Unit[] = [];
+  let total = 0;
   const held = new Set(await getAreaKeys(id));
-  const todo = refresh ? tiles : tiles.filter((u) => !held.has(u));
-  a = { ...a, total: tiles.length, done: tiles.length - todo.length, failed: 0, status: 'downloading' };
+  const list = tileLister(tileAreaOf(a));
+  for (const p of savePlan(a.detail)) {
+    const n = p.def.meta ?? 1;
+    const blocks = new Map<string, Unit>();
+    for (const [z, x, y] of list(p.minZ, p.maxZ)) {
+      total++;
+      const url = wmsTileUrl(p.def, z, x, y);
+      if (!refresh && held.has(url)) continue;
+      const bx = x - (x % n), by = y - (y % n);
+      const k = `${z}/${bx}/${by}`;
+      let u = blocks.get(k);
+      if (!u) blocks.set(k, (u = { def: p.def, z, x: bx, y: by, n, tiles: [] }));
+      u.tiles.push({ url, x, y });
+    }
+    units.push(...blocks.values());
+  }
+  const todoCount = units.reduce((s, u) => s + u.tiles.length, 0);
+  a = { ...a, total, done: total - todoCount, failed: 0, status: 'downloading' };
   await setArea(a);
 
   let lastSave = Date.now();
@@ -286,27 +297,51 @@ async function download(id: string, refresh: boolean, job: Job) {
     await putAreaKeys(id, [...held]);
     await setArea({ ...cur, ...progress, status: final ? (progress.failed || !navigator.onLine ? 'paused' : 'done') : cur.status });
   };
+  const store = async (url: string, blob: Blob) => {
+    await putAreaTile(url, blob, !held.has(url));
+    held.add(url);
+    progress.done++;
+    progress.bytes += blob.size;
+  };
 
   const worker = async () => {
     while (!job.cancelled) {
-      const url = todo[i++];
-      if (!url) return;
-      const had = held.has(url);
-      try {
-        // A tile another area already holds only needs another reference.
-        if (!refresh && !had && (await hasTile(url)) && (await refTile(url))) {
-          held.add(url);
-          progress.done++;
-        } else {
-          if (!navigator.onLine) throw new Error('offline');
-          const blob = await fetchLayerTile(defOf.get(url)!, url);
-          await putAreaTile(url, blob, !had);
-          held.add(url);
-          progress.done++;
-          progress.bytes += blob.size;
+      const unit = units[i++];
+      if (!unit) return;
+      // A tile another area already holds only needs another reference.
+      const need: Unit['tiles'] = [];
+      for (const t of unit.tiles) {
+        try {
+          if (!refresh && !held.has(t.url) && (await hasTile(t.url)) && (await refTile(t.url))) {
+            held.add(t.url);
+            progress.done++;
+          } else need.push(t);
+        } catch {
+          need.push(t);
         }
-      } catch {
-        progress.failed++;
+      }
+      let single = need;
+      if (need.length > 1 && navigator.onLine) {
+        try {
+          const got = await fetchLayerBlock(unit.def, unit.z, unit.x, unit.y, unit.n, need.map((t) => [t.x, t.y]));
+          single = [];
+          for (const t of need) {
+            const blob = got.get(t.url);
+            if (blob) await store(t.url, blob);
+            else single.push(t);
+          }
+        } catch {
+          // The block failed: try its tiles one by one.
+        }
+      }
+      for (const t of single) {
+        if (job.cancelled) break;
+        try {
+          if (!navigator.onLine) throw new Error('offline');
+          await store(t.url, await fetchLayerTile(unit.def, t.url));
+        } catch {
+          progress.failed++;
+        }
       }
       if (Date.now() - lastSave > 1500) {
         lastSave = Date.now();

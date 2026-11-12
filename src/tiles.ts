@@ -32,13 +32,16 @@ export interface WmsDef {
   avgKB: number;
   /** Server to ask instead when a tile comes back blank white (same parameters). */
   blankFallback?: string;
+  /** Saving asks for n×n tiles in one image and cuts it up: the server takes about as long
+   *  to draw a 1024 px image as a 256 px one, so this is several times faster. */
+  meta?: number;
 }
 
 export const WMS = {
-  ortho: { id: 'ortho', url: GEOPORTAL_ORTHO_HR, layers: 'Raster', format: 'image/jpeg', transparent: false, maxNative: 19, cache: true, avgKB: 22, blankFallback: GEOPORTAL_ORTHO_STD },
-  geotopo: { id: 'geotopo', url: GEOPORTAL_TOPO, layers: 'Raster', format: 'image/jpeg', transparent: false, maxNative: 17, cache: true, avgKB: 28 },
-  districts: { id: 'districts', url: BDL_WMS_DISTRICTS, layers: '0', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 6 },
-  compartments: { id: 'compartments', url: BDL_WMS_FORESTS, layers: '3,2', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 10 },
+  ortho: { id: 'ortho', url: GEOPORTAL_ORTHO_HR, layers: 'Raster', format: 'image/jpeg', transparent: false, maxNative: 19, cache: true, avgKB: 22, blankFallback: GEOPORTAL_ORTHO_STD, meta: 4 },
+  geotopo: { id: 'geotopo', url: GEOPORTAL_TOPO, layers: 'Raster', format: 'image/jpeg', transparent: false, maxNative: 17, cache: true, avgKB: 28, meta: 4 },
+  districts: { id: 'districts', url: BDL_WMS_DISTRICTS, layers: '0', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 6, meta: 4 },
+  compartments: { id: 'compartments', url: BDL_WMS_FORESTS, layers: '3,2', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 10, meta: 4 },
   forests: { id: 'forests', url: BDL_WMS_FORESTS, layers: '5', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 4 },
   bans: { id: 'bans', url: BDL_WMS_ENTRY_BANS, layers: '3', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 3 },
   // Fire danger changes daily, so it is never kept.
@@ -74,6 +77,16 @@ export function wmsTileUrl(def: WmsDef, z: number, x: number, y: number): string
     `${def.url}?service=WMS&request=GetMap&version=1.3.0&layers=${encodeURIComponent(def.layers)}&styles=` +
     `&format=${encodeURIComponent(def.format)}&transparent=${def.transparent}&width=256&height=256&crs=EPSG:3857&bbox=${bbox}`
   );
+}
+
+/** GetMap URL of an n×n block of tiles whose top-left tile is (x, y), as one image. */
+export function wmsBlockUrl(def: WmsDef, z: number, x: number, y: number, n: number): string {
+  const [minX, , , maxY] = tileBBox(z, x, y);
+  const [, minY, maxX] = tileBBox(z, x + n - 1, y + n - 1);
+  const px = 256 * n;
+  return wmsTileUrl(def, z, x, y)
+    .replace(/width=256&height=256/, `width=${px}&height=${px}`)
+    .replace(/bbox=[^&]*$/, `bbox=${[minX, minY, maxX, maxY].map((v) => v.toFixed(2)).join(',')}`);
 }
 
 export function lngToX(lng: number, z: number): number {

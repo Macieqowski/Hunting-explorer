@@ -8,7 +8,7 @@
 
 import L from 'leaflet';
 import { getTile, putViewedTile } from './offlineStore';
-import { wmsTileUrl, type WmsDef } from './tiles';
+import { wmsBlockUrl, wmsTileUrl, type WmsDef } from './tiles';
 
 const FRESH_MS = 30 * 24 * 3600 * 1000;
 /** Hosts that answered without CORS headers: tiles are shown directly and not stored. */
@@ -41,16 +41,17 @@ export async function fetchTile(url: string, tries = 4): Promise<Blob> {
   throw last;
 }
 
-/** Share of near-white pixels in an image (sampled). */
-async function whiteShare(blob: Blob): Promise<number> {
+/** Share of near-white pixels in an image or a square part of one (sampled). */
+async function whiteShare(src: Blob | ImageBitmap, sx = 0, sy = 0, size = 0): Promise<number> {
   try {
-    const bmp = await createImageBitmap(blob);
+    const bmp = src instanceof Blob ? await createImageBitmap(src) : src;
     const c = document.createElement('canvas');
     c.width = c.height = 32;
     const ctx = c.getContext('2d', { willReadFrequently: true });
     if (!ctx) return 0;
-    ctx.drawImage(bmp, 0, 0, 32, 32);
-    bmp.close?.();
+    if (size) ctx.drawImage(bmp, sx, sy, size, size, 0, 0, 32, 32);
+    else ctx.drawImage(bmp, 0, 0, 32, 32);
+    if (src instanceof Blob) bmp.close?.();
     const d = ctx.getImageData(0, 0, 32, 32).data;
     let white = 0;
     for (let i = 0; i < d.length; i += 4) if (d[i] >= 248 && d[i + 1] >= 248 && d[i + 2] >= 248) white++;
@@ -69,6 +70,47 @@ export async function fetchLayerTile(def: WmsDef, url: string): Promise<Blob> {
   } catch {
     return blob;
   }
+}
+
+function cut(bmp: ImageBitmap, col: number, row: number, mime: string): Promise<Blob> {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  if (!ctx) return Promise.reject(new Error('no canvas'));
+  ctx.drawImage(bmp, col * 256, row * 256, 256, 256, 0, 0, 256, 256);
+  return new Promise((resolve, reject) =>
+    c.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), mime, 0.9),
+  );
+}
+
+/**
+ * Fetches an n×n block of tiles (top-left x, y) as one image and cuts it into tiles.
+ * Returns blobs for the wanted [x, y] tiles, keyed by tile URL. Tiles that come out blank
+ * white are taken from the fallback server's block instead.
+ */
+export async function fetchLayerBlock(def: WmsDef, z: number, x: number, y: number, n: number, wanted: [number, number][]): Promise<Map<string, Blob>> {
+  const block = await fetchTile(wmsBlockUrl(def, z, x, y, n), 3);
+  const bmp = await createImageBitmap(block);
+  let fallback: ImageBitmap | null | undefined;
+  const out = new Map<string, Blob>();
+  try {
+    for (const [tx, ty] of wanted) {
+      const col = tx - x, row = ty - y;
+      let src = bmp;
+      if (def.blankFallback && (await whiteShare(bmp, col * 256, row * 256, 256)) >= 0.4) {
+        if (fallback === undefined)
+          fallback = await fetchTile(wmsBlockUrl({ ...def, url: def.blankFallback }, z, x, y, n), 3)
+            .then((b) => createImageBitmap(b))
+            .catch(() => null);
+        if (fallback) src = fallback;
+      }
+      out.set(wmsTileUrl(def, z, tx, ty), await cut(src, col, row, def.format));
+    }
+  } finally {
+    bmp.close?.();
+    fallback?.close?.();
+  }
+  return out;
 }
 
 /** A lower-zoom stored tile, cropped and scaled to stand in for (z, x, y). */
