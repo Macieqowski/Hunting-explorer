@@ -40,8 +40,8 @@ export interface WmsDef {
 export const WMS = {
   ortho: { id: 'ortho', url: GEOPORTAL_ORTHO_HR, layers: 'Raster', format: 'image/jpeg', transparent: false, maxNative: 19, cache: true, avgKB: 22, blankFallback: GEOPORTAL_ORTHO_STD, meta: 4 },
   geotopo: { id: 'geotopo', url: GEOPORTAL_TOPO, layers: 'Raster', format: 'image/jpeg', transparent: false, maxNative: 17, cache: true, avgKB: 28, meta: 4 },
-  districts: { id: 'districts', url: BDL_WMS_DISTRICTS, layers: '0', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 6 },
-  compartments: { id: 'compartments', url: BDL_WMS_FORESTS, layers: '3,2', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 10 },
+  districts: { id: 'districts', url: BDL_WMS_DISTRICTS, layers: '0', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 6, meta: 4 },
+  compartments: { id: 'compartments', url: BDL_WMS_FORESTS, layers: '3,2', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 10, meta: 4 },
   forests: { id: 'forests', url: BDL_WMS_FORESTS, layers: '5', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 4 },
   bans: { id: 'bans', url: BDL_WMS_ENTRY_BANS, layers: '3', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 3 },
   // Fire danger changes daily, so it is never kept.
