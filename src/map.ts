@@ -8,7 +8,7 @@ import {
 } from './bdl';
 import { t } from './i18n';
 import { cachedWms } from './cachedLayer';
-import { WMS } from './tiles';
+import { MAX_ZOOM, WMS, zoomUpTo } from './tiles';
 
 export interface MapApi {
   map: L.Map;
@@ -27,19 +27,20 @@ export const BDL_ATTR = '&copy; <a href="https://www.bdl.lasy.gov.pl/portal/obwo
  * Fresh instances of the base maps (a tile layer can belong to one map only).
  * OSM and OpenTopoMap forbid offline use, so they are plain online layers. The Geoportal
  * maps (free Polish public data) are kept on the device and work without signal.
+ * All of them reach MAX_ZOOM, scaling up their deepest tiles past what the server draws.
  */
 export function baseLayers() {
   return {
     osm: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
+      ...zoomUpTo(19),
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }),
     topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-      maxZoom: 17,
+      ...zoomUpTo(17),
       attribution: '&copy; OpenStreetMap, SRTM | &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)',
     }),
-    geotopo: cachedWms(WMS.geotopo, { maxZoom: 19, attribution: GEOPORTAL_ATTR }),
-    sat: cachedWms(WMS.ortho, { maxZoom: 19, attribution: GEOPORTAL_ATTR }),
+    geotopo: cachedWms(WMS.geotopo, { attribution: GEOPORTAL_ATTR }),
+    sat: cachedWms(WMS.ortho, { attribution: GEOPORTAL_ATTR }),
   };
 }
 
@@ -58,7 +59,7 @@ export function offlineBaseSwitch(map: L.Map, online: L.Layer[], fallback: L.Lay
 }
 
 export function createMap(el: HTMLElement, onClick: (lat: number, lng: number) => void): MapApi {
-  const map = L.map(el, { zoomControl: false, minZoom: 5, maxBounds: POLAND_BOUNDS.pad(0.6) });
+  const map = L.map(el, { zoomControl: false, minZoom: 5, maxZoom: MAX_ZOOM, maxBounds: POLAND_BOUNDS.pad(0.6) });
   map.fitBounds(POLAND_BOUNDS);
   L.control.zoom({ position: 'topright' }).addTo(map);
   L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);

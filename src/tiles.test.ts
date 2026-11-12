@@ -1,4 +1,16 @@
-import { boxKm2, estimate, tileLister, latToY, lngToX, padBox, savePlan, tileBBox, tilesForBoxes, wmsBlockUrl, wmsTileUrl, WMS, type Box } from './tiles';
+import { boxKm2, estimate, tileLister, latToY, lngToX, MAX_ZOOM, padBox, savePlan, tileBBox, tilesForBoxes, wmsBlockUrl, wmsTileUrl, WMS, zoomUpTo, type Box } from './tiles';
+
+describe('layer zoom', () => {
+  it('lets every layer reach the deepest map zoom, scaling up past what its server draws', () => {
+    // A layer whose maxZoom is below the map's goes blank at the deepest zoom.
+    for (const native of [17, 19, ...Object.values(WMS).map((d) => d.maxNative)]) {
+      const z = zoomUpTo(native);
+      expect(z.maxZoom).toBe(MAX_ZOOM);
+      expect(z.maxNativeZoom).toBe(native);
+    }
+    expect(zoomUpTo(22).maxNativeZoom).toBe(MAX_ZOOM);
+  });
+});
 
 describe('tile math', () => {
   it('finds the slippy tile of a point (Warsaw, z12)', () => {

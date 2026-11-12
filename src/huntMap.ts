@@ -6,7 +6,7 @@ import L from 'leaflet';
 import { fetchDistrictsByIds } from './bdl';
 import { baseLayers, offlineBaseSwitch, BDL_ATTR, POLAND_BOUNDS } from './map';
 import { cachedWms } from './cachedLayer';
-import { WMS } from './tiles';
+import { MAX_ZOOM, WMS } from './tiles';
 import { createWind } from './windLayer';
 import { roleIcon, ROLE_COLOR, speciesIcon, SPECIES_COLOR, standIcon } from './huntIcons';
 import type { Stand, StandKind } from './stands';
@@ -135,7 +135,7 @@ const fmtM = (m: number) => (m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toF
 export function createHuntMap(text: HuntMapText): HuntMap {
   const el = document.createElement('div');
   el.className = 'hm-map';
-  const map = L.map(el, { zoomControl: false, minZoom: 5, maxBounds: POLAND_BOUNDS.pad(0.6) });
+  const map = L.map(el, { zoomControl: false, minZoom: 5, maxZoom: MAX_ZOOM, maxBounds: POLAND_BOUNDS.pad(0.6) });
   map.fitBounds(POLAND_BOUNDS);
   L.control.zoom({ position: 'topright' }).addTo(map);
   L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);
