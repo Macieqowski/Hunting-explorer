@@ -103,8 +103,9 @@ const L = {
   detail: { pl: 'Dokładność', en: 'Detail' },
   d16: { pl: 'Standardowa (zoom 16)', en: 'Standard (zoom 16)' },
   d17: { pl: 'Dokładniejsze zdjęcie lotnicze (zoom 17)', en: 'Closer aerial photo (zoom 17)' },
-  d18: { pl: 'Najdokładniejsze zdjęcie lotnicze (zoom 18)', en: 'Closest aerial photo (zoom 18)' },
-  d18TooBig: { pl: 'Za duży obszar na zoom 18 (ponad 2 GB) – wybierz mniej obwodów.', en: 'Too large for zoom 18 (over 2 GB) – choose fewer districts.' },
+  d18: { pl: 'Bardzo dokładne zdjęcie lotnicze (zoom 18)', en: 'Very close aerial photo (zoom 18)' },
+  d19: { pl: 'Najdokładniejsze zdjęcie lotnicze (zoom 19)', en: 'Closest aerial photo (zoom 19)' },
+  deepTooBig: { pl: 'Za duży obszar na ten zoom (ponad 2 GB) – wybierz mniej obwodów.', en: 'Too large for this zoom (over 2 GB) – choose fewer districts.' },
   detailHint: {
     pl: 'Bliżej niż zapisany zoom mapa powiększa zapisane zdjęcie od razu, a gdy jest internet, podmienia je na ostrzejsze.',
     en: 'Closer than the saved zoom the map enlarges the saved photo straight away, and with internet swaps in a sharper one.',
@@ -161,10 +162,11 @@ export interface OfflineUiHost {
 
 let host: OfflineUiHost = { rerender: () => {}, mapBox: () => null, showBoxes: () => {}, districts: () => [], clubs: () => [], highlight: () => {} };
 
-/** Most districts saved together: a district is ~60 MB at zoom 16. */
+/** Most districts saved together: a district is ~50 MB at zoom 16. */
 export const MAX_PICK = 30;
-/** Largest save at zoom 18, in bytes: a district is about 250 MB, 2 GB nearly two hours' download. */
-const MAX_D18_BYTES = 2e9;
+/** Largest save at zoom 18 or 19, in bytes: a district is about 200 MB at 18 and 800 MB at 19;
+ *  2 GB is about two hours' download. */
+const MAX_DEEP_BYTES = 2e9;
 const PICK_RESULTS = 40;
 const PICK_CLUBS = 6;
 /** Largest map view whose districts are listed for picking, in km² (about 25 districts). */
@@ -429,9 +431,9 @@ function renderDraft(): string {
   const opt = (v: Detail) => {
     const e = draftEstimate(d, v);
     const bytes = e.mb * 1.048576e6;
-    const off = v === 18 && bytes > MAX_D18_BYTES;
+    const off = v >= 18 && bytes > MAX_DEEP_BYTES;
     return `<label class="off-opt${off ? ' disabled' : ''}"><input type="radio" name="offDetail" data-offline="detail" value="${v}"${detail === v && !off ? ' checked' : ''}${off ? ' disabled' : ''} />
-      <span>${l(`d${v}`)} <b>~${mb(bytes)}</b> <span class="muted">· ${mins(e.minutes)}</span>${off ? `<br><span class="muted small">${l('d18TooBig')}</span>` : ''}</span></label>`;
+      <span>${l(`d${v}`)} <b>~${mb(bytes)}</b> <span class="muted">· ${mins(e.minutes)}</span>${off ? `<br><span class="muted small">${l('deepTooBig')}</span>` : ''}</span></label>`;
   };
   const need = draftEstimate(d, detail).mb * 1.048576e6;
   const tooBig = free != null && need > free * 0.9;

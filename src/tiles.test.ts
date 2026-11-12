@@ -86,21 +86,26 @@ describe('tile math', () => {
         expect(p.maxZ).toBeLessThanOrEqual(p.def.maxNative);
       }
     }
-    expect(isDetail(18)).toBe(true);
-    expect(isDetail(19)).toBe(false);
+    expect(isDetail(19)).toBe(true);
+    expect(isDetail(20)).toBe(false);
     expect(isDetail('17')).toBe(false);
   });
 
-  it('shows zoom 18 for a district at a few hundred megabytes and minutes', () => {
+  it('sizes zoom 18 and 19 for a district at hundreds of megabytes', () => {
     const box = padBox([52.0, 21.0, 52.07, 21.112], 0.08);
     const list = tileLister({ boxes: [box] });
-    const [d16, d17, d18] = DETAILS.map((d) => estimate(list, d));
+    const [d16, d17, d18, d19] = DETAILS.map((d) => estimate(list, d));
     // Each zoom of the photo has four times the tiles of the one before.
     expect(d18.tiles - d17.tiles).toBeGreaterThan((d17.tiles - d16.tiles) * 3.5);
-    expect(d18.mb).toBeGreaterThan(200);
-    expect(d18.mb).toBeLessThan(500);
+    expect(d19.tiles - d18.tiles).toBeGreaterThan((d18.tiles - d17.tiles) * 3.5);
+    expect(d18.mb).toBeGreaterThan(120);
+    expect(d18.mb).toBeLessThan(400);
+    expect(d19.mb).toBeGreaterThan(500);
+    expect(d19.mb).toBeLessThan(1200);
     expect(d18.minutes).toBeGreaterThan(5);
     expect(d18.minutes).toBeLessThan(30);
+    expect(d19.minutes).toBeGreaterThan(30);
+    expect(d19.minutes).toBeLessThan(120);
     expect(d16.minutes).toBeLessThan(d18.minutes / 4);
   });
 });
