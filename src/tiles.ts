@@ -59,9 +59,19 @@ export const WMS = {
   fire: { id: 'fire', url: BDL_WMS_FIRE, layers: '0', format: 'image/png', transparent: true, maxNative: 18, cache: false, avgKB: 3 },
 } satisfies Record<string, WmsDef>;
 
-export type Detail = 16 | 17;
+/**
+ * Deepest zoom the orthophoto is saved at. Geoportal's photo has real detail down to zoom 19,
+ * but every zoom takes about four times the tiles of the one before (zoom 19 would be about
+ * 1 GB per district), so saving stops at 18 and the map scales the deepest saved tiles beyond.
+ */
+export type Detail = 16 | 17 | 18;
+export const DETAILS: readonly Detail[] = [16, 17, 18];
+export const isDetail = (v: unknown): v is Detail => DETAILS.includes(v as Detail);
 
-/** What "Save for offline" downloads: layer and zoom range. */
+/** Tiles a save fetches per second, for time estimates (25 to 10 measured, with blocks). */
+export const SAVE_TILES_PER_S = 15;
+
+/** What "Save for offline" downloads: layer and zoom range. Only the photo goes deeper than 16. */
 export function savePlan(detail: Detail): { def: WmsDef; minZ: number; maxZ: number }[] {
   return [
     { def: WMS.ortho, minZ: 8, maxZ: detail },
@@ -243,8 +253,8 @@ export function tileLister(area: TileArea, bufferM = SHAPE_BUFFER_M) {
   };
 }
 
-/** Number of tiles and approximate megabytes for saving an area. */
-export function estimate(area: TileArea | ReturnType<typeof tileLister>, detail: Detail): { tiles: number; mb: number } {
+/** Number of tiles, approximate megabytes and download minutes for saving an area. */
+export function estimate(area: TileArea | ReturnType<typeof tileLister>, detail: Detail): { tiles: number; mb: number; minutes: number } {
   const list = typeof area === 'function' ? area : tileLister(area);
   let tiles = 0;
   let kb = 0;
@@ -253,7 +263,7 @@ export function estimate(area: TileArea | ReturnType<typeof tileLister>, detail:
     tiles += n;
     kb += n * p.def.avgKB;
   }
-  return { tiles, mb: kb / 1024 };
+  return { tiles, mb: kb / 1024, minutes: tiles / SAVE_TILES_PER_S / 60 };
 }
 
 /** Area of a box in km² (good enough for size limits). */

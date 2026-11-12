@@ -1,4 +1,4 @@
-import { boxKm2, estimate, tileLister, latToY, lngToX, MAX_ZOOM, padBox, savePlan, tileBBox, tilesForBoxes, wmsBlockUrl, wmsTileUrl, WMS, zoomUpTo, type Box } from './tiles';
+import { boxKm2, DETAILS, estimate, isDetail, tileLister, latToY, lngToX, MAX_ZOOM, padBox, savePlan, tileBBox, tilesForBoxes, wmsBlockUrl, wmsTileUrl, WMS, zoomUpTo, type Box } from './tiles';
 
 describe('layer zoom', () => {
   it('lets every layer reach the deepest map zoom, scaling up past what its server draws', () => {
@@ -73,8 +73,35 @@ describe('tile math', () => {
   });
 
   it('only saves layers whose terms allow it', () => {
-    for (const p of savePlan(17)) expect(p.def.cache).toBe(true);
+    for (const d of DETAILS) for (const p of savePlan(d)) expect(p.def.cache).toBe(true);
     expect(WMS.fire.cache).toBe(false);
+  });
+
+  it('saves only the photo deeper than zoom 16, never past what Geoportal draws', () => {
+    for (const d of DETAILS) {
+      const plan = savePlan(d);
+      expect(plan.find((p) => p.def === WMS.ortho)!.maxZ).toBe(d);
+      for (const p of plan) {
+        if (p.def !== WMS.ortho) expect(p.maxZ).toBeLessThanOrEqual(16);
+        expect(p.maxZ).toBeLessThanOrEqual(p.def.maxNative);
+      }
+    }
+    expect(isDetail(18)).toBe(true);
+    expect(isDetail(19)).toBe(false);
+    expect(isDetail('17')).toBe(false);
+  });
+
+  it('shows zoom 18 for a district at a few hundred megabytes and minutes', () => {
+    const box = padBox([52.0, 21.0, 52.07, 21.112], 0.08);
+    const list = tileLister({ boxes: [box] });
+    const [d16, d17, d18] = DETAILS.map((d) => estimate(list, d));
+    // Each zoom of the photo has four times the tiles of the one before.
+    expect(d18.tiles - d17.tiles).toBeGreaterThan((d17.tiles - d16.tiles) * 3.5);
+    expect(d18.mb).toBeGreaterThan(200);
+    expect(d18.mb).toBeLessThan(500);
+    expect(d18.minutes).toBeGreaterThan(5);
+    expect(d18.minutes).toBeLessThan(30);
+    expect(d16.minutes).toBeLessThan(d18.minutes / 4);
   });
 });
 
