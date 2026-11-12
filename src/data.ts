@@ -51,6 +51,18 @@ export function fold(s: string): string {
     .replace(/[̀-ͯ]/g, '');
 }
 
+/** Whether a district matches every search word: its exact number, or text in holder, forest district, powiat, voivodeship or PZŁ board. */
+export function districtMatches(d: District, terms: string[]): boolean {
+  return terms.every(
+    (tm) =>
+      d.hunt_dist_nr === tm ||
+      fold([d.lease_holder_name, d.inspectorate_name, d.district_name, d.county_name, d.reg_mng_board_name].join(' ')).includes(tm),
+  );
+}
+
+/** Splits a search into folded words. */
+export const searchTerms = (q: string) => fold(q.trim()).split(/\s+/).filter(Boolean);
+
 const uniqSorted = (xs: (string | null)[]) =>
   [...new Set(xs.filter((x): x is string => !!x))].sort((a, b) => a.localeCompare(b, 'pl'));
 
