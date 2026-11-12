@@ -12,7 +12,14 @@ export type View =
   | { kind: 'club'; key: string }
   | { kind: 'point'; lat: number; lng: number }
   | { kind: 'hunt'; id: string; invite?: string }
-  | { kind: 'atlas'; slug: string | null };
+  | { kind: 'atlas'; slug: string | null }
+  | { kind: 'guide'; role: GuideRole | null };
+
+/** The group hunt guides (instrukcje), one per role, under #/instrukcja/<slug>. */
+export type GuideRole = 'leader' | 'hunter' | 'beater';
+export const GUIDE_ROLES: readonly GuideRole[] = ['leader', 'hunter', 'beater'];
+export const GUIDE_SLUG: Record<GuideRole, string> = { leader: 'prowadzacy', hunter: 'mysliwy', beater: 'naganiacz' };
+export const guideRoleOf = (slug: string | undefined): GuideRole | null => GUIDE_ROLES.find((r) => GUIDE_SLUG[r] === slug) ?? null;
 
 export type Area = 'map' | 'hunt' | 'weather' | 'know' | 'more';
 export const AREAS: readonly Area[] = ['map', 'hunt', 'weather', 'know', 'more'];
@@ -26,7 +33,7 @@ export type MapTab = 'clubs' | 'districts' | 'stats' | 'offline';
 export const MAP_TABS: readonly MapTab[] = ['clubs', 'districts', 'stats', 'offline'];
 
 export function areaOf(v: View): Area {
-  if (v.kind === 'hunt') return 'hunt';
+  if (v.kind === 'hunt' || v.kind === 'guide') return 'hunt';
   if (v.kind === 'atlas') return 'know';
   if (v.kind !== 'tab') return 'map';
   switch (v.tab) {
@@ -63,6 +70,8 @@ export function viewToHash(v: View): string {
       return `#/polowanie/${encodeURIComponent(v.id)}${v.invite ? `/${v.invite}` : ''}`;
     case 'atlas':
       return v.slug ? `#/atlas/${v.slug}` : '#/atlas';
+    case 'guide':
+      return v.role ? `#/instrukcja/${GUIDE_SLUG[v.role]}` : '#/instrukcja';
     case 'district':
       return `#/obwod/${v.slug}`;
     case 'club':
@@ -86,6 +95,7 @@ export function hashToView(h: string): View {
   // #/polowanie/<hunt>/<invitation token>
   if (kind === 'polowanie') return arg ? { kind: 'hunt', id: safeDecode(arg), ...(arg2 ? { invite: arg2 } : {}) } : { kind: 'tab', tab: 'hunt' };
   if (kind === 'atlas') return { kind: 'atlas', slug: arg || null };
+  if (kind === 'instrukcja') return { kind: 'guide', role: guideRoleOf(arg) };
   if (kind === 'kolo' && arg) return { kind: 'club', key: safeDecode(arg) };
   if (kind === 'punkt' && arg) {
     const [lat, lng] = arg.split(',').map(Number);

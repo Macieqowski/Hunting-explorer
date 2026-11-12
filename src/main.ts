@@ -18,7 +18,8 @@ import { createMap, type MapApi } from './map';
 import { t, tt, getLang, setLang, fmtHa, fmtKm2, fmtNum, type Key } from './i18n';
 import { ic } from './icons';
 import { applyTheme, getThemePref, nextThemePref, setThemePref, watchSystemTheme, type ThemePref } from './theme';
-import { AREAS, KNOW_PAGES, MAP_TABS, areaOf, knowPageOf, knowView, viewToHash, hashToView, type Area, type KnowPage, type MapTab, type Tab, type View } from './nav';
+import { AREAS, KNOW_PAGES, MAP_TABS, areaOf, knowPageOf, knowView, viewToHash, hashToView, type Area, type KnowPage, type MapTab, type Tab, type View, type GuideRole } from './nav';
+import { renderGuide } from './huntHelp';
 import { createSheet } from './sheet';
 import { SEASONS, isOpen, effective, formatRanges, yearFrac, openOnlyIn, type Season } from './seasons';
 import { renderExams, handleExamClick, handleExamChange, drillSpecies } from './examUi';
@@ -231,9 +232,24 @@ function renderStatic() {
         : '';
 }
 
+/** The guide on screen ("role:lang"), so live hunt updates do not redraw it while it is read. */
+let guideShown: string | null = null;
+
 function render() {
   renderStatic();
   const v = state.view;
+  // The guide is part of the hunt area and leaves the hunt running (location sharing goes on).
+  if (v.kind === 'guide') {
+    const key = `${v.role}:${getLang()}`;
+    if (guideShown !== key) {
+      guideShown = key;
+      content.innerHTML = renderGuide(v.role);
+      content.scrollTop = 0;
+      window.scrollTo(0, 0);
+    }
+    return;
+  }
+  guideShown = null;
   if (v.kind === 'point') return void (content.innerHTML = renderPoint());
   if (v.kind === 'tab' && v.tab === 'exams') return void (content.innerHTML = renderExams(render));
   if (v.kind === 'tab' && v.tab === 'weather') return void (content.innerHTML = renderWeather(render));
@@ -674,6 +690,7 @@ function renderMore() {
     <h3>${t('moreSection')}</h3>
     <ul class="more-list">
       ${row('#/offline', 'offline', ic('download', 22), t('moreOffline'), t('moreOfflineHint'))}
+      <li><a href="#/instrukcja" data-nav="guide">${ic('book', 22)}<span><strong>${t('moreGuide')}</strong><small class="muted">${t('moreGuideHint')}</small></span>${ic('chevron', 20)}</a></li>
       ${isApp() ? '' : row('#/about', 'about', ic('android', 22), t('moreApp'), t('moreAppHint'))}
       ${row('#/about', 'about', ic('info', 22), t('moreAbout'), t('moreAboutHint'))}
     </ul>
@@ -846,6 +863,7 @@ content.addEventListener('click', (e) => {
     if (nav === 'club') navigate({ kind: 'club', key: el.dataset.key! });
     if (nav === 'district') navigate({ kind: 'district', slug: el.dataset.slug! });
     if (nav === 'tab') navigate({ kind: 'tab', tab: el.dataset.tab as Tab });
+    if (nav === 'guide') navigate({ kind: 'guide', role: (el.dataset.role as GuideRole | undefined) ?? null });
     $('#panel').scrollTop = 0;
     content.scrollTop = 0;
     return;
@@ -867,6 +885,9 @@ content.addEventListener('click', (e) => {
       break;
     case 'retry':
       load();
+      break;
+    case 'guideJump':
+      document.getElementById(el.dataset.target ?? '')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       break;
     case 'appUpdate': {
       el.setAttribute('disabled', '');

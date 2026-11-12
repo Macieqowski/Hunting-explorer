@@ -20,6 +20,8 @@ const dict = {
   moreSection: { pl: 'Aplikacja', en: 'App' },
   moreOffline: { pl: 'Mapy offline', en: 'Offline maps' },
   moreOfflineHint: { pl: 'Zapisz obwód na telefonie, żeby mapa działała bez zasięgu', en: 'Save a district on the phone so the map works without signal' },
+  moreGuide: { pl: 'Instrukcje polowania zbiorowego', en: 'Group hunt guides' },
+  moreGuideHint: { pl: 'Krok po kroku dla prowadzącego, myśliwego i naganiacza', en: 'Step by step for the leader, hunters and beaters (in Polish)' },
   moreAbout: { pl: 'O aplikacji i danych', en: 'About the app and data' },
   moreAboutHint: { pl: 'Skąd pochodzą dane, wersja, przydatne linki', en: 'Data sources, version, useful links' },
   moreApp: { pl: 'Aplikacja na Androida', en: 'Android app' },
