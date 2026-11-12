@@ -8,7 +8,7 @@
 
 import L from 'leaflet';
 import { getTile, putViewedTile } from './offlineStore';
-import { wmsBlockUrl, wmsTileUrl, type WmsDef } from './tiles';
+import { wmsBlockUrl, wmsTileUrl, zoomUpTo, type WmsDef } from './tiles';
 
 const FRESH_MS = 30 * 24 * 3600 * 1000;
 /** Hosts that answered without CORS headers: tiles are shown directly and not stored. */
@@ -142,7 +142,7 @@ export class CachedWmsLayer extends L.TileLayer {
   private def: WmsDef;
 
   constructor(def: WmsDef, options: L.TileLayerOptions = {}) {
-    super('', { maxNativeZoom: def.maxNative, maxZoom: 20, ...options });
+    super('', { ...zoomUpTo(def.maxNative), ...options });
     this.def = def;
   }
 

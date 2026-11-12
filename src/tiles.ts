@@ -18,6 +18,17 @@ export const GEOPORTAL_ORTHO_HR = 'https://mapy.geoportal.gov.pl/wss/service/PZG
 export const GEOPORTAL_ORTHO_STD = 'https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMS/StandardResolution';
 export const GEOPORTAL_TOPO = 'https://mapy.geoportal.gov.pl/wss/service/img/guest/TOPO/MapServer/WMSServer';
 
+/**
+ * Deepest zoom of both maps. Each layer also has the deepest zoom its server draws (OSM 19,
+ * OpenTopoMap 17, Geoportal ortho 19…); past that Leaflet scales up the deepest tiles instead
+ * of showing nothing. Every layer must reach MAX_ZOOM: a layer whose maxZoom is lower goes
+ * blank at the deepest zoom, since the map's own limit comes from the deepest layer.
+ */
+export const MAX_ZOOM = 20;
+
+/** Leaflet zoom options for a layer whose server draws tiles up to `native`. */
+export const zoomUpTo = (native: number) => ({ maxNativeZoom: Math.min(native, MAX_ZOOM), maxZoom: MAX_ZOOM });
+
 export interface WmsDef {
   id: string;
   url: string;
