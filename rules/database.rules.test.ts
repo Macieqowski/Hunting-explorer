@@ -844,6 +844,60 @@ describe('leader devices and deputies', () => {
     await assertSucceeds(update(ref(db('a')), { 'participants/h1/a': null, 'hunts/h1/leaders/a': null, 'userHunts/a/h1': null }));
     await assertFails(update(ref(db('c')), { 'participants/h1/c': null, 'hunts/h1/leaders/c': null })); // not a deputy: may not touch the hunt
   });
+  /** Hand the hunt to `to`: the new leader row, the old one becomes a hunter, the leader's devices drop out. */
+  const handOver = (by: string, to: string, old = 'lead', extra: Record<string, unknown> = {}) =>
+    update(ref(db(by)), {
+      'hunts/h1/leaderUid': to,
+      'hunts/h1/leaderName': `Osoba ${to}`,
+      [`participants/h1/${to}/role`]: 'leader',
+      [`participants/h1/${old}/role`]: 'hunter',
+      ...extra,
+    });
+  it('a leader device hands the hunt to a confirmed participant', async () => {
+    await createHunt('lead');
+    await confirmed('a');
+    await join('b');
+    await confirmed('c', 'beater');
+    // not to someone unconfirmed, not without making them the leader row, not keeping two leader rows
+    await assertFails(handOver('lead', 'b'));
+    await assertFails(update(ref(db('lead')), { 'hunts/h1/leaderUid': 'a' }));
+    await assertFails(update(ref(db('lead')), { 'hunts/h1/leaderUid': 'a', 'participants/h1/a/role': 'leader' }));
+    await assertFails(update(ref(db('lead')), { 'participants/h1/a/role': 'leader' }));
+    // nobody but a leader device
+    await assertFails(handOver('a', 'a'));
+    await assertFails(handOver('c', 'a'));
+    await update(ref(db('lead'), 'hunts/h1/leaders'), { c: 'deputy' });
+    await assertFails(handOver('c', 'a'));
+    await assertFails(handOver('c', 'c', 'lead', { 'hunts/h1/leaders/c': null }));
+    // the old leader can stay on as a deputy, but cannot change their name on the way
+    await assertFails(handOver('lead', 'a', 'lead', { 'participants/h1/lead/name': 'Inny' }));
+    await assertSucceeds(handOver('lead', 'a', 'lead', { 'hunts/h1/leaders/lead': 'deputy' }));
+    const h = (await get(ref(db('a'), 'hunts/h1'))).val();
+    expect(h.leaderUid).toBe('a');
+    expect(h.leaders).toEqual({ c: 'deputy', lead: 'deputy' });
+    // the new leader leads; the old one is now a deputy and cannot take it back
+    await assertSucceeds(update(ref(db('a'), 'participants/h1/b'), { status: 'confirmed' }));
+    await assertSucceeds(update(ref(db('a'), 'hunts/h1'), { status: 'live' }));
+    await assertFails(handOver('lead', 'lead', 'a'));
+    await assertFails(update(ref(db('lead'), 'hunts/h1/leaders'), { b: 'deputy' }));
+    await assertSucceeds(update(ref(db('a'), 'hunts/h1/leaders'), { lead: null }));
+    await assertFails(update(ref(db('lead'), 'hunts/h1'), { status: 'ended' }));
+    // and can hand it on again
+    await assertSucceeds(handOver('a', 'b', 'a'));
+  });
+  it('a paired computer hands over too and its devices drop out', async () => {
+    await createHunt('lead');
+    await confirmed('a');
+    await code('lead');
+    await pair('phone');
+    await takeOver('phone', 'lead');
+    // the computer may not make itself a deputy (it has no participant row), only the leader in the field
+    await assertFails(handOver('lead', 'a', 'phone', { 'hunts/h1/leaders/lead': 'deputy' }));
+    await assertSucceeds(handOver('lead', 'a', 'phone', { 'hunts/h1/leaders/lead': null, 'hunts/h1/leaders/phone': null, 'leaderPair/h1': null, 'leaderPairJoins/h1': null }));
+    await assertFails(get(ref(db('lead'), 'participants/h1')));
+    await assertFails(update(ref(db('phone'), 'hunts/h1'), { status: 'live' }));
+    expect((await get(ref(db('a'), 'participants/h1/phone/role'))).val()).toBe('hunter');
+  });
   it('codes and used codes go with the hunt', async () => {
     await createHunt('lead');
     await code('lead');

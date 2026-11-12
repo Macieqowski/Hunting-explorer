@@ -43,6 +43,11 @@ export interface HuntBackend {
   takeField(id: string): Promise<void>;
   /** Leader device: let a confirmed participant lead too (or stop that). */
   setDeputy(id: string, uid: string, on: boolean): Promise<void>;
+  /**
+   * Leader device: make a confirmed participant the leader. The old leader in the field stays on
+   * as a hunter (and a deputy if `stayDeputy`); all of the old leader's devices lose their rights.
+   */
+  handOver(id: string, to: string, stayDeputy: boolean): Promise<void>;
   /** Leader device: remove another of the leader's devices; a deputy can remove themselves. */
   removeLeader(id: string, uid: string): Promise<void>;
   rename(id: string, name: string): Promise<void>;

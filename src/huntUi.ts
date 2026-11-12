@@ -236,6 +236,20 @@ const L = {
   deputyMake: { pl: '+ zastępca', en: '+ deputy' },
   deputyDrop: { pl: 'Odbierz zastępstwo', en: 'Remove as deputy' },
   deputyBadge: { pl: 'zastępca', en: 'deputy' },
+  handMake: { pl: 'Przekaż prowadzenie', en: 'Hand over leadership' },
+  handAsk: {
+    pl: 'Ta osoba zostanie prowadzącym: dostanie wszystkie prawa prowadzącego i będzie nim na mapie i w pokocie. Ty zostaniesz na liście jako myśliwy, a Twoje urządzenia stracą prawa prowadzącego, chyba że zostaniesz zastępcą.',
+    en: 'This person becomes the leader, with all the leader\'s rights, on the map and in the results. You stay on the list as a hunter and your devices lose the leader\'s rights unless you stay on as a deputy.',
+  },
+  handAskQ: { pl: 'Przekazać prowadzenie:', en: 'Hand over leadership to' },
+  handStay: { pl: 'Przekaż, zostaję zastępcą', en: 'Hand over, stay as deputy' },
+  handOnly: { pl: 'Przekaż', en: 'Hand over' },
+  handHint: {
+    pl: 'Prowadzenie przekażesz innemu potwierdzonemu uczestnikowi przyciskiem „Przekaż prowadzenie” na liście uczestników (zakładka Uczestnicy).',
+    en: 'Hand the hunt to another confirmed participant with “Hand over leadership” in the participant list (People tab).',
+  },
+  handDone: { pl: 'Prowadzenie przekazane. Prowadzący:', en: 'Leadership handed over. Leader:' },
+  handYou: { pl: 'Prowadzisz teraz to polowanie: masz wszystkie prawa prowadzącego.', en: 'You are now the leader of this hunt, with all the leader\'s rights.' },
   deputyYou: { pl: 'Jesteś zastępcą prowadzącego: masz te same prawa co prowadzący.', en: 'You are a deputy leader: you have the same rights as the leader.' },
   pairTitle: { pl: 'Prowadzenie polowania na tym urządzeniu', en: 'Run this hunt on this device' },
   pairAsk: {
@@ -642,6 +656,10 @@ let pairToken: { id: string; token: string } | null = null;
 let pairCode: { id: string; token: string; exp: number; before: string } | null = null;
 /** Shown once after a successful pairing. */
 let pairedNote: string | null = null;
+/** After a leadership change on this device: who handed over or took over (shown on that hunt's page). */
+let handNote: { id: string; text: string } | null = null;
+/** The hunt's leader as this device last saw it, to notice becoming the leader. */
+let seenLeader: { id: string; uid: string } | null = null;
 /** The "run from your phone" box opened or closed by hand (null: by default). */
 let leadOpen: boolean | null = null;
 /** The leader's invitation links: null until loaded. */
@@ -1612,6 +1630,12 @@ function subscribe(id: string) {
       id,
       (h) => {
         hunt = h;
+        if (h && conn.s === 'ready') {
+          const me = conn.be.uid;
+          if (seenLeader?.id === h.id && seenLeader.uid !== h.leaderUid && h.leaderUid === me && !isLeaderDevice({ ...h, leaderUid: seenLeader.uid }, me))
+            handNote = { id: h.id, text: l('handYou') };
+          seenLeader = { id: h.id, uid: h.leaderUid };
+        }
         rerender();
       },
       (e) => {
@@ -1700,6 +1724,8 @@ function setRoute(id: string | null) {
   leadOpen = null;
   pairCode = null;
   pairedNote = null;
+  handNote = null;
+  seenLeader = null;
   htab = 'field';
   fieldPanel = null;
   fieldPanelScroll = 0;
@@ -2316,7 +2342,8 @@ function renderHunt(): string {
     pending ? ` <span class="h-tabbadge">${pending}</span>` : ` <span class="h-tabcount">${ps.length}</span>`,
   )}${tab('pokot', l('tabPokot'))}</div>`;
   const pane = (id: HTab, html: string) => `<section class="h-pane" data-hpane="${id}"${htab === id ? '' : ' hidden'}>${html}</section>`;
-  return `${back}${head}${pairing}${tabs}
+  const hand = handNote && handNote.id === h.id ? `<div class="notice small" role="status">${ic('check', 16)} ${esc(handNote.text)}</div>` : '';
+  return `${back}${head}${hand}${pairing}${tabs}
     ${pane('field', renderLive(h, me))}
     ${pane('info', `${info(false)}${leadBox}${crew}${isLeader ? `${renderManage(h)}${errorBox()}` : ''}`)}
     ${pane('people', `${meBox}${isLeader ? renderInvite(h) : ''}${renderMembers(uid, isLeader)}`)}
@@ -2440,7 +2467,7 @@ function renderLeadDevices(h: Hunt): string {
     <p class="small muted">${l('leadHint')}</p>${code}
     <h4>${l('leadDevices')}</h4><ul class="h-people">${rows}</ul>${take}
     <h4>${l('deputies')}</h4>${deps.length ? `<ul class="h-people">${deps.map((u) => `<li class="h-person">${roleIcon('hunter')}<span class="h-pname">${esc(personName(u))}</span></li>`).join('')}</ul>` : ''}
-    <p class="small muted">${l('deputyHint')}</p>${errorBox()}</details>`;
+    <p class="small muted">${l('deputyHint')}</p><p class="small muted">${l('handHint')}</p>${errorBox()}</details>`;
 }
 
 /** A leader device whose leader row is on another device. */
@@ -2469,8 +2496,15 @@ function renderMembers(uid: string, isLeader: boolean): string {
     const deputy = isDeputy(h, p.uid);
     const appoint =
       canAppoint && p.role !== 'leader' && p.status === 'confirmed' && confirming !== `remove:${p.uid}`
-        ? `<button type="button" class="btn small ghost" data-hunt="deputy" data-uid="${esc(p.uid)}" data-on="${deputy ? '' : '1'}"${btnBusy()}>${l(deputy ? 'deputyDrop' : 'deputyMake')}</button>`
+        ? `<button type="button" class="btn small ghost" data-hunt="deputy" data-uid="${esc(p.uid)}" data-on="${deputy ? '' : '1'}"${btnBusy()}>${l(deputy ? 'deputyDrop' : 'deputyMake')}</button>
+           <button type="button" class="btn small ghost" data-hunt="askHand" data-uid="${esc(p.uid)}">${roleIcon('leader', 14)} ${l('handMake')}</button>`
         : '';
+    if (canAppoint && confirming === `hand:${p.uid}` && p.role !== 'leader' && p.status === 'confirmed')
+      return `<li class="h-person h-hand">${roleIcon('leader')}<div class="h-pname"><strong>${l('handAskQ')} ${esc(p.name)}?</strong>
+        <p class="small">${l('handAsk')}</p>
+        <div class="h-actions"><button type="button" class="btn small" data-hunt="hand" data-uid="${esc(p.uid)}" data-stay="1"${btnBusy()}>${l('handStay')}</button>
+        <button type="button" class="btn small ghost" data-hunt="hand" data-uid="${esc(p.uid)}"${btnBusy()}>${l('handOnly')}</button>
+        <button type="button" class="btn small ghost" data-hunt="unconfirm">${l('cancel')}</button></div></div></li>`;
     const controls =
       isLeader && p.role !== 'leader'
         ? confirming === `remove:${p.uid}`
@@ -3332,6 +3366,21 @@ export function handleHuntClick(el: HTMLElement): boolean {
           mine = { s: 'idle' };
           go(null);
         });
+      return true;
+    case 'askHand':
+      confirming = `hand:${uid}`;
+      break;
+    case 'hand':
+      if (id && uid) {
+        const to = members?.find((p) => p.uid === uid)?.name ?? '';
+        run(async (be) => {
+          await be.handOver(id, uid, el.dataset.stay === '1');
+          confirming = null;
+          pairCode = null;
+          handNote = { id, text: `${l('handDone')} ${to}` };
+          seenLeader = { id, uid };
+        });
+      }
       return true;
     case 'remove':
       confirming = null;

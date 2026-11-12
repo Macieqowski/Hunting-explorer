@@ -259,6 +259,30 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
 
     takeField,
 
+    async handOver(id, to, stayDeputy) {
+      const h = parseHunt(id, await guard(get(child(root, `hunts/${id}`)).then((s) => s.val())));
+      if (!h) throw new HuntError('unknown', 'no such hunt');
+      const ps = parseParticipants(await guard(get(child(root, `participants/${id}`)).then((s) => s.val())));
+      const next = ps.find((p) => p.uid === to);
+      if (!next || next.status !== 'confirmed' || next.role === 'leader' || to === h.leaderUid) throw new HuntError('unknown', 'not a confirmed participant');
+      const old = h.leaderUid;
+      const oldRow = ps.find((p) => p.uid === old && p.role === 'leader');
+      const upd: Record<string, unknown> = {
+        [`hunts/${id}/leaderUid`]: to,
+        [`hunts/${id}/leaderName`]: next.name,
+        [`participants/${id}/${to}/role`]: 'leader',
+        // Pairing codes belong to the old leader's devices.
+        [`leaderPair/${id}`]: null,
+        [`leaderPairJoins/${id}`]: null,
+      };
+      for (const [u, k] of Object.entries(h.leaders)) if (k === 'device' || u === to) upd[`hunts/${id}/leaders/${u}`] = null;
+      if (oldRow) {
+        upd[`participants/${id}/${old}/role`] = 'hunter';
+        if (stayDeputy) upd[`hunts/${id}/leaders/${old}`] = 'deputy';
+      }
+      await guard(update(root, upd));
+    },
+
     setDeputy: (id, who, on) => guard(update(root, { [`hunts/${id}/leaders/${who}`]: on ? 'deputy' : null })),
 
     removeLeader: (id, who) => guard(update(root, { [`hunts/${id}/leaders/${who}`]: null })),
