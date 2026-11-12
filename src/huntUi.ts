@@ -92,6 +92,7 @@ import { renderPokot, renderPokotPrint, gameName, outcomeName, groupName, pl, ty
 import { GAMES, NO_SHOOTER, OUTCOMES, outOfSeason, voivodeshipOf, type Outcome, type Shot, type ShotSpot } from './pokot';
 import { firebaseConfig, getBackend, HuntError, type HuntBackend, type Unsubscribe } from './huntBackend';
 import { ic } from './icons';
+import { GUIDE_ROLES, GUIDE_SLUG, type GuideRole } from './nav';
 
 const esc = (s: unknown) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -619,6 +620,11 @@ const L = {
   fmNear: { pl: 'Sąsiednie stanowiska', en: 'Neighbouring stands' },
   fmClose: { pl: 'Zamknij', en: 'Close' },
   fmPocket: { pl: 'Kieszeń', en: 'Pocket' },
+  guides: { pl: 'Instrukcje', en: 'Guides' },
+  guidesHint: { pl: 'Krok po kroku: co możesz zrobić w swojej roli.', en: 'Step by step: what you can do in your role (in Polish).' },
+  guideMine: { pl: 'Instrukcja dla Ciebie:', en: 'Your guide:' },
+  guideOthers: { pl: 'Pozostałe instrukcje', en: 'Other guides' },
+  guideJoin: { pl: 'Jak to działa?', en: 'How does it work?' },
   fmPendingPokot: { pl: 'Pokot zobaczysz, gdy prowadzący potwierdzi Twój udział.', en: 'You will see the bag once the leader confirms you.' },
 } as const;
 const l = (k: keyof typeof L) => tt(L[k]);
@@ -1809,6 +1815,14 @@ export function renderHunts(id: string | null, invite: string | undefined, ctx: 
   return `<div class="hunts">${body}</div>`;
 }
 
+/** A link to the guide of one role (#/instrukcja/…), handled by main.ts like the other pages. */
+const guideLink = (r: GuideRole, cls = 'h-guide') =>
+  `<a class="${cls}" href="#/instrukcja/${GUIDE_SLUG[r]}" data-nav="guide" data-role="${r}">${roleIcon(r, 18)}<span>${l(`r_${r}`)}</span></a>`;
+
+/** The three guides as a row of chips, with a title. */
+const guidesRow = (title: string, roles: readonly GuideRole[] = GUIDE_ROLES) =>
+  `<div class="h-guides">${title ? `<span class="small">${ic('book', 16)} ${title}</span>` : ''}${roles.map((r) => guideLink(r)).join('')}</div>`;
+
 function renderList(): string {
   if (mine.s === 'idle') loadMine();
   const head = `<h2>${tt({ pl: 'Polowanie zbiorowe', en: 'Group hunts' })}</h2><p class="muted">${l('intro')}</p>`;
@@ -1829,7 +1843,8 @@ function renderList(): string {
   else if (mine.s === 'error') list = `<div class="notice error">${esc(mine.msg)}</div>`;
   else list = `<p class="muted">${l('loading')}</p>`;
   return `${head}<button type="button" class="btn" data-hunt="new">${l('newHunt')}</button>
-    <h3>${l('myHunts')}</h3>${list}<p class="muted small">${l('thisDevice')}</p>`;
+    <h3>${l('myHunts')}</h3>${list}<p class="muted small">${l('thisDevice')}</p>
+    <h3>${l('guides')}</h3><p class="muted small">${l('guidesHint')}</p>${guidesRow('', GUIDE_ROLES)}`;
 }
 
 function renderHuntForm(kind: 'create' | 'edit'): string {
@@ -2345,9 +2360,15 @@ function renderHunt(): string {
   const hand = handNote && handNote.id === h.id ? `<div class="notice small" role="status">${ic('check', 16)} ${esc(handNote.text)}</div>` : '';
   return `${back}${head}${hand}${pairing}${tabs}
     ${pane('field', renderLive(h, me))}
-    ${pane('info', `${info(false)}${leadBox}${crew}${isLeader ? `${renderManage(h)}${errorBox()}` : ''}`)}
+    ${pane('info', `${info(false)}${leadBox}${crew}${isLeader ? `${renderManage(h)}${errorBox()}` : ''}${renderGuides(isLeader ? 'leader' : me.role)}`)}
     ${pane('people', `${meBox}${isLeader ? renderInvite(h) : ''}${renderMembers(uid, isLeader)}`)}
     ${pane('pokot', confirmed ? renderPokot(pokotCtx(h)) : `<div class="notice">${l('fmPendingPokot')}</div>`)}`;
+}
+
+/** Under "Informacje": the guide for my role first, the others beside it. */
+function renderGuides(mine: GuideRole): string {
+  return `<div class="h-guides h-guides-mine"><span class="small">${ic('book', 16)} ${l('guideMine')}</span>${guideLink(mine, 'h-guide on')}
+    ${GUIDE_ROLES.filter((r) => r !== mine).map((r) => guideLink(r)).join('')}</div>`;
 }
 
 function renderJoin(h: Hunt): string {
@@ -2360,6 +2381,7 @@ function renderJoin(h: Hunt): string {
     <h3>${l(guest ? 'guestTitle' : 'joinTitle')}</h3>
     ${guest ? `<p class="small">${l('guestHint')}</p>` : ''}
     <fieldset class="h-roles"><legend>${l('fRole')}</legend>${radio('hunter')}${radio('beater')}</fieldset>
+    ${guidesRow(l('guideJoin'), ['hunter', 'beater'])}
     ${field('join', 'pname', l('fYourName'), storedName(), { max: LIMITS.name, req: true, hint: l('fYourNameHint'), auto: 'name' })}
     ${field('join', 'phone', l('fPhone'), '', { type: 'tel', auto: 'tel', hint: l('fPhoneHint') })}
     ${guest ? '' : field('join', 'pass', l('fPass'), '', { req: true, hint: l('fPassHint'), auto: 'off' })}
