@@ -49,7 +49,8 @@ export interface WmsDef {
 }
 
 export const WMS = {
-  ortho: { id: 'ortho', url: GEOPORTAL_ORTHO_HR, layers: 'Raster', format: 'image/jpeg', transparent: false, maxNative: 19, cache: true, avgKB: 22, blankFallback: GEOPORTAL_ORTHO_STD, meta: 4 },
+  // avgKB: 30 random points in Poland (Nov 2026) gave 15 KB at zoom 16 down to 13 KB at zoom 19.
+  ortho: { id: 'ortho', url: GEOPORTAL_ORTHO_HR, layers: 'Raster', format: 'image/jpeg', transparent: false, maxNative: 19, cache: true, avgKB: 16, blankFallback: GEOPORTAL_ORTHO_STD, meta: 4 },
   geotopo: { id: 'geotopo', url: GEOPORTAL_TOPO, layers: 'Raster', format: 'image/jpeg', transparent: false, maxNative: 17, cache: true, avgKB: 28, meta: 4 },
   districts: { id: 'districts', url: BDL_WMS_DISTRICTS, layers: '0', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 6, meta: 4 },
   compartments: { id: 'compartments', url: BDL_WMS_FORESTS, layers: '3,2', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 10, meta: 4 },
@@ -61,11 +62,11 @@ export const WMS = {
 
 /**
  * Deepest zoom the orthophoto is saved at. Geoportal's photo has real detail down to zoom 19,
- * but every zoom takes about four times the tiles of the one before (zoom 19 would be about
- * 1 GB per district), so saving stops at 18 and the map scales the deepest saved tiles beyond.
+ * the deepest it draws; every zoom takes about four times the tiles of the one before (zoom 19
+ * is several hundred MB per district). Past the saved zoom the map scales the saved tiles.
  */
-export type Detail = 16 | 17 | 18;
-export const DETAILS: readonly Detail[] = [16, 17, 18];
+export type Detail = 16 | 17 | 18 | 19;
+export const DETAILS: readonly Detail[] = [16, 17, 18, 19];
 export const isDetail = (v: unknown): v is Detail => DETAILS.includes(v as Detail);
 
 /** Tiles a save fetches per second, for time estimates (25 to 10 measured, with blocks). */
