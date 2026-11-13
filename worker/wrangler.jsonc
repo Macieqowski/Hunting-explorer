@@ -13,7 +13,8 @@
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Counters"] }],
   "vars": {
     // Which model grades: "anthropic" or "openai". The other one is the fallback when its key is set.
-    "MODEL_PROVIDER": "anthropic",
+    // GPT-6 Luna was closer to the hand scores on the control set (docs/oral-exam.md, "Choosing the model").
+    "MODEL_PROVIDER": "openai",
     "ANTHROPIC_MODEL": "claude-haiku-5-5",
     "OPENAI_MODEL": "gpt-6-luna",
     // Firebase project whose anonymous sign-in tokens are accepted (the app's project).

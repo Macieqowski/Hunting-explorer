@@ -24,12 +24,12 @@ The answers were checked against the current law on the date in `checked`. When 
 
 A Cloudflare Worker. The app sends `POST /grade` with `{ nr, answer }` and the ID token of the app's anonymous Firebase sign-in; the Worker adds the reference answer and the key points, asks the model and returns `{ score, points, errors, feedback, left }`.
 
-- **Model**: `MODEL_PROVIDER` in `worker/wrangler.jsonc` is `anthropic` (Claude Haiku 5.5, through the official SDK with structured output) or `openai` (GPT-6 Luna). The other one is the fallback when its key is set.
+- **Model**: `MODEL_PROVIDER` in `worker/wrangler.jsonc` is `openai` (GPT-6 Luna, the current choice) or `anthropic` (Claude Haiku 5.5, through the official SDK with structured output). The other one is the fallback when its key is set.
 - **Prompt and checks** (`worker/src/prompt.ts`): the candidate's text is wrapped in its own tag with angle brackets removed and the model is told to treat it as material to grade, not instructions. The model first decides the coverage of every key point, then the score. The returned score may differ from what the covered points give by at most +1/-2, so an answer that talks the model into a top score still cannot get it.
 - **Who may call it**: a valid Firebase ID token for the project in `FIREBASE_PROJECT_ID` is required (`worker/src/auth.ts` checks the signature against Google's keys). Browser calls are accepted only from the pages in `ALLOWED_ORIGINS`.
 - **Limits** per day in Polish time: `LIMIT_USER` (9 = three exams) per sign-in, `LIMIT_IP` (60) per network address, `LIMIT_GLOBAL` (2000) in total. Counters live in a Durable Object (`worker/src/counters.ts`) as one-way fingerprints that change daily and are deleted the next day. A failed grading is not counted.
 - **Privacy**: answers are not stored or logged; logs hold only the question number, model, time and score.
-- **Cost**: about 1,500 input and 400 output tokens per answer, roughly $0.35 per 1,000 graded answers at $0.10 / $0.50 per million tokens. The global limit caps a day at under $1.
+- **Cost**: measured on the control set, $0.38 per 1,000 graded answers with GPT-6 Luna (about 1,640 input and 420 output tokens each) and $0.47 with Claude Haiku 5.5 (2,820 and 385), both at $0.10 / $0.50 per million tokens. The global limit caps a day at about $1.
 
 ### Deployment
 
@@ -42,3 +42,12 @@ Locally: `cd worker && npm ci && npm test`, `npx wrangler dev` (put the keys in 
 ### Choosing the model
 
 `worker/eval/control.json` has 42 answers written like speech-to-text output and scored by hand: full, partial, wrong, off-topic, empty and two that try to talk the grader into a top score. `npm run eval` (in `worker/`, with the API keys in the environment) grades them with every model that has a key and reports the mean error, agreement with the hand scores, speed and cost. The workflow "Oral exam model comparison" does the same on GitHub when the prompt, a provider or the control set changes in a pull request, and on demand; the table is in the run summary. Keep the model with the smaller error, and add an answer to the control set whenever a user reports a grade that was clearly off.
+
+Result of 2026-11-13 (42 answers, one run):
+
+| Model | Mean error | Same score | Within 1 point | Same side of 3 points | Mean time | Cost per 1,000 |
+|---|---|---|---|---|---|---|
+| GPT-6 Luna | 0.26 | 74% | 100% | 98% | 2.9 s | $0.38 |
+| Claude Haiku 5.5 | 0.40 | 60% | 100% | 98% | 2.2 s | $0.47 |
+
+Neither model followed the instructions hidden in the two "injection" answers. Haiku was the stricter one: it gave 4 instead of 5 to half of the complete answers. The set is small and scored by one person, so treat a gap of this size as a preference, not a verdict.
