@@ -28,8 +28,8 @@
     // Pages allowed to call the service from a browser (the app on Android runs at https://localhost).
     "ALLOWED_ORIGINS": "https://www.polowanie.org,https://polowanie.org,https://macieqowski.github.io,https://localhost,http://localhost:5173",
     // Graded answers per day (Europe/Warsaw): per signed-in user, per network address, and in total.
-    "LIMIT_USER": "9",
-    "LIMIT_IP": "60",
+    "LIMIT_USER": "100",
+    "LIMIT_IP": "300",
     "LIMIT_GLOBAL": "2000"
   }
   // Secrets (set by the deploy workflow from GitHub secrets): ANTHROPIC_API_KEY, OPENAI_API_KEY.
