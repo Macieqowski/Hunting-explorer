@@ -121,7 +121,7 @@ public class TileDownloadService extends Service {
             this.doneTitle = doneTitle;
             this.stopLabel = stopLabel;
             this.refresh = refresh;
-            this.concurrency = Math.max(1, Math.min(24, concurrency));
+            this.concurrency = Math.max(1, Math.min(32, concurrency));
             this.units = units;
             this.sources = sources;
             this.wmsSlots = new java.util.concurrent.Semaphore(Math.max(1, Math.min(this.concurrency, wmsConcurrency)));
@@ -258,6 +258,7 @@ public class TileDownloadService extends Service {
                 doUnit(job, i, u, ok);
             } catch (Throwable t) {
                 // Out of memory on a huge image, a full disk…: the unit's missing tiles count as failed.
+                android.util.Log.w("polowanie", "tile download unit " + i + " failed", t);
                 job.failed.addAndGet(Math.max(0, u.files.length - ok[0]));
             }
         }
@@ -593,12 +594,17 @@ public class TileDownloadService extends Service {
     }
 
     private boolean online() {
-        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        if (cm == null) return true;
-        Network n = cm.getActiveNetwork();
-        if (n == null) return false;
-        NetworkCapabilities caps = cm.getNetworkCapabilities(n);
-        return caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+        try {
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm == null) return true;
+            Network n = cm.getActiveNetwork();
+            if (n == null) return false;
+            NetworkCapabilities caps = cm.getNetworkCapabilities(n);
+            return caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+        } catch (SecurityException e) {
+            // Without ACCESS_NETWORK_STATE: just try.
+            return true;
+        }
     }
 
     private static void sleep(long ms) {

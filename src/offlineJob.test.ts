@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { nativeSources, nativeUnit } from './offlineJob';
+import { limiter, nativeSources, nativeUnit } from './offlineJob';
 import { tileFileName } from './tileFiles';
-import { estimate, WMS, wmsBlockUrl, wmsTileUrl } from './tiles';
+import { estimate, SAVE_WMTS_TILES_PER_S, WMS, wmsBlockUrl, wmsTileUrl } from './tiles';
 
 const unit = (def: (typeof WMS)[keyof typeof WMS], tiles: [number, number][]) => ({
   def,
@@ -42,11 +42,24 @@ describe('app downloader jobs', () => {
     expect([src.ortho.e, src.ortho.n, src.ortho.size]).toEqual([100000, 850000, 512]);
   });
 
-  it('estimates a shorter time when the photo comes from WMTS', () => {
+  it('counts the photo at the WMTS speed in time estimates', () => {
     const area = { boxes: [[52.2, 20.9, 52.3, 21.1]] as [number, number, number, number][] };
-    const web = estimate(area, 18);
-    const app = estimate(area, 18, true);
-    expect(app.tiles).toBe(web.tiles);
-    expect(app.minutes).toBeLessThan(web.minutes / 2);
+    const e = estimate(area, 18);
+    const photo = e.tiles - estimate(area, 16).tiles; // the extra zoom 17-18 tiles are all photo
+    expect(estimate(area, 18).minutes - estimate(area, 16).minutes).toBeCloseTo(photo / SAVE_WMTS_TILES_PER_S / 60, 5);
+  });
+
+  it('limits how many run at once', async () => {
+    const run = limiter(2);
+    let now = 0;
+    let most = 0;
+    const job = () =>
+      run(async () => {
+        most = Math.max(most, ++now);
+        await new Promise((r) => setTimeout(r, 5));
+        now--;
+      });
+    await Promise.all(Array.from({ length: 7 }, job));
+    expect(most).toBe(2);
   });
 });

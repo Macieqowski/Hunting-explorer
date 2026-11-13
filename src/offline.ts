@@ -12,7 +12,8 @@ import {
 import { fetchLayerBlock, fetchLayerTile } from './cachedLayer';
 import { tt } from './i18n';
 import { nativeTileDownload } from './native';
-import { nativeSources, nativeUnit, type Unit } from './offlineJob';
+import { limiter, nativeSources, nativeUnit, type Unit } from './offlineJob';
+import { WMTS_CONCURRENCY, wmtsTile } from './wmtsSave';
 import {
   deleteArea,
   getAreaKeys,
@@ -34,13 +35,14 @@ export type { SavedArea } from './offlineStore';
 
 /** Largest map view that can be saved at once, in km² (a large club is about 300). */
 export const MAX_VIEW_KM2 = 400;
+/** Images a WMS server draws at once for a save: more only queue on the server. */
 const CONCURRENCY = 6;
 /**
  * Requests the app's downloader (TileDownloadService.java) makes at once: WMTS tiles come from
- * a cache and get faster with more; WMS servers draw each image and do not (Nov 2026: 6 → 24 at
- * once stayed at 10-16 tiles/s, while WMTS went from 12 to 39 images/s).
+ * a cache and get faster with more (see WMTS_CONCURRENCY); WMS servers draw each image and do not
+ * (Nov 2026: 6 → 24 at once stayed at 10-16 tiles/s).
  */
-const NATIVE_CONCURRENCY = 16;
+const NATIVE_CONCURRENCY = WMTS_CONCURRENCY;
 const NATIVE_WMS_CONCURRENCY = 6;
 
 let areas: SavedArea[] = [];
@@ -187,7 +189,7 @@ const listers = new WeakMap<object, ReturnType<typeof tileLister>>();
 export function draftEstimate(d: Draft, detail: Detail) {
   let list = listers.get(d);
   if (!list) listers.set(d, (list = tileLister(tileAreaOf(d))));
-  return estimate(list, detail, !!nativeTileDownload());
+  return estimate(list, detail);
 }
 
 // ---------------------------------------------------------------- downloading
@@ -335,9 +337,20 @@ async function download(id: string, refresh: boolean, job: Job) {
         }
       }
       let single = need;
-      if (need.length > 1 && navigator.onLine) {
+      // The photo: drawn from WMTS tiles (fast), each tile on its own; WMS only if that fails.
+      if (unit.def.wmts && navigator.onLine) {
+        single = [];
+        for (const t of need) {
+          if (job.cancelled) break;
+          try {
+            await store(t.url, await wmtsTile(unit.def, unit.z, t.x, t.y));
+          } catch {
+            single.push(t);
+          }
+        }
+      } else if (need.length > 1 && navigator.onLine) {
         try {
-          const got = await fetchLayerBlock(unit.def, unit.z, unit.x, unit.y, unit.n, need.map((t) => [t.x, t.y]));
+          const got = await wms(() => fetchLayerBlock(unit.def, unit.z, unit.x, unit.y, unit.n, need.map((t) => [t.x, t.y])));
           single = [];
           for (const t of need) {
             const blob = got.get(t.url);
@@ -352,7 +365,7 @@ async function download(id: string, refresh: boolean, job: Job) {
         if (job.cancelled) break;
         try {
           if (!navigator.onLine) throw new Error('offline');
-          await store(t.url, await fetchLayerTile(unit.def, t.url));
+          await store(t.url, await wms(() => fetchLayerTile(unit.def, t.url)));
         } catch {
           progress.failed++;
         }
@@ -363,7 +376,9 @@ async function download(id: string, refresh: boolean, job: Job) {
       }
     }
   };
-  await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+  // Enough workers to keep the WMTS busy; WMS images are limited to CONCURRENCY at once.
+  const wms = limiter(CONCURRENCY);
+  await Promise.all(Array.from({ length: units.some((u) => u.def.wmts) ? WMTS_CONCURRENCY : CONCURRENCY }, worker));
   if (!job.cancelled) await flush(true);
 }
 

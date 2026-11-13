@@ -41,3 +41,19 @@ export function nativeSources(units: Unit[]): Record<string, TileDownloadSource>
       };
   return out;
 }
+
+/** Runs at most `n` of the given jobs at once; the rest wait their turn. */
+export function limiter(n: number) {
+  let active = 0;
+  const waiting: (() => void)[] = [];
+  return async <T>(f: () => Promise<T>): Promise<T> => {
+    while (active >= n) await new Promise<void>((r) => waiting.push(r));
+    active++;
+    try {
+      return await f();
+    } finally {
+      active--;
+      waiting.shift()?.();
+    }
+  };
+}

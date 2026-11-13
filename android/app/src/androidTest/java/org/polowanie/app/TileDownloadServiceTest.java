@@ -120,7 +120,7 @@ public class TileDownloadServiceTest {
 
         // The app on screen first: Android only lets a visible app start a foreground service.
         try (ActivityScenario<MainActivity> ignored = ActivityScenario.launch(MainActivity.class)) {
-            TileDownloadService.Job job = new TileDownloadService.Job("test", "Test", "Test done", "Stop", true, 16, 6, units, sources);
+            TileDownloadService.Job job = new TileDownloadService.Job("test", "Test", "Test done", "Stop", true, 32, 6, units, sources);
             synchronized (TileDownloadService.LOCK) {
                 TileDownloadService.jobs.put(job.id, job);
                 TileDownloadService.queue.add(job);
