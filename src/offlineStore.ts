@@ -134,6 +134,25 @@ export async function putAreaTile(url: string, blob: Blob, addRef: boolean): Pro
   await txDone(tx);
 }
 
+/**
+ * App: records tiles the native downloader already wrote as files (see TileDownloadService).
+ * `held` are the tiles the area already had, which get no extra reference. One transaction.
+ */
+export async function recordAreaFiles(entries: { url: string; f: string }[], held: Set<string>): Promise<void> {
+  if (!entries.length) return;
+  const { s, tx } = await store('tiles', 'readwrite');
+  const now = Date.now();
+  for (const { url, f } of entries) {
+    const req = s.get(url);
+    req.onsuccess = () => {
+      const old = req.result as TileRec | undefined;
+      const r = (old?.r ?? 0) + (held.has(url) ? 0 : 1);
+      s.put({ f, t: now, r } satisfies TileRec, url);
+    };
+  }
+  await txDone(tx);
+}
+
 async function getRec(url: string): Promise<TileRec | undefined> {
   const { s } = await store('tiles');
   return (await done(s.get(url))) as TileRec | undefined;

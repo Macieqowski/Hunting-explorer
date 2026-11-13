@@ -38,10 +38,77 @@ interface CompassPlugin {
   addListener(e: 'heading', f: (h: NativeHeading) => void): Promise<PluginListenerHandle>;
 }
 
+export interface TileDownloadUnit {
+  /** Image URL (one tile or an n×n block). */
+  u?: string;
+  /** Or: a WMTS source (TileDownloadSource) the tiles are drawn from, and the top-left tile. */
+  s?: string;
+  z?: number;
+  x?: number;
+  y?: number;
+  /** Same image from the server to use for tiles that come out blank white. */
+  f?: string;
+  n: number;
+  /** Format the tiles are stored in. */
+  m: string;
+  /** Tiles to cut: [column, row, file name]. */
+  t: [number, number, string][];
+}
+/** Ready-made tiles in PUWG 1992 (EPSG:2180). */
+export interface TileDownloadSource {
+  /** GetTile URL with {L}, {r}, {c}. */
+  t: string;
+  /** Same, from the server to use where the first has no photo. */
+  f?: string;
+  scales: number[];
+  /** Top-left corner of the tile matrix: easting, northing. */
+  e: number;
+  n: number;
+  size: number;
+}
+export interface TileDownloadStatus {
+  state: 'queued' | 'running' | 'done' | 'cancelled' | 'none';
+  done?: number;
+  failed?: number;
+  bytes?: number;
+  total?: number;
+  /** Waiting for signal. */
+  waiting?: boolean;
+  /** [unit index, tile index, bytes] of each tile written since `since`. */
+  results?: [number, number, number][];
+  next?: number;
+}
+interface TileDownloadPlugin {
+  start(o: {
+    id: string;
+    title: string;
+    doneTitle: string;
+    stopLabel: string;
+    refresh: boolean;
+    concurrency: number;
+    wmsConcurrency: number;
+    sources: Record<string, TileDownloadSource>;
+    units: TileDownloadUnit[];
+  }): Promise<void>;
+  status(o: { id: string; since: number }): Promise<TileDownloadStatus>;
+  cancel(o: { id: string }): Promise<void>;
+  forget(o: { id: string }): Promise<void>;
+}
+
 const BackgroundLocation = registerPlugin<BackgroundLocationPlugin>('BackgroundLocation');
 const Alerts = registerPlugin<AlertsPlugin>('Alerts');
 const Bars = registerPlugin<BarsPlugin>('Bars');
 const Compass = registerPlugin<CompassPlugin>('Compass');
+const TileDownload = registerPlugin<TileDownloadPlugin>('TileDownload');
+
+// ---------------------------------------------------------------- saving offline maps
+
+/**
+ * App only (version with the TileDownload plugin): saving offline maps runs in a foreground
+ * service, so it goes on with the screen off. See TileDownloadService.java.
+ */
+export const nativeTileDownload = (): TileDownloadPlugin | null =>
+  isApp() && Capacitor.isPluginAvailable('TileDownload') ? TileDownload : null;
 
 // ---------------------------------------------------------------- location with the screen off
 
@@ -118,7 +185,7 @@ export function alertUser(title: string, text: string, pattern: readonly number[
 
 if (isApp()) {
   // For the app's smoke test (android workflow), which checks that the plugins are there.
-  console.info(`[polowanie] plugins ${['Printer', 'BackgroundLocation', 'Alerts', 'Compass', 'Bars'].filter((p) => Capacitor.isPluginAvailable(p)).join(',')}`);
+  console.info(`[polowanie] plugins ${['Printer', 'BackgroundLocation', 'Alerts', 'Compass', 'Bars', 'TileDownload'].filter((p) => Capacitor.isPluginAvailable(p)).join(',')}`);
   document.addEventListener('visibilitychange', () => {
     // Back on screen: the alerts are visible in the app itself.
     if (document.visibilityState === 'visible') void Alerts.clear().catch(() => {});

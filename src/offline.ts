@@ -10,6 +10,9 @@ import {
   type DistrictWithGeometry,
 } from './bdl';
 import { fetchLayerBlock, fetchLayerTile } from './cachedLayer';
+import { tt } from './i18n';
+import { nativeTileDownload } from './native';
+import { nativeSources, nativeUnit, type Unit } from './offlineJob';
 import {
   deleteArea,
   getAreaKeys,
@@ -20,16 +23,25 @@ import {
   putAreaKeys,
   putAreaTile,
   putBdl,
+  recordAreaFiles,
   refTile,
   type SavedArea,
 } from './offlineStore';
-import { estimate, boxKm2, boxOf, padBox, savePlan, tileLister, wmsTileUrl, type Box, type Detail, type TileArea, type WmsDef } from './tiles';
+import { tileFileName } from './tileFiles';
+import { estimate, boxKm2, boxOf, padBox, savePlan, tileLister, wmsTileUrl, type Box, type Detail, type TileArea } from './tiles';
 
 export type { SavedArea } from './offlineStore';
 
 /** Largest map view that can be saved at once, in km² (a large club is about 300). */
 export const MAX_VIEW_KM2 = 400;
 const CONCURRENCY = 6;
+/**
+ * Requests the app's downloader (TileDownloadService.java) makes at once: WMTS tiles come from
+ * a cache and get faster with more; WMS servers draw each image and do not (Nov 2026: 6 → 24 at
+ * once stayed at 10-16 tiles/s, while WMTS went from 12 to 39 images/s).
+ */
+const NATIVE_CONCURRENCY = 16;
+const NATIVE_WMS_CONCURRENCY = 6;
 
 let areas: SavedArea[] = [];
 const listeners = new Set<() => void>();
@@ -175,7 +187,7 @@ const listers = new WeakMap<object, ReturnType<typeof tileLister>>();
 export function draftEstimate(d: Draft, detail: Detail) {
   let list = listers.get(d);
   if (!list) listers.set(d, (list = tileLister(tileAreaOf(d))));
-  return estimate(list, detail);
+  return estimate(list, detail, !!nativeTileDownload());
 }
 
 // ---------------------------------------------------------------- downloading
@@ -183,6 +195,7 @@ export function draftEstimate(d: Draft, detail: Detail) {
 interface Job {
   cancelled: boolean;
 }
+
 const jobs = new Map<string, Job>();
 let running: Promise<void> = Promise.resolve();
 
@@ -262,8 +275,6 @@ function queue(id: string, refresh: boolean) {
 async function download(id: string, refresh: boolean, job: Job) {
   let a = areas.find((x) => x.id === id);
   if (!a || job.cancelled) return;
-  // Work comes in units: one tile, or for layers drawn in blocks, the tiles of one n×n block.
-  type Unit = { def: WmsDef; z: number; x: number; y: number; n: number; tiles: { url: string; x: number; y: number }[] };
   const units: Unit[] = [];
   let total = 0;
   const held = new Set(await getAreaKeys(id));
@@ -286,6 +297,9 @@ async function download(id: string, refresh: boolean, job: Job) {
   const todoCount = units.reduce((s, u) => s + u.tiles.length, 0);
   a = { ...a, total, done: total - todoCount, failed: 0, status: 'downloading' };
   await setArea(a);
+
+  const nt = nativeTileDownload();
+  if (nt) return downloadInApp(nt, a, units, refresh, job, held);
 
   let lastSave = Date.now();
   let i = 0;
@@ -351,6 +365,85 @@ async function download(id: string, refresh: boolean, job: Job) {
   };
   await Promise.all(Array.from({ length: CONCURRENCY }, worker));
   if (!job.cancelled) await flush(true);
+}
+
+// ---------------------------------------------------------------- downloading in the app
+
+const T = {
+  saving: { pl: 'Zapisywanie mapy', en: 'Saving map' },
+  saved: { pl: 'Mapa zapisana', en: 'Map saved' },
+  stop: { pl: 'Zatrzymaj', en: 'Stop' },
+};
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * App: the phone's own downloader fetches the tiles into files, in a foreground service that
+ * goes on with the screen off. This page only records what it wrote, every second while it runs,
+ * and catches up at once when Android lets it run again (screen back on).
+ */
+async function downloadInApp(nt: NonNullable<ReturnType<typeof nativeTileDownload>>, a: SavedArea, units: Unit[], refresh: boolean, job: Job, held: Set<string>) {
+  const id = a.id;
+  const base = { done: a.done, bytes: refresh ? 0 : a.bytes };
+  const pause = async () => {
+    const cur = areas.find((x) => x.id === id);
+    if (cur && !job.cancelled) await setArea({ ...cur, status: 'paused' });
+  };
+  try {
+    await nt.start({
+      id,
+      title: `${tt(T.saving)}: ${a.name}`,
+      doneTitle: `${tt(T.saved)}: ${a.name}`,
+      stopLabel: tt(T.stop),
+      refresh,
+      concurrency: NATIVE_CONCURRENCY,
+      wmsConcurrency: NATIVE_WMS_CONCURRENCY,
+      sources: nativeSources(units),
+      units: units.map(nativeUnit),
+    });
+  } catch {
+    // Android does not let a service start while the app is in the background: resume later.
+    return pause();
+  }
+  let since = 0;
+  let got = 0;
+  let gotBytes = 0;
+  let keysSaved = Date.now();
+  for (;;) {
+    if (job.cancelled) {
+      await nt.cancel({ id }).catch(() => {});
+      await nt.forget({ id }).catch(() => {});
+      return;
+    }
+    const s = await nt.status({ id, since }).catch(() => ({ state: 'none' as const }));
+    if (s.state === 'none') return pause();
+    const entries = (s.results ?? []).map(([ui, ti, size]) => {
+      const u = units[ui];
+      const url = u.tiles[ti].url;
+      got++;
+      gotBytes += size;
+      return { url, f: tileFileName(url, u.def.format) };
+    });
+    await recordAreaFiles(entries, held);
+    for (const e of entries) held.add(e.url);
+    since = s.next ?? since;
+    const finished = s.state === 'done' || s.state === 'cancelled';
+    const cur = areas.find((x) => x.id === id);
+    if (!cur || job.cancelled) continue;
+    if (finished || (entries.length && Date.now() - keysSaved > 3000)) {
+      await putAreaKeys(id, [...held]);
+      keysSaved = Date.now();
+    }
+    const done = base.done + got;
+    const failed = s.failed ?? 0;
+    const status = finished ? (failed || done < cur.total ? 'paused' : 'done') : 'downloading';
+    await setArea({ ...cur, done, failed, bytes: base.bytes + gotBytes, status });
+    if (finished) {
+      await nt.forget({ id }).catch(() => {});
+      return;
+    }
+    await sleep(1000);
+  }
 }
 
 // ---------------------------------------------------------------- storage

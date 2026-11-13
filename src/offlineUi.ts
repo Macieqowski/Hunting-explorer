@@ -23,6 +23,7 @@ import {
 } from './offline';
 import { boxKm2, DETAILS, isDetail, type Box, type Detail } from './tiles';
 import { isApp } from './platform';
+import { nativeTileDownload } from './native';
 import { fetchDistrictsAtPoint, fetchDistrictsByIds, fetchOutlinesInBounds, type District, type DistrictWithGeometry } from './bdl';
 import { districtMatches, fold, searchTerms, type Club } from './data';
 import { cap, pickName } from './offlinePick';
@@ -116,6 +117,14 @@ const L = {
   tooBig: { pl: 'Za mało wolnego miejsca na ten obszar.', en: 'Not enough free space for this area.' },
   downloading: { pl: 'Pobieranie', en: 'Downloading' },
   waiting: { pl: 'Czeka w kolejce', en: 'Waiting in queue' },
+  screenOffApp: {
+    pl: 'Możesz wyłączyć ekran – zapis trwa dalej, postęp widać w powiadomieniu.',
+    en: 'You can turn the screen off – saving goes on, the notification shows progress.',
+  },
+  screenOffWeb: {
+    pl: 'Nie wyłączaj ekranu i nie zamykaj tej strony – przeglądarka wstrzymuje wtedy pobieranie.',
+    en: 'Keep the screen on and this page open – the browser pauses the download otherwise.',
+  },
   paused: { pl: 'Wstrzymane', en: 'Paused' },
   missing: { pl: 'kafelków nie pobrano', en: 'tiles not downloaded' },
   resume: { pl: 'Wznów', en: 'Resume' },
@@ -454,7 +463,8 @@ function renderArea(a: SavedArea): string {
   let status: string;
   if (a.status === 'downloading')
     status = `<p class="small">${running && a.total ? `${l('downloading')} ${pct}% (${fmtNum(a.done)} / ${fmtNum(a.total)})` : l('waiting')}</p>
-      <div class="progress"><span style="width:${pct}%"></span></div>`;
+      <div class="progress"><span style="width:${pct}%"></span></div>
+      ${running ? `<p class="muted small">${l(nativeTileDownload() ? 'screenOffApp' : 'screenOffWeb')}</p>` : ''}`;
   else if (a.status === 'paused')
     status = `<p class="small">${l('paused')} · ${pct}%${a.total > a.done ? ` · ${fmtNum(a.total - a.done)} ${l('missing')}` : ''}</p>
       <div class="progress"><span style="width:${pct}%"></span></div>`;

@@ -57,6 +57,13 @@ dependencies {
     implementation project(':capacitor-cordova-android-plugins')
 }
 
+// The emulator test (src/androidTest) pulls an old kotlin-stdlib-jdk7/jdk8 next to the newer
+// kotlin-stdlib that already contains them.
+configurations.matching { it.name.toLowerCase().contains('androidtest') }.configureEach {
+    exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
+    exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+}
+
 apply from: 'capacitor.build.gradle'
 
 try {

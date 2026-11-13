@@ -17,6 +17,9 @@ on:
       - 'capacitor.config.ts'
       - 'src/platform.ts'
       - 'src/native.ts'
+      - 'src/offline.ts'
+      - 'src/offlineJob.ts'
+      - 'src/tiles.ts'
       - 'scripts/snapshot-districts.mjs'
       - 'package.json'
       - 'package-lock.json'
@@ -164,7 +167,7 @@ jobs:
             if grep -E "Uncaught|TypeError|ReferenceError|SyntaxError" logcat.txt | grep -v "Error injecting safe area CSS"; then echo "::error::Błąd JavaScript w aplikacji"; exit 1; fi
             grep -q "Polowanie\|Loading app\|Capacitor" logcat.txt || echo "::warning::Brak logów Capacitora"
             grep -Eq "\[polowanie\] districts [0-9]{4,} built-in" logcat.txt || { echo "::error::Aplikacja nie wczytała wbudowanej listy obwodów"; exit 1; }
-            grep -q "\[polowanie\] plugins Printer,BackgroundLocation,Alerts,Compass,Bars" logcat.txt || { echo "::error::Brak wtyczek aplikacji"; exit 1; }
+            grep -q "\[polowanie\] plugins Printer,BackgroundLocation,Alerts,Compass,Bars,TileDownload" logcat.txt || { echo "::error::Brak wtyczek aplikacji"; exit 1; }
             # The location service (screen-off sharing) must start as a foreground service.
             adb root; adb wait-for-device; sleep 3
             adb shell pm grant org.polowanie.app android.permission.ACCESS_FINE_LOCATION
@@ -190,3 +193,57 @@ jobs:
             logcat*.txt
             services.txt
             location.txt
+
+  # The app's own downloader for offline maps (TileDownloadService): saves real tiles from
+  # Geoportal (orthophoto WMTS redrawn on the phone, topographic WMS) and BDL with the emulator's
+  # screen off and in Doze, and checks every tile (android/app/src/androidTest).
+  native-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - run: npm ci
+      - run: npm run build
+      - run: npx cap sync android
+      - name: Unit tests (Java)
+        working-directory: android
+        run: ./gradlew :app:testDebugUnitTest
+      - name: Test APKs
+        working-directory: android
+        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          working-directory: android
+          script: |
+            adb logcat -c
+            ./gradlew :app:connectedDebugAndroidTest || (adb logcat -d -s polowanie-test:* TestRunner:* AndroidRuntime:* > ../logcat-native.txt; exit 1)
+            adb logcat -d -s polowanie-test:* TestRunner:* AndroidRuntime:* > ../logcat-native.txt || true
+      - name: Speed
+        if: always()
+        run: grep -h "tiles .* done" logcat-native.txt | tee -a "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-tests
+          path: |
+            logcat-native.txt
+            android/app/build/reports/androidTests/
