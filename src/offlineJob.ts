@@ -32,8 +32,8 @@ export function nativeSources(units: Unit[]): Record<string, TileDownloadSource>
   for (const { def } of units)
     if (def.wmts && !out[def.id])
       out[def.id] = {
-        t: def.wmts.template('HighResolution'),
-        ...(def.blankFallback ? { f: def.wmts.template('StandardResolution') } : {}),
+        t: def.wmts.template,
+        ...(def.wmts.fallback ? { f: def.wmts.fallback } : {}),
         scales: def.wmts.scales,
         e: def.wmts.e,
         n: def.wmts.n,

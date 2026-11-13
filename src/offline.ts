@@ -35,15 +35,18 @@ export type { SavedArea } from './offlineStore';
 
 /** Largest map view that can be saved at once, in km² (a large club is about 300). */
 export const MAX_VIEW_KM2 = 400;
-/** Images a WMS server draws at once for a save: more only queue on the server. */
-const CONCURRENCY = 6;
+/**
+ * Images a WMS server draws at once for a save. Saving uses WMS only for the BDL layers now
+ * (12 at once: 400-600 tiles/s, Nov 2026); Geoportal's WMS stopped speeding up past ~6.
+ */
+const CONCURRENCY = 12;
 /**
  * Requests the app's downloader (TileDownloadService.java) makes at once: WMTS tiles come from
  * a cache and get faster with more (see WMTS_CONCURRENCY); WMS servers draw each image and do not
  * (Nov 2026: 6 → 24 at once stayed at 10-16 tiles/s).
  */
 const NATIVE_CONCURRENCY = WMTS_CONCURRENCY;
-const NATIVE_WMS_CONCURRENCY = 6;
+const NATIVE_WMS_CONCURRENCY = CONCURRENCY;
 
 let areas: SavedArea[] = [];
 const listeners = new Set<() => void>();

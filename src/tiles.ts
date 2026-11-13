@@ -17,21 +17,56 @@ import {
 export const GEOPORTAL_ORTHO_HR = 'https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMS/HighResolution';
 export const GEOPORTAL_ORTHO_STD = 'https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMS/StandardResolution';
 /**
- * The same orthophoto as ready-made 512 px tiles in the Polish grid (PUWG 1992, EPSG:2180).
- * Geoportal serves them from a cache in about half a second however many are asked for at
- * once, while WMS draws each image for seconds and stops speeding up past a few at a time.
- * Saving keeps the photo from these, redrawn into web-map tiles (src/puwg92.ts, and
- * android/…/Puwg92.java in the app). Levels are not halvings; the scale denominators are the server's.
+ * Ready-made 512 px tiles in the Polish grid (PUWG 1992, EPSG:2180). Geoportal serves them
+ * from a cache in well under a second, up to about 50 a second (Nov 2026; more requests only
+ * queue), while WMS draws each image for seconds and stops speeding up past a few at a time.
+ * Saving draws web-map tiles from these (src/puwg92.ts, and android/…/Puwg92.java in the
+ * app). Levels are not halvings: the scale denominators are the server's (GetCapabilities).
  */
-export const GEOPORTAL_ORTHO_WMTS = {
-  template: (service: 'HighResolution' | 'StandardResolution') =>
-    `https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMTS/${service}?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTOFOTOMAPA&STYLE=default&FORMAT=image/jpeg&TILEMATRIXSET=EPSG:2180&TILEMATRIX=EPSG:2180:{L}&TILEROW={r}&TILECOL={c}`,
+export interface Wmts {
+  /** GetTile URL with {L}, {r} and {c} for level, row and column. */
+  template: string;
+  /** The same from a server to use where the first has no picture (blank white or empty). */
+  fallback?: string;
+  scales: number[];
+  /** Top-left corner: easting, northing (metres). */
+  e: number;
+  n: number;
+  size: number;
+}
+
+const wmtsGetTile = (base: string, layer: string) =>
+  `${base}?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${encodeURIComponent(layer)}&STYLE=default&FORMAT=image/jpeg&TILEMATRIXSET=EPSG:2180&TILEMATRIX=EPSG:2180:{L}&TILEROW={r}&TILECOL={c}`;
+
+/** The orthophoto (the same as GEOPORTAL_ORTHO_HR, gaps filled from StandardResolution). */
+export const GEOPORTAL_ORTHO_WMTS: Wmts = {
+  template: wmtsGetTile('https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMTS/HighResolution', 'ORTOFOTOMAPA'),
+  fallback: wmtsGetTile('https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMTS/StandardResolution', 'ORTOFOTOMAPA'),
   scales: [
     3.0238155714285716e7, 1.5119077857142858e7, 7559538.928571429, 3779769.4642857146, 1889884.7321428573, 944942.3660714286,
     472471.1830357143, 236235.59151785716, 94494.23660714286, 47247.11830357143, 23623.559151785714, 9449.423660714287,
     4724.711830357143, 1889.8847321428573, 944.9423660714286, 472.4711830357143, 236.23559151785716,
   ],
-  /** Top-left corner: easting, northing (metres). */
+  e: 100000,
+  n: 850000,
+  size: 512,
+};
+
+/**
+ * The topographic map. Each level holds the scale series meant for it (1:10 000 from level 10,
+ * 2.6 m pixels down). The level used is the coarsest one with pixels no bigger than the zoom's
+ * ground pixel (src/puwg92.ts), so zoom 16 gets the 1:10 000 map: the most detailed map, as
+ * the terrain matters for hunting (Maciej, Nov 2026). Its WMS (GEOPORTAL_TOPO) shows coarser
+ * series at some zooms (at zoom 16 a 1:50 000-like map), so the layer is drawn from WMTS online
+ * too. Same series compared in Warsaw: correlation 0.91-0.99 with WMS, no shift.
+ */
+export const GEOPORTAL_TOPO_WMTS: Wmts = {
+  template: wmtsGetTile('https://mapy.geoportal.gov.pl/wss/service/WMTS/guest/wmts/TOPO', 'MAPA TOPOGRAFICZNA'),
+  scales: [
+    7559538.928571429, 3779769.4642857146, 1889884.7321428573, 944942.3660714286, 472471.1830357143, 236235.59151785716,
+    94494.23660714286, 47247.11830357143, 23623.559151785714, 9449.423660714287, 4724.711830357143, 1889.8847321428573,
+    944.9423660714286,
+  ],
   e: 100000,
   n: 850000,
   size: 512,
@@ -67,15 +102,19 @@ export interface WmsDef {
    *  to draw a 1024 px image as a 256 px one, so this is several times faster. */
   meta?: number;
   /** Saved from these ready-made PUWG 1992 tiles instead (much faster than WMS), see puwg92.ts. */
-  wmts?: typeof GEOPORTAL_ORTHO_WMTS;
+  wmts?: Wmts;
+  /** Tiles a save gets per second, for time estimates, where it differs from the defaults below. */
+  savePerS?: number;
 }
 
 export const WMS = {
   // avgKB: 30 random points in Poland (Nov 2026) gave 15 KB at zoom 16 down to 13 KB at zoom 19.
   ortho: { id: 'ortho', url: GEOPORTAL_ORTHO_HR, layers: 'Raster', format: 'image/jpeg', transparent: false, maxNative: 19, cache: true, avgKB: 16, blankFallback: GEOPORTAL_ORTHO_STD, meta: 4, wmts: GEOPORTAL_ORTHO_WMTS },
-  geotopo: { id: 'geotopo', url: GEOPORTAL_TOPO, layers: 'Raster', format: 'image/jpeg', transparent: false, maxNative: 17, cache: true, avgKB: 28, meta: 4 },
-  districts: { id: 'districts', url: BDL_WMS_DISTRICTS, layers: '0', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 6, meta: 4 },
-  compartments: { id: 'compartments', url: BDL_WMS_FORESTS, layers: '3,2', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 10, meta: 4 },
+  // savePerS: one WMTS image holds about 13 zoom 16 tiles (Chromium: 71 tiles/s).
+  geotopo: { id: 'geotopo', url: GEOPORTAL_TOPO, layers: 'Raster', format: 'image/jpeg', transparent: false, maxNative: 17, cache: true, avgKB: 28, meta: 4, wmts: GEOPORTAL_TOPO_WMTS, savePerS: 60 },
+  // savePerS: BDL draws a 4×4 block in 0.2-0.3 s; 12 at once gave 400-600 tiles/s (Nov 2026).
+  districts: { id: 'districts', url: BDL_WMS_DISTRICTS, layers: '0', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 6, meta: 4, savePerS: 100 },
+  compartments: { id: 'compartments', url: BDL_WMS_FORESTS, layers: '3,2', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 10, meta: 4, savePerS: 100 },
   forests: { id: 'forests', url: BDL_WMS_FORESTS, layers: '5', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 4 },
   bans: { id: 'bans', url: BDL_WMS_ENTRY_BANS, layers: '3', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 3 },
   // Fire danger changes daily, so it is never kept.
@@ -93,7 +132,7 @@ export const isDetail = (v: unknown): v is Detail => DETAILS.includes(v as Detai
 
 /** Tiles a save fetches per second, for time estimates (25 to 10 measured, with blocks). */
 export const SAVE_TILES_PER_S = 15;
-/** The same for layers saved from WMTS (the photo): ~50 source images/s, each worth 1-2 tiles. */
+/** The same for layers saved from WMTS (photo, topographic map): ~50 source images/s, each worth 1-13 tiles. */
 export const SAVE_WMTS_TILES_PER_S = 40;
 
 /** What "Save for offline" downloads: layer and zoom range. Only the photo goes deeper than 16. */
@@ -288,7 +327,7 @@ export function estimate(area: TileArea | ReturnType<typeof tileLister>, detail:
     const n = list(p.minZ, p.maxZ).length;
     tiles += n;
     kb += n * p.def.avgKB;
-    secs += n / (p.def.wmts ? SAVE_WMTS_TILES_PER_S : SAVE_TILES_PER_S);
+    secs += n / (p.def.savePerS ?? (p.def.wmts ? SAVE_WMTS_TILES_PER_S : SAVE_TILES_PER_S));
   }
   return { tiles, mb: kb / 1024, minutes: secs / 60 };
 }

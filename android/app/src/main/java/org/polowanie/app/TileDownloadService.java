@@ -419,7 +419,9 @@ public class TileDownloadService extends Service {
      * An empty array means the server has no photo there (drawn white); null that fetching failed.
      */
     private int[] wmtsTile(Job job, WmtsSource src, int level, int row, int col) {
-        String key = level + "/" + row + "/" + col;
+        // Outside the grid (far west or north of Poland): nothing there.
+        if (row < 0 || col < 0) return new int[0];
+        String key = src.template + "|" + level + "/" + row + "/" + col;
         java.util.concurrent.FutureTask<int[]> task;
         boolean mine = false;
         synchronized (job.cache) {

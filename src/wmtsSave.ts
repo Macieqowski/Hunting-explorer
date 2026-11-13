@@ -1,11 +1,12 @@
-// Website: saving the aerial photo for offline use from Geoportal's ready-made WMTS tiles
-// (PUWG 1992), redrawn into the web map's tiles in the browser (see puwg92.ts). The app does the
+// The aerial photo and the topographic map drawn from Geoportal's ready-made WMTS tiles
+// (PUWG 1992), redrawn into the web map's tiles in the browser (see puwg92.ts): for saving
+// offline on the website and for showing these layers with signal (cachedLayer.ts). The app does the
 // same natively (TileDownloadService.java); this is for the website and iPhones.
 
 import { fetchTile } from './cachedLayer';
 import { fillWhite, groundPixel, level, PIXEL, render, sourcePixels, tileRange, whiteShare, type SourceTile } from './puwg92';
 import { limiter } from './offlineJob';
-import type { WmsDef } from './tiles';
+import type { WmsDef, Wmts } from './tiles';
 
 /**
  * Requests to the WMTS at once. Measured Nov 2026: 16 → 25, 24 → 39, 32 → 50, 48 → 51 images/s
@@ -14,8 +15,6 @@ import type { WmsDef } from './tiles';
  */
 export const WMTS_CONCURRENCY = 32;
 const slot = limiter(WMTS_CONCURRENCY);
-
-type Wmts = NonNullable<WmsDef['wmts']>;
 
 /** Decoded source tiles shared by neighbouring tiles: a 512 px tile serves up to ~8 web tiles. */
 const CACHE_MAX = 48;
@@ -62,12 +61,14 @@ async function pixels(u: string, size: number): Promise<SourceTile> {
   }
 }
 
-/** A source tile, its gaps in the high-resolution photo filled from the standard one. */
-function source(w: Wmts, fallback: boolean, l: number, r: number, c: number): Promise<SourceTile> {
-  return remember(`${l}/${r}/${c}`, async () => {
-    const main = await pixels(url(w.template('HighResolution'), l, r, c), w.size);
-    if (!fallback || (main && whiteShare(main) < 0.3)) return main;
-    const other = await pixels(url(w.template('StandardResolution'), l, r, c), w.size).catch(() => undefined);
+/** A source tile, its gaps (no picture there) filled from the fallback server. */
+function source(w: Wmts, l: number, r: number, c: number): Promise<SourceTile> {
+  // Outside the grid (far west or north of Poland): nothing there.
+  if (r < 0 || c < 0) return Promise.resolve(null);
+  return remember(url(w.template, l, r, c), async () => {
+    const main = await pixels(url(w.template, l, r, c), w.size);
+    if (!w.fallback || (main && whiteShare(main) < 0.3)) return main;
+    const other = await pixels(url(w.fallback, l, r, c), w.size).catch(() => undefined);
     if (other === undefined) return main;
     if (!main) return other;
     if (other) fillWhite(main, other);
@@ -84,7 +85,7 @@ export async function wmtsTile(def: WmsDef, z: number, x: number, y: number): Pr
   const [c0, r0, c1, r1] = tileRange(f, w.size);
   if (c1 - c0 > 3 || r1 - r0 > 3) throw new Error('level table');
   const rows = await Promise.all(
-    Array.from({ length: r1 - r0 + 1 }, (_, r) => Promise.all(Array.from({ length: c1 - c0 + 1 }, (_, c) => source(w, !!def.blankFallback, l, r0 + r, c0 + c)))),
+    Array.from({ length: r1 - r0 + 1 }, (_, r) => Promise.all(Array.from({ length: c1 - c0 + 1 }, (_, c) => source(w, l, r0 + r, c0 + c)))),
   );
   const rgba = render(f, rows, c0, r0, w.size);
   const c = document.createElement('canvas');
