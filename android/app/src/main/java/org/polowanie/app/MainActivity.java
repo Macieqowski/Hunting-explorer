@@ -14,6 +14,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(CompassPlugin.class);
         registerPlugin(BarsPlugin.class);
         registerPlugin(TileDownloadPlugin.class);
+        registerPlugin(SpeechPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

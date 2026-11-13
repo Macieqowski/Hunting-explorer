@@ -61,5 +61,6 @@ export default defineConfig({
   build: { outDir: 'dist/app' },
   plugins: [cleanDist(), serviceWorker(), analytics()],
   // rules/ holds the Firebase security rules tests, which need the emulator (npm run test:rules).
-  test: { globals: true, environment: 'node', exclude: ['rules/**', 'node_modules/**'] },
+  // worker/ is its own package with its own tests (cd worker && npm test).
+  test: { globals: true, environment: 'node', exclude: ['rules/**', 'worker/**', 'node_modules/**'] },
 } as any);

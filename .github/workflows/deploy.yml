@@ -38,8 +38,19 @@ jobs:
         run: npm run test:rules
       - name: Club and district list from BDL
         run: node scripts/snapshot-districts.mjs
+      - name: Address of the oral-exam grading service
+        id: oral
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ORAL_API_URL: ${{ vars.ORAL_API_URL }}
+          # On main the Worker may be deploying right now (worker.yml), so give it a moment.
+          ORAL_WAIT_S: ${{ github.event_name == 'push' && '120' || '0' }}
+        run: echo "url=$(node scripts/oral-api-url.mjs)" >> "$GITHUB_OUTPUT"
       - run: npm run build
         env:
+          # Oral exam: AI grading service (worker/). Empty = the oral exam works with self-rating only.
+          VITE_ORAL_API_URL: ${{ steps.oral.outputs.url }}
           # Public Firebase web config for the group hunt section (Settings → Secrets and variables → Actions → Variables).
           # Without them the section shows a "not set up" notice and the rest of the site works as before.
           VITE_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
