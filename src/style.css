@@ -42,6 +42,9 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; text-transform: uppercase; le
   position: absolute; left: 12px; top: 12px; z-index: 500; border: 1px solid var(--border); background: var(--surface); color: var(--text);
   border-radius: var(--r-pill); padding: 8px 14px; font: inherit; font-weight: 600; box-shadow: var(--shadow); cursor: pointer;
 }
+/* The locate button sits in the map's top-left corner, so the map's own top-left controls (the wind badge)
+   start below it instead of underneath it: 12 px offset + 44 px button. */
+#map .leaflet-top.leaflet-left { top: 56px; }
 .legend {
   position: absolute; left: 12px; bottom: 24px; z-index: 500; background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--r-m); padding: 6px 10px; box-shadow: var(--shadow); max-width: 260px;
