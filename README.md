@@ -51,6 +51,7 @@ Stack: Vite + TypeScript + Leaflet, no framework. Code layout:
 - `src/hunt.ts`, `src/huntUi.ts`, `src/huntMap.ts`, `src/huntShare.ts`, `src/huntSighting.ts`, `src/huntIcons.ts`, `src/stands.ts` – group hunts: logic, pages, live map, location sharing, game reporting with the compass, role, species and high-seat icons, high seats (zwyżki, ambony) read from a KMZ/KML file; `src/huntBackend.ts` (interface) + `src/huntFirebase.ts` (Firebase, loaded only when the section opens); rules in `database.rules.json`, tested in `rules/`
 - `src/main.ts` – UI, routing, rendering; `src/nav.ts` – the five destinations and link addresses; `src/tokens.css` – colours, fonts and shapes of the light and dark look
 - `landing/` – the welcome page at the root of the site (`vite.landing.config.ts`); it passes old `#/…` links on to `app/`
+- `landing/seo/` – pages written as plain HTML at build time so search engines can read them (the app's `#/…` views are one page to them): hunting seasons, the game atlas, both exams and every hunting district and club, plus `sitemap.xml`, `robots.txt` and `404.html`; `landing/public/og.png` (the picture for shared links) is drawn by `scripts/make-og.mjs`
 - `src/i18n.ts` – Polish/English strings
 
 ## Exam question banks
@@ -66,6 +67,8 @@ Columns: `temat; pytanie; a; b; c; d; poprawna; wyjasnienie; zrodlo` (`poprawna`
 ## Deployment
 
 `.github/workflows/deploy.yml` tests, builds and publishes `dist/` to GitHub Pages on every push to `main`. Enable it once in **Settings → Pages → Source: GitHub Actions**.
+
+Visitor statistics are Cloudflare Web Analytics (no cookies, so no consent banner): set the repository variable `CF_ANALYTICS_TOKEN` to the token from Cloudflare's snippet. The beacon loads only on `www.polowanie.org`, never in the Android app, and does not see the `#/…` part of addresses (`landing/seo/analytics.ts`).
 
 ## Disclaimer
 

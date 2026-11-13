@@ -1,6 +1,7 @@
 import { defineConfig, type Plugin } from 'vite';
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { analyticsSnippet } from './landing/seo/analytics';
 
 /**
  * Emits sw.js (from sw/service-worker.js) with the list of built files to keep for
@@ -46,13 +47,19 @@ function cleanDist(): Plugin {
   };
 }
 
+/** Cloudflare Web Analytics (repository variable CF_ANALYTICS_TOKEN); it only runs on www.polowanie.org, not in the Android app. */
+function analytics(): Plugin {
+  const tag = analyticsSnippet(process.env.VITE_CF_ANALYTICS_TOKEN);
+  return { name: 'hunting-analytics', transformIndexHtml: (html) => html.replace('</head>', `${tag}\n  </head>`) };
+}
+
 // The app is built into dist/app/ and the welcome page (vite.landing.config.ts) into dist/, so
 // the site serves the page at / and the app at /app/. The Android app packs dist/app/ only.
 // Relative base so the build works under any address.
 export default defineConfig({
   base: './',
   build: { outDir: 'dist/app' },
-  plugins: [cleanDist(), serviceWorker()],
+  plugins: [cleanDist(), serviceWorker(), analytics()],
   // rules/ holds the Firebase security rules tests, which need the emulator (npm run test:rules).
   test: { globals: true, environment: 'node', exclude: ['rules/**', 'node_modules/**'] },
 } as any);
