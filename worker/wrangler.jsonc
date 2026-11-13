@@ -20,6 +20,11 @@
     // Firebase project whose anonymous sign-in tokens are accepted (the app's project).
     // Overridden at deploy time from the repository variable FIREBASE_PROJECT_ID.
     "FIREBASE_PROJECT_ID": "",
+    // Who may use AI grading: "passphrase" = only those who entered the group-hunt passphrase in the
+    // app (checked in the database below), "open" = anyone using the app.
+    "ACCESS_MODE": "passphrase",
+    // The app's Realtime Database. Overridden at deploy time from the repository variable FIREBASE_DATABASE_URL.
+    "FIREBASE_DATABASE_URL": "",
     // Pages allowed to call the service from a browser (the app on Android runs at https://localhost).
     "ALLOWED_ORIGINS": "https://www.polowanie.org,https://polowanie.org,https://macieqowski.github.io,https://localhost,http://localhost:5173",
     // Graded answers per day (Europe/Warsaw): per signed-in user, per network address, and in total.

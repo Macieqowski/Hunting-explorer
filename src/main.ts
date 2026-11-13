@@ -25,7 +25,7 @@ import { renderGuide } from './huntHelp';
 import { createSheet } from './sheet';
 import { SEASONS, isOpen, effective, formatRanges, yearFrac, openOnlyIn, type Season } from './seasons';
 import { renderExams, handleExamClick, handleExamChange, drillSpecies } from './examUi';
-import { handleOralClick, handleOralInput, handleOralChange } from './oralUi';
+import { handleOralClick, handleOralInput, handleOralChange, handleOralSubmit } from './oralUi';
 import { renderWeather, handleWeatherClick, handleWeatherInput, handleWeatherSubmit, showWeatherAt } from './weatherUi';
 import { renderBallistics, handleBallisticsClick, handleBallisticsChange, handleBallisticsSubmit } from './ballisticsUi';
 import { renderHunts, handleHuntClick, handleHuntInput, handleHuntSubmit, handleHuntChange, leaveHunts, mountHuntMap, huntBack, huntPhoneBack } from './huntUi';
@@ -982,7 +982,8 @@ content.addEventListener('change', (e) => {
 });
 
 content.addEventListener('submit', (e) => {
-  if (handleWeatherSubmit(e.target as HTMLFormElement)) e.preventDefault();
+  if (handleOralSubmit(e.target as HTMLFormElement)) e.preventDefault();
+  else if (handleWeatherSubmit(e.target as HTMLFormElement)) e.preventDefault();
   else if (handleBallisticsSubmit(e.target as HTMLFormElement)) e.preventDefault();
   else if (handleHuntSubmit(e.target as HTMLFormElement)) e.preventDefault();
 });

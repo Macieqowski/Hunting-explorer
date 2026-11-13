@@ -1,8 +1,10 @@
 // Grading service of the oral exam. POST /grade { nr, answer } with a Firebase ID token returns
-// { score, points, errors, feedback, left }. The reference answers stay here; the app sends only
+// { score, points, errors, feedback, left }, or 403 { error: 'locked' } until the user has given
+// the club passphrase in the app. The reference answers stay here; the app sends only
 // the question number and the candidate's text. Nothing about the answer is stored or logged.
 import bankJson from '../../public/exams/ustny.json';
 import { MAX_ANSWER, wordCount, type OralBank, type OralQuestion } from '../../src/oral';
+import { AccessUnavailable, hasAccess } from './access';
 import { verifyFirebaseToken, googleKeys, type KeySource } from './auth';
 import { Counters } from './counters';
 import { dayOf, readLimits, takesFor, type Take, type TakeResult } from './limits';
@@ -21,6 +23,8 @@ export interface Env {
   ANTHROPIC_API_KEY?: string;
   OPENAI_API_KEY?: string;
   FIREBASE_PROJECT_ID?: string;
+  FIREBASE_DATABASE_URL?: string;
+  ACCESS_MODE?: string;
   ALLOWED_ORIGINS?: string;
   LIMIT_USER?: string;
   LIMIT_IP?: string;
@@ -35,6 +39,8 @@ const MAX_BODY = 16_000;
 /** What the handler needs from outside, replaceable in tests. */
 export interface Deps {
   keys: KeySource;
+  /** Whether this user gave the club passphrase (see access.ts). */
+  access(env: Env, uid: string, token: string): Promise<boolean>;
   providers(env: Env): { name: string; grade: Provider }[];
   take(env: Env, day: string, takes: Take[]): Promise<TakeResult>;
   refund(env: Env, day: string, keys: string[]): Promise<void>;
@@ -55,6 +61,7 @@ export function providersOf(env: Env): { name: string; grade: Provider }[] {
 
 const realDeps: Deps = {
   keys: googleKeys,
+  access: (env, uid, token) => hasAccess(env, uid, token),
   providers: providersOf,
   take: async (env, day, takes) => counters(env).take(day, takes),
   refund: async (env, day, keys) => counters(env).refund(day, keys),
@@ -109,7 +116,13 @@ export async function handle(req: Request, env: Env, deps: Deps = realDeps): Pro
 
   const token = /^Bearer (.+)$/.exec(req.headers.get('authorization') ?? '')?.[1];
   const uid = token ? await verifyFirebaseToken(token, env.FIREBASE_PROJECT_ID ?? '', deps.keys, deps.now()) : null;
-  if (!uid) return reply({ error: 'auth' }, 401, origin);
+  if (!uid || !token) return reply({ error: 'auth' }, 401, origin);
+  try {
+    if (!(await deps.access(env, uid, token))) return reply({ error: 'locked' }, 403, origin);
+  } catch (e) {
+    console.log(JSON.stringify({ ev: 'access_error', detail: e instanceof AccessUnavailable ? e.message : 'unexpected' }));
+    return reply({ error: 'unavailable', reason: 'access' }, 503, origin);
+  }
 
   const providers = deps.providers(env);
   if (!providers.length) return reply({ error: 'unavailable' }, 503, origin);

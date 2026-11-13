@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { handle, providersOf, type Deps, type Env } from '../src/index';
+import { AccessUnavailable } from '../src/access';
 import { applyTake } from '../src/limits';
 import { ProviderError, type Provider } from '../src/providers/types';
 import { claims, makeSigner, NOW, PROJECT, type Signer } from './helpers';
@@ -25,6 +26,7 @@ function deps(over: Partial<Deps> = {}) {
   const seen: string[] = [];
   const d: Deps = {
     keys: async () => [signer.jwk],
+    access: async () => true,
     providers: () => [{ name: 'anthropic', grade: good }],
     take: async (_e, _day, takes) => applyTake(counts, takes),
     refund: async (_e, _day, keys) => {
@@ -54,6 +56,35 @@ describe('grading service', () => {
     expect(body.left).toBe(1);
     expect(body.points.every((p) => p === 'yes')).toBe(true);
     expect(body.points.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('grades only for people who gave the club passphrase, and spends nothing of the limit on the others', async () => {
+    const asked: string[] = [];
+    const { d, counts } = deps({
+      access: async (_e, uid, tok) => {
+        asked.push(`${uid}:${tok === token}`);
+        return false;
+      },
+    });
+    const res = await handle(post({ nr: 1, answer: ANSWER }), env, d);
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: 'locked' });
+    expect(res.headers.get('access-control-allow-origin')).toBe(ORIGIN);
+    expect(asked).toHaveLength(1);
+    expect(asked[0].endsWith(':true')).toBe(true);
+    expect(counts.size).toBe(0);
+  });
+
+  it('says "unavailable", not "locked", when the passphrase cannot be checked', async () => {
+    const { d, counts } = deps({
+      access: async () => {
+        throw new AccessUnavailable('database 500');
+      },
+    });
+    const res = await handle(post({ nr: 1, answer: ANSWER }), env, d);
+    expect(res.status).toBe(503);
+    expect(((await res.json()) as { error: string }).error).toBe('unavailable');
+    expect(counts.size).toBe(0);
   });
 
   it('answers the browser preflight and refuses unknown pages', async () => {

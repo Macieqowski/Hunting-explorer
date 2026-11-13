@@ -345,6 +345,13 @@ describe('club stands', () => {
     await assertFails(set(ref(db('x'), 'club/members/y'), PASS)); // not for someone else
     await assertSucceeds(set(ref(db('x'), 'club/members/x'), PASS));
     await assertFails(get(ref(db('x'), 'club/members/x')));
+    // club/access/<uid> holds nothing; being allowed to read it tells the grading service of the
+    // oral exam that this account gave the passphrase.
+    await assertSucceeds(get(ref(db('x'), 'club/access/x')));
+    await assertFails(get(ref(db('stranger'), 'club/access/stranger')));
+    await assertFails(get(ref(db('stranger'), 'club/access/x')));
+    await assertFails(get(ref(db('x'), 'club/access')));
+    await assertFails(set(ref(db('x'), 'club/access/x'), true));
     await assertSucceeds(set(ref(db('x'), 'club/stands'), stands));
     await assertSucceeds(get(ref(db('x'), 'club/stands')));
     await assertFails(get(ref(db('stranger'), 'club/stands')));

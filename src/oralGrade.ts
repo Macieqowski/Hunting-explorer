@@ -1,10 +1,11 @@
 // Client of the oral-exam grading service (worker/ in this repository, a Cloudflare Worker that
 // asks an AI model how close an answer is to the reference one). The service is optional: without
 // it, or when it cannot be reached, the user rates their own answer.
-import { firebaseConfig } from './huntBackend';
+import { firebaseConfig, getBackend, HuntError } from './huntBackend';
 import { clampScore, MAX_ANSWER, type Coverage } from './oral';
 
-export type GradeFail = 'offline' | 'quota' | 'unconfigured' | 'unavailable';
+/** 'locked': the service grades only for people who gave the club passphrase, and this account has not. */
+export type GradeFail = 'offline' | 'quota' | 'locked' | 'unconfigured' | 'unavailable';
 
 export class GradeError extends Error {
   constructor(readonly code: GradeFail) {
@@ -46,8 +47,8 @@ export function parseGrade(data: unknown, nPoints: number): AiGrade | null {
   };
 }
 
-/** Which failure an HTTP status of the service means. */
-export const failOf = (status: number): GradeFail => (status === 429 ? 'quota' : 'unavailable');
+/** Which failure an HTTP status (and the `error` field of the body) of the service means. */
+export const failOf = (status: number, error?: unknown): GradeFail => (status === 429 ? 'quota' : status === 403 && error === 'locked' ? 'locked' : 'unavailable');
 
 const TIMEOUT_MS = 45_000;
 
@@ -79,8 +80,45 @@ export async function gradeAnswer(nr: number, answer: string, nPoints: number): 
   } finally {
     clearTimeout(timer);
   }
-  if (!res.ok) throw new GradeError(failOf(res.status));
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
+    throw new GradeError(failOf(res.status, body?.error));
+  }
   const grade = parseGrade(await res.json().catch(() => null), nPoints);
   if (!grade) throw new GradeError('unavailable');
   return grade;
+}
+
+export type UnlockFail = 'wrong' | 'offline' | 'unavailable';
+
+export class UnlockError extends Error {
+  constructor(readonly code: UnlockFail) {
+    super(code);
+  }
+}
+
+/** Which failure of giving the passphrase an error of the group-hunt backend means. */
+export const unlockFailOf = (e: unknown): UnlockFail => (e instanceof HuntError ? (e.code === 'denied' ? 'wrong' : e.code === 'offline' ? 'offline' : 'unavailable') : 'unavailable');
+
+const UNLOCK_TIMEOUT_MS = 15_000;
+
+/**
+ * Gives the club passphrase (the one used for group hunts) for this device's account. The
+ * database rules accept only the right one; the grading service then sees that this account gave it.
+ * Throws UnlockError.
+ */
+export async function unlockGrading(passphrase: string): Promise<void> {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) throw new UnlockError('offline');
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  // Without a connection the database client waits instead of failing.
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new UnlockError('offline')), UNLOCK_TIMEOUT_MS);
+  });
+  try {
+    await Promise.race([getBackend().then((be) => be.joinClub(passphrase)), late]);
+  } catch (e) {
+    throw e instanceof UnlockError ? e : new UnlockError(unlockFailOf(e));
+  } finally {
+    clearTimeout(timer);
+  }
 }

@@ -9,7 +9,7 @@ import { shuffle } from './exam';
 import { getLang, tt, fmtNum } from './i18n';
 import { ic } from './icons';
 import { speechSupport, startSpeech, appendSpeech, SpeechFailure, type SpeechError, type SpeechSession } from './speech';
-import { gradeConfigured, gradeAnswer, GradeError, type AiGrade, type GradeFail } from './oralGrade';
+import { gradeConfigured, gradeAnswer, unlockGrading, GradeError, UnlockError, type AiGrade, type GradeFail, type UnlockFail } from './oralGrade';
 
 export const ORAL_ID = 'ustny';
 type Mode = 'exam' | 'learn' | 'review';
@@ -46,6 +46,10 @@ const L = {
   gradeSelf: {
     pl: 'Po odpowiedzi zobaczysz odpowiedź wzorcową i sam ocenisz, ile z niej powiedziałeś.',
     en: 'After answering you see the reference answer and rate how much of it you covered.',
+  },
+  gradeAiPass: {
+    pl: 'Ocena AI jest dostępna po wpisaniu hasła koła, tego samego co do polowań zbiorowych. Aplikacja poprosi o nie przy pierwszej ocenie. Bez hasła oceniasz odpowiedzi samodzielnie.',
+    en: 'AI grading is available after you enter the club passphrase, the same one as for group hunts. The app asks for it at the first grading. Without it you rate the answers yourself.',
   },
   allTopics: { pl: 'Wszystkie działy', en: 'All topics' },
   topics: { pl: 'Działy', en: 'Topics' },
@@ -157,6 +161,23 @@ const L = {
     en: 'The daily limit of AI gradings is used up. Rate the answer yourself below; the limit renews tomorrow.',
   },
   aiUnavailable: { pl: 'Ocena AI jest chwilowo niedostępna. Oceń odpowiedź samodzielnie poniżej.', en: 'AI grading is unavailable right now. Rate the answer yourself below.' },
+  aiLockedTitle: { pl: 'Ocena AI wymaga hasła', en: 'AI grading needs the passphrase' },
+  aiLockedText: {
+    pl: 'Wpisz hasło koła, to samo co do polowań zbiorowych. Wystarczy raz na tym urządzeniu. Bez hasła oceń odpowiedź samodzielnie poniżej.',
+    en: 'Enter the club passphrase, the same one as for group hunts. Once on this device is enough. Without it, rate the answer yourself below.',
+  },
+  aiLockedPending: {
+    pl: 'Hasło zostało przyjęte, ale usługa oceny jeszcze go nie widzi. Spróbuj ponownie za chwilę albo oceń odpowiedź samodzielnie poniżej.',
+    en: 'The passphrase was accepted, but the grading service does not see it yet. Try again in a moment or rate the answer yourself below.',
+  },
+  aiLockedShort: { pl: 'Ocena AI będzie dostępna po wpisaniu hasła na górze strony.', en: 'AI grading becomes available once you enter the passphrase at the top of the page.' },
+  passLabel: { pl: 'Hasło koła', en: 'Club passphrase' },
+  unlockBtn: { pl: 'Odblokuj ocenę AI', en: 'Unlock AI grading' },
+  unlockBusy: { pl: 'Sprawdzam hasło…', en: 'Checking the passphrase…' },
+  unlockEmpty: { pl: 'Wpisz hasło.', en: 'Enter the passphrase.' },
+  unlockWrong: { pl: 'Nieprawidłowe hasło.', en: 'Wrong passphrase.' },
+  unlockOffline: { pl: 'Brak internetu. Spróbuj, gdy wróci zasięg.', en: 'No internet. Try again with signal.' },
+  unlockFail: { pl: 'Nie udało się sprawdzić hasła. Spróbuj ponownie.', en: 'The passphrase could not be checked. Try again.' },
   showResult: { pl: 'Pokaż wynik', en: 'Show the result' },
   needScores: { pl: 'Oceń wszystkie odpowiedzi, żeby zobaczyć wynik.', en: 'Grade every answer to see the result.' },
   finish: { pl: 'Zakończ', en: 'Finish' },
@@ -396,6 +417,62 @@ async function startMic(it: Item) {
 
 const canAi = (it: Item) => gradeConfigured() && wordCount(it.answer) >= MIN_WORDS;
 
+// AI grading is behind the club passphrase (the one for group hunts). The service says "locked"
+// until this device's account has given it; the form below gives it once.
+const UNLOCKED_KEY = 'oralUnlocked.v1';
+/** The passphrase being typed, and what happened to the last try. `accepted`: given in this session. */
+const gate = { pass: '', busy: false, error: null as UnlockFail | 'empty' | null, accepted: false };
+
+function unlockedHere(): boolean {
+  try {
+    return localStorage.getItem(UNLOCKED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function markUnlocked(yes: boolean) {
+  try {
+    if (yes) localStorage.setItem(UNLOCKED_KEY, '1');
+    else localStorage.removeItem(UNLOCKED_KEY);
+  } catch {
+    /* private mode: the service still knows */
+  }
+}
+
+const isLocked = (it: Item) => it.ai.state === 'error' && it.ai.code === 'locked';
+
+/** Answers on screen that wait for the passphrase (in learning mode only the current one). */
+const lockedItems = (a: Attempt): Item[] => (a.mode === 'exam' ? a.items : [a.items[a.index]]).filter(isLocked);
+
+async function unlock() {
+  if (gate.busy) return;
+  const pass = gate.pass.trim();
+  if (!pass) {
+    gate.error = 'empty';
+    return rerender();
+  }
+  gate.busy = true;
+  gate.error = null;
+  rerender();
+  try {
+    await unlockGrading(pass);
+  } catch (e) {
+    gate.busy = false;
+    gate.error = e instanceof UnlockError ? e.code : 'unavailable';
+    return rerender();
+  }
+  gate.busy = false;
+  gate.pass = '';
+  gate.accepted = true;
+  if (attempt?.phase === 'grade')
+    for (const it of lockedItems(attempt)) {
+      it.ai = { state: 'idle' };
+      void runAi(it);
+    }
+  rerender();
+}
+
 async function runAi(it: Item) {
   if (it.ai.state === 'loading' || !canAi(it)) return;
   it.ai = { state: 'loading' };
@@ -403,10 +480,12 @@ async function runAi(it: Item) {
   try {
     const grade = await gradeAnswer(it.q.nr, it.answer, it.q.points.length);
     it.ai = { state: 'done', grade };
+    markUnlocked(true);
     if (grade.points.length === it.q.points.length) it.coverage = [...grade.points];
     it.score = grade.score;
   } catch (e) {
     it.ai = { state: 'error', code: e instanceof GradeError ? e.code : 'unavailable' };
+    if (isLocked(it)) markUnlocked(false);
   }
   rerender();
 }
@@ -482,7 +561,7 @@ function renderSetup(b: OralBank) {
       .join('')}</select>
   </div>`
   }
-  <p class="muted small">${gradeConfigured() ? l('gradeAi') : l('gradeSelf')}</p>
+  <p class="muted small">${gradeConfigured() ? `${l('gradeAi')}${unlockedHere() ? '' : ` ${l('gradeAiPass')}`}` : l('gradeSelf')}</p>
   ${
     noReview
       ? `<div class="notice small">${l('nothingDue')}</div><div class="actions"><button type="button" class="btn" data-oral="learnNew">${l('learnNew')}</button></div>`
@@ -574,7 +653,18 @@ function refHtml(text: string) {
     .join('');
 }
 
-const AI_ERR: Record<GradeFail, keyof typeof L> = { offline: 'aiOffline', quota: 'aiQuota', unconfigured: 'aiUnavailable', unavailable: 'aiUnavailable' };
+const AI_ERR: Record<GradeFail, keyof typeof L> = { offline: 'aiOffline', quota: 'aiQuota', locked: 'aiLockedShort', unconfigured: 'aiUnavailable', unavailable: 'aiUnavailable' };
+const UNLOCK_ERR: Record<UnlockFail | 'empty', keyof typeof L> = { empty: 'unlockEmpty', wrong: 'unlockWrong', offline: 'unlockOffline', unavailable: 'unlockFail' };
+
+/** The passphrase form, shown where an AI grade was refused for the lack of it. */
+function lockBox() {
+  return `<form class="notice oral-consent oral-lock" data-oral-form="unlock" novalidate>
+    <p><strong>${l('aiLockedTitle')}</strong></p>
+    <p class="small">${l(gate.accepted ? 'aiLockedPending' : 'aiLockedText')}</p>
+    ${gate.error ? `<p class="h-error" role="alert">${l(UNLOCK_ERR[gate.error])}</p>` : ''}
+    <div class="oral-lock-row"><input type="password" name="oralpass" data-oral-input="pass" autocomplete="off" aria-label="${l('passLabel')}" placeholder="${l('passLabel')}" value="${esc(gate.pass)}"${gate.error ? ' aria-invalid="true"' : ''} />
+    <button type="submit" class="btn"${gate.busy ? ' disabled aria-busy="true"' : ''}>${gate.busy ? l('unlockBusy') : l('unlockBtn')}</button></div></form>`;
+}
 
 function aiBlock(b: OralBank, it: Item, i: number, single: boolean) {
   if (!gradeConfigured()) return '';
@@ -587,6 +677,7 @@ function aiBlock(b: OralBank, it: Item, i: number, single: boolean) {
       <p class="muted small">${l('aiAdjust')}${g.left != null ? ` ${l('aiLeft')}: ${fmtNum(g.left)}.` : ''}</p></div>`;
   }
   if (wordCount(it.answer) < MIN_WORDS) return it.answer.trim() ? `<p class="muted small">${l('aiTooShort')}</p>` : '';
+  if (isLocked(it)) return single ? lockBox() : `<p class="muted small">${l('aiLockedShort')}</p>`;
   const retry = it.ai.state === 'error' && it.ai.code !== 'quota';
   return `${it.ai.state === 'error' ? `<p class="notice error small">${l(AI_ERR[it.ai.code])}</p>` : ''}
     ${single && (it.ai.state === 'idle' || retry) ? `<div class="actions"><button type="button" class="btn${it.ai.state === 'error' ? ' ghost' : ''}" data-oral="ai" data-i="${i}">${it.ai.state === 'error' ? l('retry') : l('aiBtn')}</button></div>` : ''}`;
@@ -634,10 +725,10 @@ function renderGrade(b: OralBank, a: Attempt) {
     </div>`;
   }
   const missing = a.items.filter((it) => it.score == null).length;
-  const idle = a.items.filter((it) => canAi(it) && (it.ai.state === 'idle' || (it.ai.state === 'error' && it.ai.code !== 'quota')));
+  const idle = a.items.filter((it) => canAi(it) && (it.ai.state === 'idle' || (it.ai.state === 'error' && it.ai.code !== 'quota' && it.ai.code !== 'locked')));
   return `<h2>${l('gradeTitle')}</h2>
   <p class="small">${l('gradeIntro')}</p>
-  ${ask?.kind === 'ai' ? consentBox() : idle.length ? `<div class="actions"><button type="button" class="btn" data-oral="aiAll">${ic('message', 18)} ${l('aiAllBtn')}</button></div>` : ''}
+  ${ask?.kind === 'ai' ? consentBox() : lockedItems(a).length ? lockBox() : idle.length ? `<div class="actions"><button type="button" class="btn" data-oral="aiAll">${ic('message', 18)} ${l('aiAllBtn')}</button></div>` : ''}
   ${a.items.map((_, i) => gradeCard(b, a, i, false)).join('')}
   ${missing ? `<p class="muted small">${l('needScores')}</p>` : ''}
   <div class="actions exam-nav">
@@ -820,8 +911,17 @@ export function handleOralClick(el: HTMLElement): boolean {
 
 /** Typing in the answer box. Returns true if the event was consumed. */
 export function handleOralInput(el: HTMLElement): boolean {
-  if (el.dataset.oralInput !== 'answer') return false;
-  if (attempt?.phase === 'answer') attempt.items[attempt.index].answer = (el as HTMLTextAreaElement).value.slice(0, MAX_ANSWER);
+  const kind = el.dataset.oralInput;
+  if (kind === 'pass') gate.pass = (el as HTMLInputElement).value.slice(0, 200);
+  else if (kind !== 'answer') return false;
+  else if (attempt?.phase === 'answer') attempt.items[attempt.index].answer = (el as HTMLTextAreaElement).value.slice(0, MAX_ANSWER);
+  return true;
+}
+
+/** The passphrase form was sent. Returns true if the event was consumed. */
+export function handleOralSubmit(form: HTMLFormElement): boolean {
+  if (form.dataset.oralForm !== 'unlock') return false;
+  void unlock();
   return true;
 }
 

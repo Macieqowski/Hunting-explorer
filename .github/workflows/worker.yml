@@ -9,8 +9,8 @@ name: Oral exam grading service
 #   CLOUDFLARE_ACCOUNT_ID  the Cloudflare account id
 #   ANTHROPIC_API_KEY      key for Claude (grading model)
 #   OPENAI_API_KEY         key for the OpenAI model (alternative and fallback); optional
-# Repository variable FIREBASE_PROJECT_ID (already used by the site build) tells the Worker
-# whose sign-in tokens to accept.
+# Repository variables FIREBASE_PROJECT_ID and FIREBASE_DATABASE_URL (already used by the site
+# build) tell the Worker whose sign-in tokens to accept and where to check the passphrase.
 
 on:
   pull_request:
@@ -78,6 +78,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          FIREBASE_DATABASE_URL: ${{ vars.FIREBASE_DATABASE_URL }}
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
             echo "::error::Brak sekretów CLOUDFLARE_API_TOKEN lub CLOUDFLARE_ACCOUNT_ID"; exit 1
@@ -85,12 +86,12 @@ jobs:
           if [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$OPENAI_API_KEY" ]; then
             echo "::error::Brak klucza modelu (ANTHROPIC_API_KEY lub OPENAI_API_KEY)"; exit 1
           fi
-          if [ -z "$FIREBASE_PROJECT_ID" ]; then
-            echo "::error::Brak zmiennej repozytorium FIREBASE_PROJECT_ID"; exit 1
+          if [ -z "$FIREBASE_PROJECT_ID" ] || [ -z "$FIREBASE_DATABASE_URL" ]; then
+            echo "::error::Brak zmiennej repozytorium FIREBASE_PROJECT_ID lub FIREBASE_DATABASE_URL"; exit 1
           fi
           # The keys go to Cloudflare as encrypted secrets; the file never leaves this runner.
           node -e 'const s={};for(const k of ["ANTHROPIC_API_KEY","OPENAI_API_KEY"])if(process.env[k])s[k]=process.env[k];require("fs").writeFileSync(process.env.RUNNER_TEMP+"/secrets.json",JSON.stringify(s))'
-          npx wrangler deploy --var "FIREBASE_PROJECT_ID:$FIREBASE_PROJECT_ID" --secrets-file "$RUNNER_TEMP/secrets.json"
+          npx wrangler deploy --var "FIREBASE_PROJECT_ID:$FIREBASE_PROJECT_ID" --var "FIREBASE_DATABASE_URL:$FIREBASE_DATABASE_URL" --secrets-file "$RUNNER_TEMP/secrets.json"
           rm -f "$RUNNER_TEMP/secrets.json"
       - name: Check the service answers
         env:

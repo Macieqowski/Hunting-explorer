@@ -1,4 +1,5 @@
-import { parseGrade, failOf, gradeConfigured } from './oralGrade';
+import { parseGrade, failOf, gradeConfigured, unlockFailOf } from './oralGrade';
+import { HuntError } from './huntBackend';
 
 describe('oral grading client', () => {
   it('reads a grade from the service', () => {
@@ -24,6 +25,20 @@ describe('oral grading client', () => {
     expect(failOf(429)).toBe('quota');
     expect(failOf(401)).toBe('unavailable');
     expect(failOf(503)).toBe('unavailable');
+  });
+
+  it('tells "give the passphrase first" from a refused page', () => {
+    expect(failOf(403, 'locked')).toBe('locked');
+    expect(failOf(403, 'origin')).toBe('unavailable');
+    expect(failOf(403)).toBe('unavailable');
+    expect(failOf(500, 'locked')).toBe('unavailable');
+  });
+
+  it('reads why the passphrase was not accepted', () => {
+    expect(unlockFailOf(new HuntError('denied', 'PERMISSION_DENIED'))).toBe('wrong');
+    expect(unlockFailOf(new HuntError('offline', 'network'))).toBe('offline');
+    expect(unlockFailOf(new HuntError('unknown', 'x'))).toBe('unavailable');
+    expect(unlockFailOf(new Error('not configured'))).toBe('unavailable');
   });
 
   it('is off when the build has no service address', () => {
