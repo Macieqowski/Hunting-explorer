@@ -9,6 +9,7 @@
 import L from 'leaflet';
 import { getTile, putViewedTile } from './offlineStore';
 import { wmsBlockUrl, wmsTileUrl, zoomUpTo, type WmsDef } from './tiles';
+import { wmtsTile } from './wmtsSave';
 
 const FRESH_MS = 30 * 24 * 3600 * 1000;
 /**
@@ -257,7 +258,14 @@ export class CachedWmsLayer extends L.TileLayer {
     if (signal.aborted) return;
     // With signal, a missing or month-old tile comes from the server and replaces the stand-in.
     try {
-      const blob = await fetchLayerTile(def, url, signal);
+      // Layers with WMTS (photo, topographic map) come from its ready-made tiles: a fraction of
+      // a second instead of seconds, and the same picture a saved area has. WMS if that fails.
+      const blob = def.wmts
+        ? await wmtsTile(def, z, x, y).catch((e) => {
+            if (signal.aborted) throw e;
+            return fetchLayerTile(def, url, signal);
+          })
+        : await fetchLayerTile(def, url, signal);
       void putViewedTile(url, blob);
       if (signal.aborted) return;
       if (shown) swapIn(blob);

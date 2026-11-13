@@ -27,7 +27,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
- * Saves real map tiles (Geoportal orthophoto WMTS, Geoportal topographic WMS, BDL districts WMS)
+ * Saves real map tiles (Geoportal orthophoto and topographic map WMTS, BDL districts WMS)
  * through {@link TileDownloadService} with the screen off and the phone forced into Doze, and
  * checks every tile file is there and is a 256 px image. Needs internet (CI emulator).
  */
@@ -97,8 +97,18 @@ public class TileDownloadServiceTest {
         };
         ortho.originE = 100000;
         ortho.originN = 850000;
+        TileDownloadService.WmtsSource topoSrc = new TileDownloadService.WmtsSource();
+        topoSrc.template = "https://mapy.geoportal.gov.pl/wss/service/WMTS/guest/wmts/TOPO?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=MAPA%20TOPOGRAFICZNA&STYLE=default&FORMAT=image/jpeg&TILEMATRIXSET=EPSG:2180&TILEMATRIX=EPSG:2180:{L}&TILEROW={r}&TILECOL={c}";
+        topoSrc.scales = new double[] {
+            7559538.928571429, 3779769.4642857146, 1889884.7321428573, 944942.3660714286, 472471.1830357143, 236235.59151785716,
+            94494.23660714286, 47247.11830357143, 23623.559151785714, 9449.423660714287, 4724.711830357143, 1889.8847321428573,
+            944.9423660714286,
+        };
+        topoSrc.originE = 100000;
+        topoSrc.originN = 850000;
         Map<String, TileDownloadService.WmtsSource> sources = new HashMap<>();
         sources.put("ortho", ortho);
+        sources.put("geotopo", topoSrc);
 
         // Warsaw centre, and a forest in the Bieszczady (far from the grid's central meridian).
         List<TileDownloadService.Unit> units = new ArrayList<>();
@@ -107,9 +117,11 @@ public class TileDownloadServiceTest {
             u.src = "ortho";
             units.add(u);
         }
-        TileDownloadService.Unit topo = unit(16, 36592, 21576, 4, "image/jpeg");
-        topo.url = wmsBlock("https://mapy.geoportal.gov.pl/wss/service/img/guest/TOPO/MapServer/WMSServer", "Raster", "image/jpeg", false, 16, 36592, 21576, 4);
-        units.add(topo);
+        for (int[] b : new int[][] { { 16, 36592, 21576 }, { 14, 9148, 5392 } }) {
+            TileDownloadService.Unit topo = unit(b[0], b[1], b[2], 4, "image/jpeg");
+            topo.src = "geotopo";
+            units.add(topo);
+        }
         TileDownloadService.Unit districts = unit(14, 9148, 5392, 4, "image/png");
         districts.url = wmsBlock("https://mapserver.bdl.lasy.gov.pl/ArcGIS/services/WMS_Obwody_lowieckie/MapServer/WMSServer", "0", "image/png", true, 14, 9148, 5392, 4);
         units.add(districts);

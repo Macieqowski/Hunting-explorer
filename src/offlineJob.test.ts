@@ -23,23 +23,31 @@ describe('app downloader jobs', () => {
     ]);
   });
 
+  it('draws the topographic map from WMTS too', () => {
+    expect(nativeUnit(unit(WMS.geotopo, [[0, 0], [1, 1]]))).toMatchObject({ s: 'geotopo', z: 17, x: 72000, y: 43000, n: 4 });
+  });
+
   it('fetches other layers from WMS: a block, or the tile alone when only one is missing', () => {
-    const block = nativeUnit(unit(WMS.geotopo, [[0, 0], [1, 1]]));
-    expect(block.u).toBe(wmsBlockUrl(WMS.geotopo, 17, 72000, 43000, 4));
+    const block = nativeUnit(unit(WMS.compartments, [[0, 0], [1, 1]]));
+    expect(block.u).toBe(wmsBlockUrl(WMS.compartments, 17, 72000, 43000, 4));
     expect(block.f).toBeUndefined();
     const one = nativeUnit(unit(WMS.districts, [[2, 1]]));
     expect(one).toMatchObject({ u: wmsTileUrl(WMS.districts, 17, 72002, 43001), n: 1 });
     expect(one.t).toEqual([[0, 0, tileFileName(one.u!, 'image/png')]]);
   });
 
-  it('passes the WMTS grid once, with the standard-resolution fallback', () => {
-    const src = nativeSources([unit(WMS.ortho, [[0, 0]]), unit(WMS.ortho, [[1, 1]]), unit(WMS.geotopo, [[0, 0]])]);
-    expect(Object.keys(src)).toEqual(['ortho']);
+  it('passes each WMTS grid once: the photo with its fallback, and the topographic map', () => {
+    const src = nativeSources([unit(WMS.ortho, [[0, 0]]), unit(WMS.ortho, [[1, 1]]), unit(WMS.geotopo, [[0, 0]]), unit(WMS.districts, [[0, 0]])]);
+    expect(Object.keys(src)).toEqual(['ortho', 'geotopo']);
     expect(src.ortho.t).toContain('/ORTO/WMTS/HighResolution?');
     expect(src.ortho.f).toContain('/ORTO/WMTS/StandardResolution?');
     expect(src.ortho.t).toContain('TILEMATRIX=EPSG:2180:{L}&TILEROW={r}&TILECOL={c}');
     expect(src.ortho.scales).toHaveLength(17);
     expect([src.ortho.e, src.ortho.n, src.ortho.size]).toEqual([100000, 850000, 512]);
+    expect(src.geotopo.t).toContain('/WMTS/guest/wmts/TOPO?');
+    expect(src.geotopo.t).toContain('LAYER=MAPA%20TOPOGRAFICZNA');
+    expect(src.geotopo.f).toBeUndefined();
+    expect(src.geotopo.scales).toHaveLength(13);
   });
 
   it('counts the photo at the WMTS speed in time estimates', () => {
