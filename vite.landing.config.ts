@@ -1,6 +1,8 @@
 import { defineConfig, type Plugin } from 'vite';
 import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { seoPages } from './landing/seo/plugin';
+import { analyticsSnippet } from './landing/seo/analytics';
 
 /**
  * The welcome page (landing/), built into the root of dist/ after the app has been built into
@@ -11,6 +13,10 @@ import { fileURLToPath } from 'node:url';
  *   data/           the district list: the Android app (0.1.x) checks it for updates here
  *   icons, manifest apps added to the home screen from the old address
  *   sw.js           landing/public/sw.js: retires the old root service worker
+ *
+ * Next to it the build writes plain HTML pages for search engines (landing/seo/): hunting
+ * seasons, the game atlas, the exams and every hunting district and club, with sitemap.xml,
+ * robots.txt and 404.html.
  */
 const at = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 const json = (p: string): any => (existsSync(at(p)) ? JSON.parse(readFileSync(at(p), 'utf8')) : null);
@@ -28,6 +34,12 @@ function facts(): Plugin {
         .replaceAll('%QUESTIONS%', questions ? String(questions) : '800');
     },
   };
+}
+
+/** Cloudflare Web Analytics on the welcome page (repository variable CF_ANALYTICS_TOKEN). */
+const ANALYTICS = analyticsSnippet(process.env.VITE_CF_ANALYTICS_TOKEN);
+function analytics(): Plugin {
+  return { name: 'landing-analytics', transformIndexHtml: (html) => html.replace('</head>', `${ANALYTICS}\n  </head>`) };
 }
 
 function rootCopies(): Plugin {
@@ -52,6 +64,6 @@ export default defineConfig({
   base: './',
   // .env files and VITE_… variables are read from the repository root, as for the app.
   envDir: '..',
-  plugins: [facts(), rootCopies()],
+  plugins: [facts(), analytics(), rootCopies(), seoPages(ANALYTICS)],
   build: { outDir: '../dist', emptyOutDir: false },
 });

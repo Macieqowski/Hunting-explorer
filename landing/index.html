@@ -10,7 +10,44 @@
     <meta property="og:title" content="Polowanie: całe polowanie zbiorowe na jednej mapie" />
     <meta property="og:description" content="Prowadzący widzi linię myśliwych i nagankę na żywo. Każdy uczestnik zna swoje stanowisko, kierunek wiatru i granice miotu." />
     <meta property="og:url" content="https://www.polowanie.org/" />
-    <meta property="og:image" content="https://www.polowanie.org/icon-512.png" />
+    <meta property="og:image" content="https://www.polowanie.org/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="Polowanie" />
+    <meta property="og:locale" content="pl_PL" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://www.polowanie.org/#site",
+            "name": "Polowanie",
+            "url": "https://www.polowanie.org/",
+            "inLanguage": "pl"
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://www.polowanie.org/#org",
+            "name": "Polowanie",
+            "url": "https://www.polowanie.org/",
+            "logo": "https://www.polowanie.org/icon-512.png"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "name": "Polowanie",
+            "url": "https://www.polowanie.org/app/",
+            "applicationCategory": "SportsApplication",
+            "operatingSystem": "Android, przeglądarka internetowa",
+            "inLanguage": "pl",
+            "description": "Polowanie zbiorowe na jednej mapie: mioty, stanowiska, naganka i pokot. Mapa obwodów łowieckich w Polsce, także offline, okresy polowań, atlas zwierzyny i pytania egzaminacyjne.",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "PLN" },
+            "publisher": { "@id": "https://www.polowanie.org/#org" }
+          }
+        ]
+      }
+    </script>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%231e5a3a' d='M16 2c6.1 0 11 4.7 11 10.6 0 7.4-8.3 15.1-11 17.4-2.7-2.3-11-10-11-17.4C5 6.7 9.9 2 16 2Z'/%3E%3Cpath fill='%23fff' d='M16 6l-5 7h2.6l-3.6 5h5v3h2v-3h5l-3.6-5H21z'/%3E%3C/svg%3E" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
@@ -128,9 +165,24 @@
               <span class="card-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h7a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H3V5Z" /><path d="M21 5h-7a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h7V5Z" /></svg></span>
               <h3>Wiedza pod ręką</h3>
               <p>Okresy polowań na dziś, atlas zwierzyny, kalkulator balistyczny i %QUESTIONS% pytań do egzaminu na myśliwego.</p>
-              <a class="more" href="./app/#/seasons">Otwórz okresy polowań</a>
+              <a class="more" href="./okresy-polowan/">Zobacz okresy polowań</a>
             </article>
           </div>
+        </div>
+      </section>
+
+      <section id="wiedza" class="wrap sec">
+        <div class="sec-head">
+          <span class="kicker">Wiedza łowiecka</span>
+          <h2>Przydatne na co dzień</h2>
+        </div>
+        <div class="know">
+          <a href="./obwody-lowieckie/"><strong>Obwody łowieckie</strong><span>Wykaz %DISTRICTS% obwodów w Polsce według województw, z dzierżawcą i nadleśnictwem.</span></a>
+          <a href="./kola-lowieckie/"><strong>Koła łowieckie</strong><span>Koła według województw: dzierżawione obwody i ich powierzchnia.</span></a>
+          <a href="./okresy-polowan/"><strong>Okresy polowań</strong><span>Tabela terminów dla każdego gatunku, z wyjątkami dla województw.</span></a>
+          <a href="./atlas-zwierzyny/"><strong>Atlas zwierzyny</strong><span>Rozpoznawanie płci i wieku, tropy, ślady i gatunki chronione.</span></a>
+          <a href="./egzamin-na-mysliwego/"><strong>Egzamin na myśliwego</strong><span>%QUESTIONS% pytań z odpowiedziami i test próbny na czas.</span></a>
+          <a href="./egzamin-selekcjonerski/"><strong>Egzamin selekcjonerski</strong><span>Pytania z bazy PZŁ i test próbny.</span></a>
         </div>
       </section>
 
@@ -179,6 +231,11 @@
         </div>
         <nav aria-label="Stopka">
           <a href="./app/">Otwórz aplikację</a>
+          <a href="./obwody-lowieckie/">Obwody łowieckie</a>
+          <a href="./kola-lowieckie/">Koła łowieckie</a>
+          <a href="./okresy-polowan/">Okresy polowań</a>
+          <a href="./atlas-zwierzyny/">Atlas zwierzyny</a>
+          <a href="./egzamin-na-mysliwego/">Egzamin na myśliwego</a>
           <a href="./app/#/about">Źródła danych i licencje</a>
           <a href="#pobierz">Pobierz na Androida</a>
           <a id="contact-foot" hidden>Kontakt</a>

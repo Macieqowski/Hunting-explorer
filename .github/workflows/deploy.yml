@@ -49,6 +49,8 @@ jobs:
           VITE_FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID }}
           # Optional: contact address shown to clubs on the welcome page.
           VITE_CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL }}
+          # Optional: Cloudflare Web Analytics token (cookieless visitor statistics, landing/seo/analytics.ts).
+          VITE_CF_ANALYTICS_TOKEN: ${{ vars.CF_ANALYTICS_TOKEN }}
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'
         with:

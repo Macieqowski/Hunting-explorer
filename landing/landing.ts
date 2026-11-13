@@ -6,6 +6,8 @@
 import '../src/fonts.css';
 import '../src/tokens.css';
 import './landing.css';
+// Shared with the subpages made by landing/seo/, which link this same stylesheet.
+import './seo/pages.css';
 
 const qr = document.getElementById('qr');
 const apk = document.getElementById('apk') as HTMLAnchorElement | null;
