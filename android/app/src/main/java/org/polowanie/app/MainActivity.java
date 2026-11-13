@@ -13,6 +13,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AlertsPlugin.class);
         registerPlugin(CompassPlugin.class);
         registerPlugin(BarsPlugin.class);
+        registerPlugin(TileDownloadPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

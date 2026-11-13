@@ -16,6 +16,26 @@ import {
 // (a load balancer that wants its cookie). So HighResolution first, Standard for white tiles.
 export const GEOPORTAL_ORTHO_HR = 'https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMS/HighResolution';
 export const GEOPORTAL_ORTHO_STD = 'https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMS/StandardResolution';
+/**
+ * The same orthophoto as ready-made 512 px tiles in the Polish grid (PUWG 1992, EPSG:2180).
+ * Geoportal serves them from a cache in about half a second however many are asked for at
+ * once, while WMS draws each image for seconds and stops speeding up past a few at a time.
+ * Saving keeps the photo from these, redrawn into web-map tiles (src/puwg92.ts, and
+ * android/…/Puwg92.java in the app). Levels are not halvings; the scale denominators are the server's.
+ */
+export const GEOPORTAL_ORTHO_WMTS = {
+  template: (service: 'HighResolution' | 'StandardResolution') =>
+    `https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMTS/${service}?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTOFOTOMAPA&STYLE=default&FORMAT=image/jpeg&TILEMATRIXSET=EPSG:2180&TILEMATRIX=EPSG:2180:{L}&TILEROW={r}&TILECOL={c}`,
+  scales: [
+    3.0238155714285716e7, 1.5119077857142858e7, 7559538.928571429, 3779769.4642857146, 1889884.7321428573, 944942.3660714286,
+    472471.1830357143, 236235.59151785716, 94494.23660714286, 47247.11830357143, 23623.559151785714, 9449.423660714287,
+    4724.711830357143, 1889.8847321428573, 944.9423660714286, 472.4711830357143, 236.23559151785716,
+  ],
+  /** Top-left corner: easting, northing (metres). */
+  e: 100000,
+  n: 850000,
+  size: 512,
+};
 export const GEOPORTAL_TOPO = 'https://mapy.geoportal.gov.pl/wss/service/img/guest/TOPO/MapServer/WMSServer';
 
 /**
@@ -46,11 +66,13 @@ export interface WmsDef {
   /** Saving asks for n×n tiles in one image and cuts it up: the server takes about as long
    *  to draw a 1024 px image as a 256 px one, so this is several times faster. */
   meta?: number;
+  /** Saved from these ready-made PUWG 1992 tiles instead (much faster than WMS), see puwg92.ts. */
+  wmts?: typeof GEOPORTAL_ORTHO_WMTS;
 }
 
 export const WMS = {
   // avgKB: 30 random points in Poland (Nov 2026) gave 15 KB at zoom 16 down to 13 KB at zoom 19.
-  ortho: { id: 'ortho', url: GEOPORTAL_ORTHO_HR, layers: 'Raster', format: 'image/jpeg', transparent: false, maxNative: 19, cache: true, avgKB: 16, blankFallback: GEOPORTAL_ORTHO_STD, meta: 4 },
+  ortho: { id: 'ortho', url: GEOPORTAL_ORTHO_HR, layers: 'Raster', format: 'image/jpeg', transparent: false, maxNative: 19, cache: true, avgKB: 16, blankFallback: GEOPORTAL_ORTHO_STD, meta: 4, wmts: GEOPORTAL_ORTHO_WMTS },
   geotopo: { id: 'geotopo', url: GEOPORTAL_TOPO, layers: 'Raster', format: 'image/jpeg', transparent: false, maxNative: 17, cache: true, avgKB: 28, meta: 4 },
   districts: { id: 'districts', url: BDL_WMS_DISTRICTS, layers: '0', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 6, meta: 4 },
   compartments: { id: 'compartments', url: BDL_WMS_FORESTS, layers: '3,2', format: 'image/png', transparent: true, maxNative: 18, cache: true, avgKB: 10, meta: 4 },
@@ -71,6 +93,8 @@ export const isDetail = (v: unknown): v is Detail => DETAILS.includes(v as Detai
 
 /** Tiles a save fetches per second, for time estimates (25 to 10 measured, with blocks). */
 export const SAVE_TILES_PER_S = 15;
+/** The same for layers saved from WMTS (the photo): ~50 source images/s, each worth 1-2 tiles. */
+export const SAVE_WMTS_TILES_PER_S = 40;
 
 /** What "Save for offline" downloads: layer and zoom range. Only the photo goes deeper than 16. */
 export function savePlan(detail: Detail): { def: WmsDef; minZ: number; maxZ: number }[] {
@@ -259,12 +283,14 @@ export function estimate(area: TileArea | ReturnType<typeof tileLister>, detail:
   const list = typeof area === 'function' ? area : tileLister(area);
   let tiles = 0;
   let kb = 0;
+  let secs = 0;
   for (const p of savePlan(detail)) {
     const n = list(p.minZ, p.maxZ).length;
     tiles += n;
     kb += n * p.def.avgKB;
+    secs += n / (p.def.wmts ? SAVE_WMTS_TILES_PER_S : SAVE_TILES_PER_S);
   }
-  return { tiles, mb: kb / 1024, minutes: tiles / SAVE_TILES_PER_S / 60 };
+  return { tiles, mb: kb / 1024, minutes: secs / 60 };
 }
 
 /** Area of a box in km² (good enough for size limits). */

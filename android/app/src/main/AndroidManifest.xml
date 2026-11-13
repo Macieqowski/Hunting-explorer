@@ -42,6 +42,12 @@
             android:exported="false"
             android:foregroundServiceType="location" />
 
+        <!-- Saving offline maps with the screen off (TileDownloadPlugin). -->
+        <service
+            android:name=".TileDownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -63,6 +69,12 @@
     <!-- Keeps sharing your position with the screen off: a foreground service with a notification. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- Saving offline maps goes on with the screen off: a foreground service with a progress
+         notification, which keeps the phone (and its Wi-Fi) awake until the save ends. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- It waits for signal instead of failing every tile when there is none. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- That notification, and hunt alerts (messages, drives) while the app is in the background. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Buzzing on hunt alerts, messages and leaving the beater route (AlertsPlugin). -->

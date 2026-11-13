@@ -102,11 +102,12 @@ describe('tile math', () => {
     expect(d18.mb).toBeLessThan(400);
     expect(d19.mb).toBeGreaterThan(500);
     expect(d19.mb).toBeLessThan(1200);
-    expect(d18.minutes).toBeGreaterThan(5);
-    expect(d18.minutes).toBeLessThan(30);
-    expect(d19.minutes).toBeGreaterThan(30);
-    expect(d19.minutes).toBeLessThan(120);
-    expect(d16.minutes).toBeLessThan(d18.minutes / 4);
+    // The photo comes from WMTS (SAVE_WMTS_TILES_PER_S), the other layers from WMS.
+    expect(d18.minutes).toBeGreaterThan(2);
+    expect(d18.minutes).toBeLessThan(15);
+    expect(d19.minutes).toBeGreaterThan(10);
+    expect(d19.minutes).toBeLessThan(60);
+    expect(d16.minutes).toBeLessThan(d18.minutes / 2);
   });
 });
 
