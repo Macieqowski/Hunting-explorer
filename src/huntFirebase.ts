@@ -1,8 +1,8 @@
 // Firebase (Auth + Realtime Database) implementation of HuntBackend.
 // Data layout and who may write what are defined in database.rules.json.
 
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, connectAuthEmulator } from 'firebase/auth';
+import { initializeApp, type FirebaseApp } from 'firebase/app';
+import { getAuth, signInAnonymously, connectAuthEmulator, type User } from 'firebase/auth';
 import { getDatabase, ref, child, push, get, set, update, onValue, serverTimestamp, connectDatabaseEmulator } from 'firebase/database';
 import { isLeader, parseHunt, parseParticipants, parsePositions, parseTracks, parseDrives, parseSightings, encodeArea, roundCoord, shouldPurge, cleanText, cleanNotes, LIMITS, DRIVE_LIMITS, type Hunt, type HuntInput } from './hunt';
 import { parseShots, parseShotSpots, NOTE_MAX, type ShotInput } from './pokot';
@@ -48,17 +48,35 @@ function shotRecord(uid: string, s: ShotInput & { driveId: string | null }): Rec
   return rec;
 }
 
+let session: Promise<{ app: FirebaseApp; user: User }> | null = null;
+
+/** Starts Firebase and signs in anonymously, once per page (again after a failure). */
+function signIn(cfg: FirebaseConfig): Promise<{ app: FirebaseApp; user: User }> {
+  session ??= (async () => {
+    const app = initializeApp(cfg);
+    const auth = getAuth(app);
+    const emu = import.meta.env.VITE_FIREBASE_EMULATOR;
+    if (emu) connectAuthEmulator(auth, `http://${emu}:9099`, { disableWarnings: true });
+    await auth.authStateReady();
+    const user = auth.currentUser ?? (await guard(signInAnonymously(auth))).user;
+    return { app, user };
+  })().catch((e) => {
+    session = null;
+    throw e;
+  });
+  return session;
+}
+
+/** A short-lived token proving the anonymous sign-in, for our own services (oral-exam grading). */
+export async function idToken(cfg: FirebaseConfig): Promise<string> {
+  return (await signIn(cfg)).user.getIdToken();
+}
+
 export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
-  const app = initializeApp(cfg);
-  const auth = getAuth(app);
+  const { app, user } = await signIn(cfg);
   const db = getDatabase(app);
   const emu = import.meta.env.VITE_FIREBASE_EMULATOR;
-  if (emu) {
-    connectAuthEmulator(auth, `http://${emu}:9099`, { disableWarnings: true });
-    connectDatabaseEmulator(db, emu, 9000);
-  }
-  await auth.authStateReady();
-  const user = auth.currentUser ?? (await guard(signInAnonymously(auth))).user;
+  if (emu) connectDatabaseEmulator(db, emu, 9000);
   const uid = user.uid;
   const root = ref(db);
   let offset = 0;

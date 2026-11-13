@@ -38,6 +38,7 @@ const PATHS = {
   paw: '<circle cx="7" cy="9" r="1.700"/><circle cx="12" cy="6.500" r="1.700"/><circle cx="17" cy="9" r="1.700"/><path d="M8 17c0-2.500 2-4.500 4-4.500s4 2 4 4.500c0 1.600-1.200 2.500-2.400 2.200-1-.3-2.200-.3-3.200 0C9.200 19.500 8 18.600 8 17Z"/>',
   message: '<path d="M21 12a8 8 0 0 1-11.600 7.100L4 20l1-4.600A8 8 0 1 1 21 12Z"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.500 11a6.500 6.500 0 0 0 13 0"/><path d="M12 17.500V21M8.500 21h7"/>',
   list: '<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.500 6h.010M3.500 12h.010M3.500 18h.010" stroke-width="2.600"/>',
   expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
   // theme switch

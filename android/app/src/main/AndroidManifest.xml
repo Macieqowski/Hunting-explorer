@@ -79,4 +79,14 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Buzzing on hunt alerts, messages and leaving the beater route (AlertsPlugin). -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Oral exam: answering by voice. Asked for only when the microphone button is first used. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
+    <!-- Lets the app see the phone's speech recognition service (Android 11+ hides other apps by default). -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
 </manifest>

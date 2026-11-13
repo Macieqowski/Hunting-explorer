@@ -185,7 +185,7 @@ export function alertUser(title: string, text: string, pattern: readonly number[
 
 if (isApp()) {
   // For the app's smoke test (android workflow), which checks that the plugins are there.
-  console.info(`[polowanie] plugins ${['Printer', 'BackgroundLocation', 'Alerts', 'Compass', 'Bars', 'TileDownload'].filter((p) => Capacitor.isPluginAvailable(p)).join(',')}`);
+  console.info(`[polowanie] plugins ${['Printer', 'BackgroundLocation', 'Alerts', 'Compass', 'Bars', 'TileDownload', 'Speech'].filter((p) => Capacitor.isPluginAvailable(p)).join(',')}`);
   document.addEventListener('visibilitychange', () => {
     // Back on screen: the alerts are visible in the app itself.
     if (document.visibilityState === 'visible') void Alerts.clear().catch(() => {});

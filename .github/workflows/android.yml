@@ -17,6 +17,7 @@ on:
       - 'capacitor.config.ts'
       - 'src/platform.ts'
       - 'src/native.ts'
+      - 'src/speech.ts'
       - 'src/offline.ts'
       - 'src/offlineJob.ts'
       - 'src/tiles.ts'
@@ -167,7 +168,7 @@ jobs:
             if grep -E "Uncaught|TypeError|ReferenceError|SyntaxError" logcat.txt | grep -v "Error injecting safe area CSS"; then echo "::error::Błąd JavaScript w aplikacji"; exit 1; fi
             grep -q "Polowanie\|Loading app\|Capacitor" logcat.txt || echo "::warning::Brak logów Capacitora"
             grep -Eq "\[polowanie\] districts [0-9]{4,} built-in" logcat.txt || { echo "::error::Aplikacja nie wczytała wbudowanej listy obwodów"; exit 1; }
-            grep -q "\[polowanie\] plugins Printer,BackgroundLocation,Alerts,Compass,Bars,TileDownload" logcat.txt || { echo "::error::Brak wtyczek aplikacji"; exit 1; }
+            grep -q "\[polowanie\] plugins Printer,BackgroundLocation,Alerts,Compass,Bars,TileDownload,Speech" logcat.txt || { echo "::error::Brak wtyczek aplikacji"; exit 1; }
             # The location service (screen-off sharing) must start as a foreground service.
             adb root; adb wait-for-device; sleep 3
             adb shell pm grant org.polowanie.app android.permission.ACCESS_FINE_LOCATION

@@ -6,7 +6,11 @@
  * times in a row (2 → 1 day, 3 → 3 days, 4 → 7 days, 5 → 21 days). A right answer moves a
  * question up one box, a wrong or skipped one drops it back to box 1.
  */
-import type { Question } from './exam';
+/** What scheduling needs to know about a question (multiple-choice and oral questions both fit). */
+export interface QuestionRef {
+  id: string;
+  topic: string;
+}
 
 export interface QuestionProgress {
   /** Leitner box, 1..5 (0 / missing = never answered). */
@@ -63,7 +67,7 @@ export function weightOf(p: QuestionProgress | undefined, now: number): number {
 }
 
 /** Questions due for repetition, most urgent first (wrong ones, then lowest box, then oldest due). */
-export function dueQuestions(questions: Question[], progress: Progress, now: number): Question[] {
+export function dueQuestions<T extends QuestionRef>(questions: readonly T[], progress: Progress, now: number): T[] {
   return questions
     .filter((q) => isDue(progress[q.id], now))
     .sort((a, b) => {
@@ -93,7 +97,7 @@ export interface Summary extends Counts {
 const empty = (): Counts => ({ new: 0, wrong: 0, learning: 0, mastered: 0, total: 0, due: 0 });
 
 /** Counts per status for a bank, overall and per topic (only ids in `questions` are counted). */
-export function summarize(questions: Question[], progress: Progress, now: number): Summary {
+export function summarize(questions: readonly QuestionRef[], progress: Progress, now: number): Summary {
   const all = empty();
   const topics = new Map<string, TopicSummary>();
   for (const q of questions) {
@@ -110,7 +114,7 @@ export function summarize(questions: Question[], progress: Progress, now: number
 }
 
 /** Questions answered wrong at least once, most often first (ties: worse right/wrong ratio, then most recent). */
-export function mostMissed(questions: Question[], progress: Progress, limit = 10): Question[] {
+export function mostMissed<T extends QuestionRef>(questions: readonly T[], progress: Progress, limit = 10): T[] {
   return questions
     .filter((q) => (progress[q.id]?.wrong ?? 0) > 0)
     .sort((a, b) => {

@@ -25,6 +25,7 @@ import { renderGuide } from './huntHelp';
 import { createSheet } from './sheet';
 import { SEASONS, isOpen, effective, formatRanges, yearFrac, openOnlyIn, type Season } from './seasons';
 import { renderExams, handleExamClick, handleExamChange, drillSpecies } from './examUi';
+import { handleOralClick, handleOralInput, handleOralChange } from './oralUi';
 import { renderWeather, handleWeatherClick, handleWeatherInput, handleWeatherSubmit, showWeatherAt } from './weatherUi';
 import { renderBallistics, handleBallisticsClick, handleBallisticsChange, handleBallisticsSubmit } from './ballisticsUi';
 import { renderHunts, handleHuntClick, handleHuntInput, handleHuntSubmit, handleHuntChange, leaveHunts, mountHuntMap, huntBack, huntPhoneBack } from './huntUi';
@@ -826,6 +827,8 @@ content.addEventListener('click', (e) => {
   if (off && handleOfflineEvent(off)) return;
   const ex = (e.target as HTMLElement).closest<HTMLElement>('[data-exam]');
   if (ex && handleExamClick(ex)) return;
+  const oral = (e.target as HTMLElement).closest<HTMLElement>('[data-oral]');
+  if (oral && handleOralClick(oral)) return;
   const at = (e.target as HTMLElement).closest<HTMLElement>('[data-atlas]');
   if (at) {
     e.preventDefault();
@@ -937,6 +940,7 @@ content.addEventListener('click', (e) => {
 
 content.addEventListener('input', (e) => {
   const el = e.target as HTMLInputElement;
+  if (handleOralInput(el)) return;
   if (handleWeatherInput(el)) return;
   if (el instanceof HTMLInputElement && handleAtlasInput(el, render)) return;
   if (handleHuntInput(el)) return;
@@ -955,6 +959,7 @@ content.addEventListener('input', (e) => {
 content.addEventListener('change', (e) => {
   const el = e.target as HTMLSelectElement;
   if (handleExamChange(el)) return;
+  if (handleOralChange(el)) return;
   if (handleBallisticsChange(el)) return;
   if (handleHuntChange(el)) return;
   const f = el.dataset.filter;

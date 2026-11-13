@@ -1,11 +1,13 @@
 import { drawExam, weightedSample, isCorrect, scoreExam, shuffle, shuffleAnswers, answerText, answerImage, type Answer, type Bank, type DrawnQuestion, type ExamResult, type Question } from './exam';
 import { recordAnswer, weightOf, dueQuestions, summarize, mostMissed, parseProgress, mergeProgress, type Progress, type Counts } from './examProgress';
+import { readHistory, writeHistory, pushHistory, clearHistory, readProgress, saveProgress, type HistoryEntry } from './examStore';
 import { seasonQuestions, SEASON_TOPIC } from './seasonQuestions';
 import { getLang, tt, fmtNum } from './i18n';
 import { speciesIn } from './atlasMatch';
 import { speciesBySlug } from './atlas';
 import { saveTextFile } from './platform';
 import { ic } from './icons';
+import { renderOral, loadOral, oralCard, leaveOral, ORAL_ID } from './oralUi';
 
 const BANK_IDS = ['mysliwy', 'selekcjoner'] as const;
 type BankId = (typeof BANK_IDS)[number];
@@ -100,14 +102,6 @@ const L = {
 };
 const l = (k: keyof typeof L) => tt(L[k]);
 
-interface HistoryEntry {
-  bank: BankId;
-  date: string;
-  correct: number;
-  total: number;
-  passed: boolean;
-}
-
 interface Attempt {
   bank: Bank;
   mode: Mode;
@@ -133,6 +127,8 @@ const answerHtml = (a: Answer) => `${img(answerImage(a), 'ans-img', answerText(a
 const answersInline = (d: DrawnQuestion, idx: number[]) =>
   idx.map((c) => `<span class="ans-inline">${answerHtml(d.answers[c])}</span>`).join(', ');
 let loadState: 'idle' | 'loading' | 'done' | 'error' = 'idle';
+/** The oral exam (its own screens in oralUi.ts) is picked instead of a written test. */
+let oralOpen = false;
 let attempt: Attempt | null = null;
 let setup = { bank: 'mysliwy' as BankId, mode: 'exam' as Mode, count: 0, topic: '', species: '' };
 /** Questions per species drill run. */
@@ -142,40 +138,6 @@ let toolNote = '';
 let timer: ReturnType<typeof setInterval> | undefined;
 let rerender: () => void = () => {};
 
-function readHistory(): HistoryEntry[] {
-  try {
-    return JSON.parse(localStorage.getItem('examHistory') ?? '[]');
-  } catch {
-    return [];
-  }
-}
-function pushHistory(e: HistoryEntry) {
-  try {
-    localStorage.setItem('examHistory', JSON.stringify([e, ...readHistory()].slice(0, 50)));
-  } catch {
-    /* storage unavailable */
-  }
-}
-
-const PROGRESS_KEY = 'examProgress.v1';
-let progressCache: Progress | null = null;
-function readProgress(): Progress {
-  if (progressCache) return progressCache;
-  try {
-    progressCache = parseProgress(JSON.parse(localStorage.getItem(PROGRESS_KEY) ?? '{}'));
-  } catch {
-    progressCache = {};
-  }
-  return progressCache;
-}
-function saveProgress(p: Progress) {
-  progressCache = p;
-  try {
-    localStorage.setItem(PROGRESS_KEY, JSON.stringify(p));
-  } catch {
-    /* storage unavailable */
-  }
-}
 /** Records the answer to question `i` of the attempt once. */
 function record(a: Attempt, i: number) {
   if (a.recorded.has(i)) return;
@@ -204,11 +166,7 @@ async function importProgress(file: File) {
     if (Array.isArray(data.history)) {
       const seen = new Set(readHistory().map((h) => h.date));
       const merged = [...readHistory(), ...(data.history as HistoryEntry[]).filter((h) => h?.date && !seen.has(h.date))].sort((x, y) => y.date.localeCompare(x.date));
-      try {
-        localStorage.setItem('examHistory', JSON.stringify(merged.slice(0, 50)));
-      } catch {
-        /* storage unavailable */
-      }
+      writeHistory(merged);
     }
     toolNote = l('imported');
   } catch {
@@ -219,6 +177,7 @@ async function importProgress(file: File) {
 
 async function loadBanks() {
   loadState = 'loading';
+  loadOral(() => rerender());
   try {
     for (const id of BANK_IDS) {
       const res = await fetch(`./exams/${id}.json`, { cache: 'no-cache' });
@@ -322,9 +281,24 @@ export function renderExams(onChange: () => void): string {
   rerender = onChange;
   if (loadState === 'idle') loadBanks();
   if (loadState !== 'done') return `<p class="muted">${loadState === 'error' ? l('loadError') : l('loading')}</p>`;
+  if (oralOpen && !attempt) return renderOral(onChange, bankCards(ORAL_ID));
   if (attempt?.result) return renderResult(attempt);
   if (attempt) return renderQuestion(attempt);
   return renderSetup();
+}
+
+/** The exam picker: the two written tests and the oral exam. */
+function bankCards(active: string) {
+  const oral = oralCard();
+  return `<p class="small">${l('intro')}</p>
+  <div class="exam-cards">${BANK_IDS.map((id) => {
+    const bk = banks.get(id)!;
+    return `<button type="button" class="exam-card${id === active ? ' active' : ''}" data-exam="pick" data-bank="${id}">
+      <strong>${esc(tt(bk.title))}</strong><span class="muted small">${esc(bk.description ? tt(bk.description) : '')}</span>
+      <span class="muted small">${fmtNum(bk.questions.length)} ${l('inBank')}</span></button>`;
+  }).join('')}<button type="button" class="exam-card wide${active === ORAL_ID ? ' active' : ''}" data-exam="pick" data-bank="${ORAL_ID}">
+      <strong>${ic('mic', 18)} ${esc(oral.title)}</strong><span class="muted small">${esc(oral.description)}</span>
+      ${oral.count != null ? `<span class="muted small">${fmtNum(oral.count)} ${l('inBank')}</span>` : ''}</button></div>`;
 }
 
 function renderSetup() {
@@ -342,13 +316,7 @@ function renderSetup() {
   const sum = summarize(b.questions, progress, now);
   const dueHere = setup.topic ? (sum.byTopic.find((t) => t.topic === setup.topic)?.due ?? 0) : sum.due;
   const noReview = setup.mode === 'review' && !dueHere;
-  return `<p class="small">${l('intro')}</p>
-  <div class="exam-cards">${BANK_IDS.map((id) => {
-    const bk = banks.get(id)!;
-    return `<button type="button" class="exam-card${id === setup.bank ? ' active' : ''}" data-exam="pick" data-bank="${id}">
-      <strong>${esc(tt(bk.title))}</strong><span class="muted small">${esc(bk.description ? tt(bk.description) : '')}</span>
-      <span class="muted small">${fmtNum(bk.questions.length)} ${l('inBank')}</span></button>`;
-  }).join('')}</div>
+  return `${bankCards(setup.bank)}
   ${
     !b.questions.length
       ? `<div class="notice">${l('noQuestions')}</div>`
@@ -384,7 +352,7 @@ function renderSetup() {
     hist.length
       ? `<h3>${l('history')}</h3><ul class="history">${hist
           .map(
-            (h) => `<li><span>${new Date(h.date).toLocaleDateString(lang === 'pl' ? 'pl-PL' : 'en-GB')} · ${esc(tt(banks.get(h.bank)?.title ?? { pl: h.bank, en: h.bank }))}</span>
+            (h) => `<li><span>${new Date(h.date).toLocaleDateString(lang === 'pl' ? 'pl-PL' : 'en-GB')} · ${esc(tt(banks.get(h.bank as BankId)?.title ?? { pl: h.bank, en: h.bank }))}</span>
           <span class="${h.passed ? 'ok' : 'bad'}">${h.correct}/${h.total}</span></li>`,
           )
           .join('')}</ul>`
@@ -579,18 +547,18 @@ export function handleExamClick(el: HTMLElement): boolean {
     case 'reset':
       if (resetArmed) {
         saveProgress({});
-        try {
-          localStorage.removeItem('examHistory');
-        } catch {
-          /* storage unavailable */
-        }
+        clearHistory();
         resetArmed = false;
         toolNote = l('resetDone');
       } else resetArmed = true;
       rerender();
       return true;
     case 'pick':
-      setup = { ...setup, bank: el.dataset.bank as BankId, count: 0, topic: '', species: '' };
+      oralOpen = el.dataset.bank === ORAL_ID;
+      if (!oralOpen) {
+        leaveOral();
+        setup = { ...setup, bank: el.dataset.bank as BankId, count: 0, topic: '', species: '' };
+      }
       break;
     case 'mode':
       setup.mode = el.dataset.mode as Mode;
@@ -656,6 +624,8 @@ export function handleExamChange(el: HTMLSelectElement | HTMLInputElement): bool
 /** Starts a learning run with the questions about one atlas species (loads the banks if needed). */
 export function drillSpecies(slug: string, onChange: () => void) {
   rerender = onChange;
+  oralOpen = false;
+  leaveOral();
   clearInterval(timer);
   attempt = null;
   setup = { ...setup, mode: 'learn', topic: '', species: slug };
