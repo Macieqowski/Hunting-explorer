@@ -18,6 +18,7 @@ on:
       - 'src/platform.ts'
       - 'src/native.ts'
       - 'src/speech.ts'
+      - 'scripts/oral-api-url.mjs'
       - 'src/offline.ts'
       - 'src/offlineJob.ts'
       - 'src/tiles.ts'
@@ -80,9 +81,17 @@ jobs:
       - run: npm ci
       - name: Club and district list from BDL
         run: node scripts/snapshot-districts.mjs
+      - name: Address of the oral-exam grading service
+        id: oral
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ORAL_API_URL: ${{ vars.ORAL_API_URL }}
+        run: echo "url=$(node scripts/oral-api-url.mjs)" >> "$GITHUB_OUTPUT"
       - name: Build the web app
         run: npm run build
         env:
+          VITE_ORAL_API_URL: ${{ steps.oral.outputs.url }}
           VITE_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
           VITE_FIREBASE_DATABASE_URL: ${{ vars.FIREBASE_DATABASE_URL }}

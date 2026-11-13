@@ -1,0 +1,47 @@
+name: Oral exam model comparison
+
+# Grades the control set (worker/eval/control.json, answers scored by hand) with both models
+# and writes the comparison to the run summary. A run makes about 85 short model calls (cents).
+# Runs when the prompt, the providers or the control set change in a pull request, and on demand.
+
+on:
+  pull_request:
+    paths:
+      - 'worker/eval/**'
+      - 'worker/src/prompt.ts'
+      - 'worker/src/providers/**'
+      - '.github/workflows/oral-eval.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oral-eval-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compare:
+    # Secrets are not available to pull requests from forks.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - run: npm ci
+      - name: Grade the control set with both models
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: npm run eval
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oral-eval-report
+          path: worker/eval/report.md

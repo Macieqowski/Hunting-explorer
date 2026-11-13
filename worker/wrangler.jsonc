@@ -1,0 +1,30 @@
+// Cloudflare Worker that grades oral-exam answers for the Polowanie app.
+// Deployed by .github/workflows/worker.yml; see docs/oral-exam.md.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "polowanie-oral",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "observability": { "enabled": true },
+  "durable_objects": {
+    "bindings": [{ "name": "COUNTERS", "class_name": "Counters" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Counters"] }],
+  "vars": {
+    // Which model grades: "anthropic" or "openai". The other one is the fallback when its key is set.
+    "MODEL_PROVIDER": "anthropic",
+    "ANTHROPIC_MODEL": "claude-haiku-5-5",
+    "OPENAI_MODEL": "gpt-6-luna",
+    // Firebase project whose anonymous sign-in tokens are accepted (the app's project).
+    // Overridden at deploy time from the repository variable FIREBASE_PROJECT_ID.
+    "FIREBASE_PROJECT_ID": "",
+    // Pages allowed to call the service from a browser (the app on Android runs at https://localhost).
+    "ALLOWED_ORIGINS": "https://www.polowanie.org,https://polowanie.org,https://macieqowski.github.io,https://localhost,http://localhost:5173",
+    // Graded answers per day (Europe/Warsaw): per signed-in user, per network address, and in total.
+    "LIMIT_USER": "9",
+    "LIMIT_IP": "60",
+    "LIMIT_GLOBAL": "2000"
+  }
+  // Secrets (set by the deploy workflow from GitHub secrets): ANTHROPIC_API_KEY, OPENAI_API_KEY.
+}

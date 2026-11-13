@@ -1,0 +1,104 @@
+name: Oral exam grading service
+
+# The Cloudflare Worker in worker/ that grades oral-exam answers (docs/oral-exam.md).
+# - Pull requests that touch it: type check, unit tests and a dry-run bundle.
+# - Pushes to main (and "Run workflow"): the same, then deployment to Cloudflare.
+#
+# Repository secrets (Settings → Secrets and variables → Actions → Secrets):
+#   CLOUDFLARE_API_TOKEN   token from the "Edit Cloudflare Workers" template
+#   CLOUDFLARE_ACCOUNT_ID  the Cloudflare account id
+#   ANTHROPIC_API_KEY      key for Claude (grading model)
+#   OPENAI_API_KEY         key for the OpenAI model (alternative and fallback); optional
+# Repository variable FIREBASE_PROJECT_ID (already used by the site build) tells the Worker
+# whose sign-in tokens to accept.
+
+on:
+  pull_request:
+    paths:
+      - 'worker/**'
+      - 'public/exams/ustny.json'
+      - 'src/oral.ts'
+      - 'src/exam.ts'
+      - '.github/workflows/worker.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'worker/**'
+      - 'public/exams/ustny.json'
+      - 'src/oral.ts'
+      - 'src/exam.ts'
+      - '.github/workflows/worker.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: worker-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - name: Bundle (dry run)
+        run: npx wrangler deploy --dry-run
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - run: npm ci
+      - name: Deploy to Cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Brak sekretów CLOUDFLARE_API_TOKEN lub CLOUDFLARE_ACCOUNT_ID"; exit 1
+          fi
+          if [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::Brak klucza modelu (ANTHROPIC_API_KEY lub OPENAI_API_KEY)"; exit 1
+          fi
+          if [ -z "$FIREBASE_PROJECT_ID" ]; then
+            echo "::error::Brak zmiennej repozytorium FIREBASE_PROJECT_ID"; exit 1
+          fi
+          # The keys go to Cloudflare as encrypted secrets; the file never leaves this runner.
+          node -e 'const s={};for(const k of ["ANTHROPIC_API_KEY","OPENAI_API_KEY"])if(process.env[k])s[k]=process.env[k];require("fs").writeFileSync(process.env.RUNNER_TEMP+"/secrets.json",JSON.stringify(s))'
+          npx wrangler deploy --var "FIREBASE_PROJECT_ID:$FIREBASE_PROJECT_ID" --secrets-file "$RUNNER_TEMP/secrets.json"
+          rm -f "$RUNNER_TEMP/secrets.json"
+      - name: Check the service answers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ORAL_WAIT_S: '90'
+        working-directory: .
+        run: |
+          url=$(node scripts/oral-api-url.mjs)
+          if [ -z "$url" ]; then echo "::error::Usługa nie odpowiada pod adresem workers.dev"; exit 1; fi
+          echo "Usługa działa." >> "$GITHUB_STEP_SUMMARY"
