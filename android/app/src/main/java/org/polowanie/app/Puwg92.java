@@ -152,6 +152,38 @@ final class Puwg92 {
         return t[Math.floorMod(y, size) * size + Math.floorMod(x, size)];
     }
 
+    /**
+     * Geoportal's high-resolution photo answers a transparent PNG (whole or in part) where it has
+     * no photo. Drawn as is, those pixels come out black (Nov 2026: most of district 191 was black),
+     * so they become blank white, the same as its white gaps, and are filled from the other server.
+     * Returns the share of pixels that were transparent. Same as clearTransparent in src/puwg92.ts.
+     */
+    static double clearTransparent(int[] px) {
+        int n = 0;
+        for (int k = 0; k < px.length; k++) {
+            if ((px[k] >>> 24) < 128) {
+                px[k] = 0xffffffff;
+                n++;
+            } else px[k] |= 0xff000000;
+        }
+        return px.length == 0 ? 1 : (double) n / px.length;
+    }
+
+    /** Darkest a channel may be to count as black; same as BLACK in src/offlineStore.ts. */
+    static final int BLACK = 6;
+
+    /** Share of near-black pixels (a saved tile drawn from transparent pixels, see TileDownloadService.looksBlack). */
+    static double blackShare(int[] px) {
+        int black = 0;
+        for (int p : px) if (((p >> 16) & 0xff) <= BLACK && ((p >> 8) & 0xff) <= BLACK && (p & 0xff) <= BLACK) black++;
+        return px.length == 0 ? 0 : (double) black / px.length;
+    }
+
+    /** A source tile needs filling from the other server: a lot of white, or any transparent pixels. */
+    static boolean needsFill(int[] px, double transparent) {
+        return transparent > 0.001 || whiteShare(px) >= 0.3;
+    }
+
     /** Share of near-white pixels (all channels ≥ 248), sampled. */
     static double whiteShare(int[] px) {
         int white = 0, n = 0;

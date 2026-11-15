@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fillWhite, groundPixel, level, ORIGIN, PIXEL, project, render, sourcePixels, tileRange, whiteShare } from './puwg92';
+import { clearTransparent, fillWhite, groundPixel, needsFill, level, ORIGIN, PIXEL, project, render, sourcePixels, tileRange, whiteShare } from './puwg92';
 import { GEOPORTAL_ORTHO_WMTS } from './tiles';
 
 const SCALES = GEOPORTAL_ORTHO_WMTS.scales;
@@ -64,4 +64,17 @@ describe('PUWG 1992 (same checks as Puwg92Test.java)', () => {
     fillWhite(px, new Uint8ClampedArray([1, 1, 1, 255, 2, 2, 2, 255, 3, 3, 3, 255]));
     expect([...px]).toEqual([1, 1, 1, 255, 16, 32, 48, 255, 3, 3, 3, 255]);
   });
+
+  it('makes transparent pixels white so they are filled from the other server', () => {
+    // Geoportal's high-resolution photo answers transparent pixels where it has no photo; drawn as
+    // they were, they came out black.
+    const px = new Uint8ClampedArray([0, 0, 0, 0, 16, 32, 48, 255, 255, 255, 255, 64, 64, 80, 96, 128]);
+    expect(clearTransparent(px)).toBe(0.5);
+    expect([...px]).toEqual([255, 255, 255, 255, 16, 32, 48, 255, 255, 255, 255, 255, 64, 80, 96, 255]);
+    expect(needsFill(px, 0.5)).toBe(true);
+    const photo = new Uint8ClampedArray(512 * 512 * 4).fill(200);
+    expect(clearTransparent(photo)).toBe(0);
+    expect(needsFill(photo, 0)).toBe(false);
+  });
 });
+

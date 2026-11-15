@@ -5,13 +5,32 @@ import { tileFileName } from './tileFiles';
 import { wmsBlockUrl, type WmsDef } from './tiles';
 
 /** Work comes in units: one tile, or for layers drawn in blocks, the tiles of one n×n block. */
-export type Unit = { def: WmsDef; z: number; x: number; y: number; n: number; tiles: { url: string; x: number; y: number }[] };
+export type Unit = {
+  def: WmsDef;
+  z: number;
+  x: number;
+  y: number;
+  n: number;
+  /** `check`: already saved; fetched again only if it came out black (see REPAIR_VERSION in offline.ts). */
+  tiles: { url: string; x: number; y: number; check?: boolean }[];
+};
 
 /** What the app's downloader fetches for a unit: the block image, or the tile itself if only one is missing. */
 export function nativeUnit(u: Unit): TileDownloadUnit {
   const m = u.def.format;
   if (u.def.wmts)
-    return { s: u.def.id, z: u.z, x: u.x, y: u.y, n: u.n, m, t: u.tiles.map((t) => [t.x - u.x, t.y - u.y, tileFileName(t.url, m)] as [number, number, string]) };
+    return {
+      s: u.def.id,
+      z: u.z,
+      x: u.x,
+      y: u.y,
+      n: u.n,
+      m,
+      t: u.tiles.map((t): TileDownloadUnit['t'][number] => {
+        const f = tileFileName(t.url, m);
+        return t.check ? [t.x - u.x, t.y - u.y, f, 1] : [t.x - u.x, t.y - u.y, f];
+      }),
+    };
   const fb = u.def.blankFallback;
   if (u.tiles.length === 1) {
     const t = u.tiles[0];

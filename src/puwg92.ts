@@ -175,6 +175,25 @@ export function render(f: { fx: Float32Array; fy: Float32Array }, tiles: SourceT
 }
 
 /** Share of near-white pixels (all channels ≥ 248) in RGBA pixels, sampled. */
+/**
+ * Geoportal's high-resolution photo answers a transparent PNG (whole or in part) where it has no
+ * photo. Drawn as is, those pixels come out black (Nov 2026: most of district 191 was black), so
+ * they become blank white, the same as its white gaps, and are filled from the other server.
+ * Returns the share of pixels that were transparent.
+ */
+export function clearTransparent(px: Uint8ClampedArray): number {
+  let n = 0;
+  for (let k = 3; k < px.length; k += 4)
+    if (px[k] < 128) {
+      px[k - 3] = px[k - 2] = px[k - 1] = px[k] = 255;
+      n++;
+    } else px[k] = 255;
+  return px.length ? n / (px.length / 4) : 1;
+}
+
+/** A source tile needs filling from the other server: a lot of white, or any transparent pixels. */
+export const needsFill = (px: Uint8ClampedArray, transparent: number) => transparent > 0.001 || whiteShare(px) >= 0.3;
+
 export function whiteShare(px: Uint8ClampedArray): number {
   let white = 0;
   let n = 0;

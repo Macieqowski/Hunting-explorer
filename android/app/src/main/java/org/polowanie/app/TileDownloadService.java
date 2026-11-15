@@ -73,6 +73,8 @@ public class TileDownloadService extends Service {
         int[] cols;
         int[] rows;
         String[] files;
+        /** Tiles already saved that are fetched again only if they came out black (src/offline.ts REPAIR_VERSION). */
+        boolean[] check;
     }
 
     /** Ready-made tiles in PUWG 1992 (Geoportal orthophoto WMTS), see {@link Puwg92}. */
@@ -271,8 +273,9 @@ public class TileDownloadService extends Service {
         List<Integer> need = new ArrayList<>();
         for (int t = 0; t < u.files.length; t++) {
             File f = new File(dir, u.files[t]);
-            // Not an update: a tile already on the phone (another saved area, an interrupted save) stays.
-            if (!job.refresh && f.length() > 0) {
+            // Not an update: a tile already on the phone (another saved area, an interrupted save) stays,
+            // unless it is one to check and came out black.
+            if (!job.refresh && f.length() > 0 && !(u.check != null && u.check[t] && looksBlack(f))) {
                 job.result(ui, t, (int) f.length());
                 job.done.incrementAndGet();
                 ok[0]++;
@@ -448,20 +451,26 @@ public class TileDownloadService extends Service {
     }
 
     private int[] loadWmtsTile(Job job, WmtsSource src, int level, int row, int col) {
-        int[] main = wmtsPixels(job, src.template, src, level, row, col);
+        double[] holes = { 0 };
+        int[] main = wmtsPixels(job, src.template, src, level, row, col, holes);
         if (main == null || src.fallback == null) return main;
         // No photo or a part of it missing in the high-resolution set: fill from the other one.
-        if (main.length == 0 || Puwg92.whiteShare(main) >= 0.3) {
-            int[] other = wmtsPixels(job, src.fallback, src, level, row, col);
-            if (other == null) return main;
+        if (main.length == 0 || Puwg92.needsFill(main, holes[0])) {
+            int[] other = wmtsPixels(job, src.fallback, src, level, row, col, new double[1]);
+            // The other server failed: where the first had no photo, the tile would be blank, so it
+            // counts as failed (tried again later) instead of being saved blank.
+            if (other == null) return main.length == 0 || holes[0] > 0.001 ? null : main;
             if (main.length == 0) return other;
             if (other.length == src.size * src.size) Puwg92.fillWhite(main, other);
         }
         return main;
     }
 
-    /** null: failed; empty: the server answered with no image (no photo there). */
-    private int[] wmtsPixels(Job job, String template, WmtsSource src, int level, int row, int col) {
+    /**
+     * null: failed; empty: the server answered with no image or a wholly transparent one (no photo
+     * there). Transparent pixels come back white (see {@link Puwg92#clearTransparent}), their share in holes[0].
+     */
+    private int[] wmtsPixels(Job job, String template, WmtsSource src, int level, int row, int col, double[] holes) {
         String url = template.replace("{L}", Integer.toString(level)).replace("{r}", Integer.toString(row)).replace("{c}", Integer.toString(col));
         byte[] img = fetch(job, url, true);
         if (img == null) return null;
@@ -472,7 +481,30 @@ public class TileDownloadService extends Service {
             if (b.getWidth() != src.size || b.getHeight() != src.size) return new int[0];
             int[] px = new int[src.size * src.size];
             b.getPixels(px, 0, src.size, 0, 0, src.size, src.size);
-            return px;
+            holes[0] = Puwg92.clearTransparent(px);
+            return holes[0] > 0.99 ? new int[0] : px;
+        } finally {
+            b.recycle();
+        }
+    }
+
+    /** Share of black pixels from which a saved photo tile is fetched again (BLACK_SHARE in src/offline.ts). */
+    private static final double BLACK_SHARE = 0.02;
+
+    /**
+     * A saved photo tile with black in it: drawn from Geoportal's transparent "no photo" answers
+     * before they were handled (Nov 2026). Read at 1/8 size: 32×32 pixels.
+     */
+    static boolean looksBlack(File f) {
+        BitmapFactory.Options o = new BitmapFactory.Options();
+        o.inSampleSize = 8;
+        Bitmap b = BitmapFactory.decodeFile(f.getPath(), o);
+        if (b == null) return true;
+        try {
+            int w = b.getWidth(), h = b.getHeight();
+            int[] px = new int[w * h];
+            b.getPixels(px, 0, w, 0, 0, w, h);
+            return Puwg92.blackShare(px) >= BLACK_SHARE;
         } finally {
             b.recycle();
         }

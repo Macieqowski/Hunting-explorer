@@ -4,7 +4,7 @@
 // same natively (TileDownloadService.java); this is for the website and iPhones.
 
 import { fetchTile } from './cachedLayer';
-import { fillWhite, groundPixel, level, PIXEL, render, sourcePixels, tileRange, whiteShare, type SourceTile } from './puwg92';
+import { clearTransparent, fillWhite, groundPixel, level, needsFill, PIXEL, render, sourcePixels, tileRange, type SourceTile } from './puwg92';
 import { limiter } from './offlineJob';
 import type { WmsDef, Wmts } from './tiles';
 
@@ -38,8 +38,12 @@ function remember(key: string, load: () => Promise<SourceTile>): Promise<SourceT
 const url = (template: string, l: number, r: number, c: number) =>
   template.replace('{L}', String(l)).replace('{r}', String(r)).replace('{c}', String(c));
 
-/** RGBA pixels of a source tile; null where the server has no photo (an empty answer). Throws when fetching fails. */
-async function pixels(u: string, size: number): Promise<SourceTile> {
+/**
+ * RGBA pixels of a source tile, transparent ones made white (see clearTransparent), and the share
+ * that was transparent; null where the server has no photo (an empty or wholly transparent answer).
+ * Throws when fetching fails.
+ */
+async function pixels(u: string, size: number): Promise<{ px: Uint8ClampedArray; holes: number } | null> {
   const blob = await slot(() => fetchTile(u, 4));
   if (!blob.size) return null;
   let bmp: ImageBitmap;
@@ -55,7 +59,9 @@ async function pixels(u: string, size: number): Promise<SourceTile> {
     const ctx = c.getContext('2d', { willReadFrequently: true });
     if (!ctx) throw new Error('no canvas');
     ctx.drawImage(bmp, 0, 0);
-    return ctx.getImageData(0, 0, size, size).data;
+    const px = ctx.getImageData(0, 0, size, size).data;
+    const holes = clearTransparent(px);
+    return holes > 0.99 ? null : { px, holes };
   } finally {
     bmp.close?.();
   }
@@ -67,12 +73,17 @@ function source(w: Wmts, l: number, r: number, c: number): Promise<SourceTile> {
   if (r < 0 || c < 0) return Promise.resolve(null);
   return remember(url(w.template, l, r, c), async () => {
     const main = await pixels(url(w.template, l, r, c), w.size);
-    if (!w.fallback || (main && whiteShare(main) < 0.3)) return main;
+    if (!w.fallback || (main && !needsFill(main.px, main.holes))) return main?.px ?? null;
     const other = await pixels(url(w.fallback, l, r, c), w.size).catch(() => undefined);
-    if (other === undefined) return main;
-    if (!main) return other;
-    if (other) fillWhite(main, other);
-    return main;
+    // The other server failed: where the first had no photo the tile would be blank, so it fails
+    // (tried again later) instead of being saved blank.
+    if (other === undefined) {
+      if (!main || main.holes > 0.001) throw new Error('fallback failed');
+      return main.px;
+    }
+    if (!main) return other?.px ?? null;
+    if (other) fillWhite(main.px, other.px);
+    return main.px;
   });
 }
 

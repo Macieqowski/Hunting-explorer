@@ -88,4 +88,28 @@ public class Puwg92Test {
         Puwg92.fillWhite(px, new int[] { 0xff010101, 0xff020202, 0xff030303 });
         assertArrayEquals(new int[] { 0xff010101, 0xff102030, 0xff030303 }, px);
     }
+
+    @Test
+    public void transparentPixelsBecomeWhiteSoTheyAreFilled() {
+        // Geoportal's high-resolution photo answers transparent pixels where it has no photo.
+        int[] px = { 0x00000000, 0xff102030, 0x40ffffff, 0x80405060 };
+        assertEquals(0.5, Puwg92.clearTransparent(px), 1e-9);
+        assertArrayEquals(new int[] { 0xffffffff, 0xff102030, 0xffffffff, 0xff405060 }, px);
+        assertTrue(Puwg92.needsFill(px, 0.5));
+        int[] photo = new int[512 * 512];
+        java.util.Arrays.fill(photo, 0xff406080);
+        assertEquals(0, Puwg92.clearTransparent(photo), 0);
+        assertTrue(!Puwg92.needsFill(photo, 0));
+        Puwg92.fillWhite(px, new int[] { 0xff010101, 0xff020202, 0xff030303, 0xff040404 });
+        assertArrayEquals(new int[] { 0xff010101, 0xff102030, 0xff030303, 0xff405060 }, px);
+    }
+
+    @Test
+    public void spotsTilesThatCameOutBlack() {
+        int[] tile = new int[32 * 32];
+        java.util.Arrays.fill(tile, 0xff3c5a28);
+        assertEquals(0, Puwg92.blackShare(tile), 0);
+        for (int k = 0; k < 64; k++) tile[k] = 0xff020101;
+        assertEquals(64.0 / 1024, Puwg92.blackShare(tile), 1e-9);
+    }
 }

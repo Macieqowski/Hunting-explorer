@@ -23,6 +23,16 @@ describe('app downloader jobs', () => {
     ]);
   });
 
+  it('marks saved photo tiles to check for black (repair of older saves)', () => {
+    const u = unit(WMS.ortho, [[0, 0], [1, 0]]);
+    const t = u.tiles as { url: string; x: number; y: number; check?: boolean }[];
+    t[1].check = true;
+    expect(nativeUnit(u).t).toEqual([
+      [0, 0, tileFileName(t[0].url, 'image/jpeg')],
+      [1, 0, tileFileName(t[1].url, 'image/jpeg'), 1],
+    ]);
+  });
+
   it('draws the topographic map from WMTS too', () => {
     expect(nativeUnit(unit(WMS.geotopo, [[0, 0], [1, 1]]))).toMatchObject({ s: 'geotopo', z: 17, x: 72000, y: 43000, n: 4 });
   });

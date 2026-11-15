@@ -28,7 +28,7 @@ import org.json.JSONObject;
 public class TileDownloadPlugin extends Plugin {
 
     /**
-     * id, title, doneTitle, stopLabel, refresh, concurrency, units: [{ u, f?, n, m, t: [[col, row, file], …] }].
+     * id, title, doneTitle, stopLabel, refresh, concurrency, units: [{ u, f?, n, m, t: [[col, row, file, check?], …] }] (check 1: fetch again only if the saved file came out black).
      * A job with the same id replaces the earlier one.
      */
     @PluginMethod
@@ -112,6 +112,7 @@ public class TileDownloadPlugin extends Plugin {
             u.cols = new int[t.length()];
             u.rows = new int[t.length()];
             u.files = new String[t.length()];
+            u.check = new boolean[t.length()];
             for (int k = 0; k < t.length(); k++) {
                 JSONArray e = t.getJSONArray(k);
                 u.cols[k] = e.getInt(0);
@@ -120,6 +121,7 @@ public class TileDownloadPlugin extends Plugin {
                 // File names come from tileFileName(): a hash and an extension, nothing else.
                 if (!f.matches("[0-9a-f]{1,32}\\.(png|jpg)")) throw new JSONException("bad file name " + f);
                 u.files[k] = f;
+                u.check[k] = e.length() > 3 && e.optInt(3, 0) == 1;
             }
             out.add(u);
         }
