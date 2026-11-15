@@ -18,6 +18,8 @@ on:
       - 'src/platform.ts'
       - 'src/native.ts'
       - 'src/geo.ts'
+      - 'src/huntShare.ts'
+      - 'database.rules.json'
       - 'src/gpsStatus.ts'
       - 'src/speech.ts'
       - 'scripts/oral-api-url.mjs'
@@ -244,6 +246,20 @@ jobs:
       - name: Test APKs
         working-directory: android
         run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
+      # For PositionPublisherTest: the database (with the real rules) and sign-in emulators, an
+      # anonymous user and a live hunt where that user is a confirmed beater.
+      - name: Firebase emulators
+        run: |
+          npx --yes firebase-tools@15 emulators:start --only database,auth --project demo-hunting > firebase-emulators.log 2>&1 &
+          for i in $(seq 1 60); do curl -s http://127.0.0.1:9000/ >/dev/null && curl -s http://127.0.0.1:9099/ >/dev/null && break; sleep 2; done
+          sleep 3
+          NS=ns=demo-hunting-default-rtdb
+          u=$(curl -sf -X POST "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake" -H 'Content-Type: application/json' -d '{"returnSecureToken":true}')
+          uid=$(echo "$u" | jq -r .localId); rt=$(echo "$u" | jq -r .refreshToken)
+          curl -sf -X PATCH -H "Authorization: Bearer owner" "http://127.0.0.1:9000/.json?$NS" \
+            -d "{\"hunts/hci\":{\"status\":\"live\",\"leaderUid\":\"leader\"},\"participants/hci/$uid\":{\"status\":\"confirmed\",\"role\":\"beater\",\"name\":\"Test\"}}"
+          echo "FB_UID=$uid" >> "$GITHUB_ENV"
+          echo "FB_RT=$rt" >> "$GITHUB_ENV"
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -258,8 +274,8 @@ jobs:
           working-directory: android
           script: |
             adb logcat -c
-            ./gradlew :app:connectedDebugAndroidTest || (adb logcat -d -s polowanie-test:* TestRunner:* AndroidRuntime:* > ../logcat-native.txt; exit 1)
-            adb logcat -d -s polowanie-test:* TestRunner:* AndroidRuntime:* > ../logcat-native.txt || true
+            ./gradlew :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.fbDb=http://10.0.2.2:9000/?ns=demo-hunting-default-rtdb" -Pandroid.testInstrumentationRunnerArguments.fbAuth=http://10.0.2.2:9099 "-Pandroid.testInstrumentationRunnerArguments.refreshToken=$FB_RT" "-Pandroid.testInstrumentationRunnerArguments.uid=$FB_UID" -Pandroid.testInstrumentationRunnerArguments.huntId=hci || (adb logcat -d -s polowanie-test:* polowanie-pos:* TestRunner:* AndroidRuntime:* > ../logcat-native.txt; exit 1)
+            adb logcat -d -s polowanie-test:* polowanie-pos:* TestRunner:* AndroidRuntime:* > ../logcat-native.txt || true
       - name: Speed
         if: always()
         run: grep -h "tiles .* done" logcat-native.txt | tee -a "$GITHUB_STEP_SUMMARY" || true
@@ -269,4 +285,5 @@ jobs:
           name: native-tests
           path: |
             logcat-native.txt
+            firebase-emulators.log
             android/app/build/reports/androidTests/

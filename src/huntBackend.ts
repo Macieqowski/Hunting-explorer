@@ -62,6 +62,11 @@ export interface HuntBackend {
   /** Send my position; `track` also appends it to my track. */
   publishPosition(id: string, fix: { lat: number; lng: number; acc: number | null }, track: boolean): Promise<void>;
   clearPosition(id: string): Promise<void>;
+  /**
+   * The sign-in and database address, for the Android app's location service to send my
+   * positions itself while the screen is locked. Null where it cannot (emulator, other backends).
+   */
+  nativeAuth?(): Promise<{ dbUrl: string; apiKey: string; refreshToken: string; idToken: string; idTokenExpiresAt: number; uid: string } | null>;
   /** Readable by confirmed participants; onDenied for anyone else. */
   watchPositions(id: string, cb: (ps: Position[]) => void, onDenied: () => void): Unsubscribe;
   watchTracks(id: string, cb: (tracks: Map<string, TrackPoint[]>) => void, onDenied: () => void): Unsubscribe;

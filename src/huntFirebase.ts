@@ -359,6 +359,12 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
 
     clearPosition: (id) => guard(update(root, { [`positions/${id}/${uid}`]: null })),
 
+    async nativeAuth() {
+      if (emu || !cfg.databaseURL || !cfg.apiKey || !user.refreshToken) return null;
+      const t = await user.getIdTokenResult();
+      return { dbUrl: cfg.databaseURL, apiKey: cfg.apiKey, refreshToken: user.refreshToken, idToken: t.token, idTokenExpiresAt: Date.parse(t.expirationTime), uid };
+    },
+
     watchPositions(id, cb, onDenied) {
       return onValue(
         child(root, `positions/${id}`),
