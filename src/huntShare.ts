@@ -4,6 +4,7 @@
 
 import { sendDecision } from './hunt';
 import { hasBackgroundLocation, watchBackgroundLocation, type BackgroundWatch } from './native';
+import { watchLocation, type Satellites } from './geo';
 
 export type ShareState = 'off' | 'starting' | 'on' | 'denied' | 'unavailable' | 'error';
 
@@ -36,7 +37,9 @@ export class Sharer {
   lastFix: Fix | null = null;
   lastSentAt = 0;
   error = '';
-  private watchId: number | null = null;
+  /** While starting (app only): satellites GPS sees and uses, to show it is still searching. */
+  sats: Satellites | null = null;
+  private stopWatch: (() => void) | null = null;
   private last: { lat: number; lng: number; at: number } | null = null;
   private wake: WakeLock | null = null;
   private native: BackgroundWatch | null = null;
@@ -74,6 +77,7 @@ export class Sharer {
         this.opts.onStoppedOutside?.();
         this.stop();
       },
+      (s) => this.onSats(s),
     ).then(
       (w) => {
         if (gen === this.gen) this.native = w;
@@ -92,28 +96,31 @@ export class Sharer {
   }
 
   private startBrowser() {
-    this.watchId = navigator.geolocation.watchPosition(
-      (p) => this.onFix({ lat: p.coords.latitude, lng: p.coords.longitude, acc: isFinite(p.coords.accuracy) ? p.coords.accuracy : null }),
-      (e) => {
-        if (e.code === e.PERMISSION_DENIED) {
-          this.stop(false);
-          this.set('denied');
-        } else if (this.state === 'starting') {
-          // Timeout or no fix yet: keep watching, the next fix will arrive.
-          this.error = e.message;
-          this.opts.onChange();
-        }
+    // No time limit: the watch goes on until a position comes (a cold GPS start can take minutes).
+    this.stopWatch = watchLocation((p) => !p.cached && this.onFix({ lat: p.lat, lng: p.lng, acc: p.acc }), {
+      // A remembered position is not sent to the others: only fresh ones.
+      maxAgeMs: 10_000,
+      onSatellites: (s) => this.onSats(s),
+      onError: (e) => {
+        this.stop(false);
+        this.set(e.code === 'denied' ? 'denied' : 'unavailable');
       },
-      { enableHighAccuracy: true, maximumAge: 10_000, timeout: 60_000 },
-    );
+    });
     this.keepAwake();
     document.addEventListener('visibilitychange', this.onVisible);
   }
 
+  private onSats(s: Satellites) {
+    if (this.state !== 'starting') return;
+    this.sats = s;
+    this.opts.onChange();
+  }
+
   /** Stop watching; `clear` also removes my position from the map for everyone. */
   stop(clear = true) {
-    if (this.watchId != null) navigator.geolocation.clearWatch(this.watchId);
-    this.watchId = null;
+    this.stopWatch?.();
+    this.stopWatch = null;
+    this.sats = null;
     this.native?.stop();
     this.native = null;
     this.gen++;

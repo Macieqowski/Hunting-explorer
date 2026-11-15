@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
         // Plugins that live in this app (not in npm packages) are registered before the bridge starts.
         registerPlugin(PrinterPlugin.class);
         registerPlugin(BackgroundLocationPlugin.class);
+        registerPlugin(GpsPlugin.class);
         registerPlugin(AlertsPlugin.class);
         registerPlugin(CompassPlugin.class);
         registerPlugin(BarsPlugin.class);

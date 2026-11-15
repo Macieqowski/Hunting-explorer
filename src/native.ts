@@ -18,6 +18,7 @@ interface BackgroundLocationPlugin {
   stop(): Promise<void>;
   addListener(e: 'location', f: (p: NativeFix) => void): Promise<PluginListenerHandle>;
   addListener(e: 'stopped', f: () => void): Promise<PluginListenerHandle>;
+  addListener(e: 'satellites', f: (s: { visible: number; used: number }) => void): Promise<PluginListenerHandle>;
 }
 interface AlertsPlugin {
   vibrate(o: { pattern: number[]; alarm?: boolean }): Promise<void>;
@@ -125,15 +126,21 @@ export interface BackgroundWatch {
 /**
  * App only: starts the foreground service that keeps sending positions with the screen off
  * (a notification with a Stop button is shown meanwhile). `onStopped` runs when the person taps
- * Stop there. Rejects with code 'DENIED' when location permission is refused.
+ * Stop there; `onSatellites` gets the satellites GPS sees and uses (newer apps only). Rejects with
+ * code 'DENIED' when location permission is refused.
  */
 export async function watchBackgroundLocation(
   text: { title: string; text: string; stop: string },
   onFix: (f: NativeFix) => void,
   onStopped: () => void,
+  onSatellites?: (s: { visible: number; used: number }) => void,
   intervalMs = 3000,
 ): Promise<BackgroundWatch> {
-  const handles = await Promise.all([BackgroundLocation.addListener('location', onFix), BackgroundLocation.addListener('stopped', onStopped)]);
+  const handles = await Promise.all([
+    BackgroundLocation.addListener('location', onFix),
+    BackgroundLocation.addListener('stopped', onStopped),
+    ...(onSatellites ? [BackgroundLocation.addListener('satellites', onSatellites)] : []),
+  ]);
   const removeAll = () => handles.forEach((h) => void h.remove());
   try {
     await BackgroundLocation.start({ title: text.title, text: text.text, stopLabel: text.stop, intervalMs });
@@ -185,7 +192,7 @@ export function alertUser(title: string, text: string, pattern: readonly number[
 
 if (isApp()) {
   // For the app's smoke test (android workflow), which checks that the plugins are there.
-  console.info(`[polowanie] plugins ${['Printer', 'BackgroundLocation', 'Alerts', 'Compass', 'Bars', 'TileDownload', 'Speech'].filter((p) => Capacitor.isPluginAvailable(p)).join(',')}`);
+  console.info(`[polowanie] plugins ${['Printer', 'BackgroundLocation', 'Gps', 'Alerts', 'Compass', 'Bars', 'TileDownload', 'Speech'].filter((p) => Capacitor.isPluginAvailable(p)).join(',')}`);
   document.addEventListener('visibilitychange', () => {
     // Back on screen: the alerts are visible in the app itself.
     if (document.visibilityState === 'visible') void Alerts.clear().catch(() => {});

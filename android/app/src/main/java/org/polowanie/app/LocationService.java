@@ -11,13 +11,8 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.IBinder;
-import android.os.Looper;
-import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 import androidx.core.content.ContextCompat;
@@ -28,8 +23,8 @@ import java.util.function.Consumer;
  * location sharing in a group hunt. Android only allows that to a foreground service, which must
  * show a notification ("Polowanie: udostępniasz położenie", with a Stop button).
  *
- * Uses Android's own LocationManager (no Google Play services), so it also works on phones
- * without them. Positions go to {@link BackgroundLocationPlugin} and on to the web code.
+ * Uses Android's own LocationManager through {@link LocationFeed} (no Google Play services), so it
+ * also works on phones without them. Positions go to {@link BackgroundLocationPlugin} and on to the web code.
  */
 public class LocationService extends Service {
 
@@ -46,29 +41,10 @@ public class LocationService extends Service {
     static volatile Runnable onStoppedByUser;
     static volatile boolean running;
 
-    private LocationManager manager;
-    private long lastGpsAt;
-    private final LocationListener listener = new LocationListener() {
-        @Override
-        public void onLocationChanged(@NonNull Location location) {
-            boolean gps = LocationManager.GPS_PROVIDER.equals(location.getProvider());
-            if (gps) lastGpsAt = System.currentTimeMillis();
-            // A network position is only worth sending while GPS has nothing (e.g. under a roof).
-            else if (!"fused".equals(location.getProvider()) && System.currentTimeMillis() - lastGpsAt < 30_000) return;
-            Consumer<Location> s = sink;
-            if (s != null) s.accept(location);
-        }
+    /** Set by the plugin: satellites GPS sees and uses, while it is still looking for a position. */
+    static volatile LocationFeed.Sink satellitesSink;
 
-        // Needed on Android 9 and 10, where these are not default methods yet.
-        @Override
-        public void onStatusChanged(String provider, int status, Bundle extras) {}
-
-        @Override
-        public void onProviderEnabled(@NonNull String provider) {}
-
-        @Override
-        public void onProviderDisabled(@NonNull String provider) {}
-    };
+    private LocationFeed feed;
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -129,21 +105,24 @@ public class LocationService extends Service {
             .build();
     }
 
-    @SuppressWarnings("MissingPermission")
     private void startUpdates(long interval) {
-        if (manager == null) manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        manager.removeUpdates(listener);
-        Looper looper = Looper.getMainLooper();
+        if (feed == null)
+            feed = new LocationFeed(this, new LocationFeed.Sink() {
+                @Override
+                public void onFix(Location location) {
+                    Consumer<Location> s = sink;
+                    if (s != null) s.accept(location);
+                }
+
+                @Override
+                public void onSatellites(int visible, int used) {
+                    LocationFeed.Sink s = satellitesSink;
+                    if (s != null) s.onSatellites(visible, used);
+                }
+            });
+        // Started once and kept until the service stops: restarting would lose the satellite search.
         try {
-            // Android 12+ has its own fused provider (GPS + network) without Google Play services.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && manager.getAllProviders().contains(LocationManager.FUSED_PROVIDER)) {
-                manager.requestLocationUpdates(LocationManager.FUSED_PROVIDER, interval, 0f, listener, looper);
-                return;
-            }
-            if (manager.getAllProviders().contains(LocationManager.GPS_PROVIDER))
-                manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, interval, 0f, listener, looper);
-            if (manager.getAllProviders().contains(LocationManager.NETWORK_PROVIDER))
-                manager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, Math.max(interval, 10_000), 0f, listener, looper);
+            if (!feed.start(interval)) stopSelf();
         } catch (SecurityException e) {
             stopSelf();
         }
@@ -152,7 +131,7 @@ public class LocationService extends Service {
     @Override
     public void onDestroy() {
         running = false;
-        if (manager != null) manager.removeUpdates(listener);
+        if (feed != null) feed.stop();
         super.onDestroy();
     }
 }

@@ -17,6 +17,8 @@ on:
       - 'capacitor.config.ts'
       - 'src/platform.ts'
       - 'src/native.ts'
+      - 'src/geo.ts'
+      - 'src/gpsStatus.ts'
       - 'src/speech.ts'
       - 'scripts/oral-api-url.mjs'
       - 'src/offline.ts'
@@ -177,11 +179,22 @@ jobs:
             if grep -E "Uncaught|TypeError|ReferenceError|SyntaxError" logcat.txt | grep -v "Error injecting safe area CSS"; then echo "::error::Błąd JavaScript w aplikacji"; exit 1; fi
             grep -q "Polowanie\|Loading app\|Capacitor" logcat.txt || echo "::warning::Brak logów Capacitora"
             grep -Eq "\[polowanie\] districts [0-9]{4,} built-in" logcat.txt || { echo "::error::Aplikacja nie wczytała wbudowanej listy obwodów"; exit 1; }
-            grep -q "\[polowanie\] plugins Printer,BackgroundLocation,Alerts,Compass,Bars,TileDownload,Speech" logcat.txt || { echo "::error::Brak wtyczek aplikacji"; exit 1; }
+            grep -q "\[polowanie\] plugins Printer,BackgroundLocation,Gps,Alerts,Compass,Bars,TileDownload,Speech" logcat.txt || { echo "::error::Brak wtyczek aplikacji"; exit 1; }
             # The location service (screen-off sharing) must start as a foreground service.
             adb root; adb wait-for-device; sleep 3
             adb shell pm grant org.polowanie.app android.permission.ACCESS_FINE_LOCATION
             adb shell pm grant org.polowanie.app android.permission.POST_NOTIFICATIONS
+            # On screen, the position must be awaited without a time limit (no GPS fix for 25 s here,
+            # like a cold start on a phone without Google services), not dropped after 15 s.
+            adb shell am start -a android.intent.action.VIEW -d "https://www.polowanie.org/app/#/weather" org.polowanie.app
+            sleep 25
+            adb shell dumpsys location > location-wait.txt || true
+            awk '/gps provider/{on=1} on&&/^ *[a-z]+ provider/&&!/gps provider/{on=0} on' location-wait.txt > gps-section.txt
+            cat gps-section.txt | head -60
+            grep -q "org.polowanie.app" gps-section.txt || { echo "::error::Aplikacja przestała prosić o pozycję GPS przed jej ustaleniem"; exit 1; }
+            adb emu geo fix 21.0 52.2 || true
+            sleep 5
+            adb exec-out screencap -p > screen-weather.png
             adb shell am start-foreground-service -n org.polowanie.app/.LocationService --es title Test --es text Test
             sleep 5
             adb emu geo fix 21.0 52.2 || true
