@@ -363,6 +363,10 @@ export function createHuntMap(text: HuntMapText): HuntMap {
       if (markers.size > before) autoFit();
       // An open popup is drawn once when opened: refresh it, or its distance and "ago" stand still.
       for (const m of markers.values()) if (m.marker.isPopupOpen()) m.marker.getPopup()?.update(); // re-runs popupHtml
+      // Stand popups show the distance from me too.
+      standLayer.eachLayer((l) => {
+        if (l instanceof L.Marker && l.isPopupOpen()) l.getPopup()?.update();
+      });
       // Your own scent cone, so you can see whether game in front of you will wind you.
       const mine = markers.get(me);
       wind.setScentOrigin(mine && freshness(mine.pos.ts, now) !== 'lost' ? { lat: mine.pos.lat, lng: mine.pos.lng } : null);
