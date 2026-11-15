@@ -1131,6 +1131,12 @@ input[type='checkbox'], input[type='radio'] { width: 18px; height: 18px; accent-
   position: absolute; right: 12px; bottom: 28px; z-index: 2; width: 48px; height: 48px; display: inline-flex; align-items: center; justify-content: center;
   border: 1px solid var(--border); border-radius: var(--r-pill); background: var(--surface); color: var(--text); box-shadow: var(--shadow); cursor: pointer;
 }
+.hf-trails {
+  position: absolute; left: 12px; bottom: 28px; z-index: 2; height: 48px; display: inline-flex; align-items: center; gap: 8px; padding: 0 16px;
+  border: 1px solid var(--border); border-radius: var(--r-pill); background: var(--surface); color: var(--text); box-shadow: var(--shadow);
+  font: 600 0.95rem var(--font-body); cursor: pointer;
+}
+.hf-trails.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 .hf-bottom { display: flex; flex-direction: column; gap: 8px; flex: none; padding: 10px 12px calc(12px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--border); }
 .hf-near { margin: 0; font-size: 0.85rem; color: var(--muted); }
 .hf-near strong { color: var(--text); font-weight: 600; }

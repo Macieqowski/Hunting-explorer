@@ -74,6 +74,7 @@ const FIELD = (beater: boolean): GuideSection => ({
   text: [
     'Gdy polowanie trwa, dotknij [[Tryb terenowy]]. Mapa wypełnia ekran, a przyciski są duże, żeby dało się ich używać w rękawiczkach.',
     `Na górze widać nazwę miotu i jego czas, ${beater ? 'czy masz wyznaczoną trasę' : 'Twoje stanowisko'}, numer miotu (np. 2/5) i czy Twoja lokalizacja jest wysyłana. Na dole są przyciski [[Zwierzyna]]${beater ? '' : ', [[Strzał]]'} i [[Wiadomości]], a pod nimi listy [[Uczestnicy]], [[Mioty]] i [[Pokot]], które wysuwają się na mapę.`,
+    'Przycisk [[Ślady naganki]] w lewym dolnym rogu mapy pokazuje, którędy szli naganiacze w trwającym miocie. Drugie dotknięcie je ukrywa.',
     'Z trybu terenowego wychodzisz strzałką w lewym górnym rogu (albo przyciskiem Wstecz w telefonie).',
   ],
   tips: beater
