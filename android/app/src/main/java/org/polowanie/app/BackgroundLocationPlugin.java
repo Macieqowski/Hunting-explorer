@@ -18,6 +18,8 @@ import com.getcapacitor.annotation.PermissionCallback;
 /**
  * Location sharing that keeps working with the screen off: start() starts {@link LocationService}
  * and positions arrive as "location" events, satellites GPS sees as "satellites" { visible, used }; "stopped" when the user taps Stop in the notification.
+ * With a "publish" option the service also sends them to the hunt's database itself: "sent" { at }
+ * when one got there, "denied" when the database refused it (the service has stopped then).
  * Used by src/native.ts.
  */
 @CapacitorPlugin(
@@ -43,6 +45,15 @@ public class BackgroundLocationPlugin extends Plugin {
                 o.put("used", used);
                 notifyListeners("satellites", o);
             }
+        };
+        LocationService.onSent = (at) -> {
+            JSObject o = new JSObject();
+            o.put("at", at);
+            notifyListeners("sent", o);
+        };
+        LocationService.onDenied = () -> {
+            keepRendererImportant(false);
+            notifyListeners("denied", new JSObject());
         };
         LocationService.onStoppedByUser = () -> {
             keepRendererImportant(false);
@@ -71,6 +82,28 @@ public class BackgroundLocationPlugin extends Plugin {
             requestPermissionForAlias("notifications", call, "afterLocation");
             return;
         }
+        // In a group hunt the service itself sends my position to the database (see PositionPublisher).
+        boolean publishing = false;
+        JSObject pub = call.getObject("publish");
+        PositionPublisher old = LocationService.publisher;
+        if (pub != null && pub.getString("dbUrl") != null && pub.getString("refreshToken") != null && pub.getString("uid") != null && pub.getString("huntId") != null) {
+            PositionPublisher.Config c = new PositionPublisher.Config();
+            c.dbUrl = pub.getString("dbUrl");
+            c.apiKey = pub.getString("apiKey", "");
+            c.refreshToken = pub.getString("refreshToken");
+            c.idToken = pub.getString("idToken");
+            c.idTokenExpiresAt = pub.optLong("idTokenExpiresAt", 0);
+            c.uid = pub.getString("uid");
+            c.huntId = pub.getString("huntId");
+            c.heartbeatMs = pub.optLong("heartbeatMs", 30_000);
+            c.minMoveM = pub.optDouble("minMoveM", 20);
+            String tokenUrl = pub.getString("tokenUrl");
+            if (tokenUrl != null && !tokenUrl.isEmpty()) c.tokenUrl = tokenUrl;
+            LocationService.publisher = new PositionPublisher(getContext(), c, LocationService.listener());
+            publishing = true;
+        } else LocationService.publisher = null;
+        // Another hunt, or the page sends again: the old one stops (keeping my position there is up to the page).
+        if (old != null) old.stop(false);
         Intent i = new Intent(getContext(), LocationService.class)
             .putExtra(LocationService.EXTRA_TITLE, call.getString("title", "Polowanie"))
             .putExtra(LocationService.EXTRA_TEXT, call.getString("text", ""))
@@ -79,11 +112,15 @@ public class BackgroundLocationPlugin extends Plugin {
         try {
             ContextCompat.startForegroundService(getContext(), i);
         } catch (Exception e) {
+            if (LocationService.publisher != null) LocationService.publisher.stop(false);
+            LocationService.publisher = null;
             call.reject("Could not start location service: " + e.getMessage(), "UNAVAILABLE");
             return;
         }
         keepRendererImportant(true);
-        call.resolve();
+        JSObject r = new JSObject();
+        r.put("publishing", publishing);
+        call.resolve(r);
     }
 
     @PluginMethod
@@ -131,6 +168,8 @@ public class BackgroundLocationPlugin extends Plugin {
         LocationService.sink = null;
         LocationService.satellitesSink = null;
         LocationService.onStoppedByUser = null;
+        LocationService.onSent = null;
+        LocationService.onDenied = null;
         getContext().stopService(new Intent(getContext(), LocationService.class));
         super.handleOnDestroy();
     }

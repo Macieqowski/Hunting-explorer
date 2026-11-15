@@ -24,7 +24,9 @@ import java.util.function.Consumer;
  * show a notification ("Polowanie: udostępniasz położenie", with a Stop button).
  *
  * Uses Android's own LocationManager through {@link LocationFeed} (no Google Play services), so it
- * also works on phones without them. Positions go to {@link BackgroundLocationPlugin} and on to the web code.
+ * also works on phones without them. Positions go to {@link BackgroundLocationPlugin} and on to the web code,
+ * and, in a group hunt, straight to the database through {@link PositionPublisher}: the web page is
+ * throttled and then paused with the screen locked, so it cannot be the one sending them.
  */
 public class LocationService extends Service {
 
@@ -44,6 +46,18 @@ public class LocationService extends Service {
     /** Set by the plugin: satellites GPS sees and uses, while it is still looking for a position. */
     static volatile LocationFeed.Sink satellitesSink;
 
+    /** Set by the plugin before starting: sends positions to the hunt's database (null = the page sends them). */
+    static volatile PositionPublisher publisher;
+
+    /** Set by the plugin: a position reached the database (ms since 1970). */
+    static volatile java.util.function.LongConsumer onSent;
+    /** Set by the plugin: the database refused my position (hunt ended, I was removed); the service stops. */
+    static volatile Runnable onDenied;
+
+    private String title = "Polowanie";
+    private String text = "";
+    private String stopLabel = "Stop";
+
     private LocationFeed feed;
 
     @Override
@@ -55,6 +69,9 @@ public class LocationService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
             Runnable r = onStoppedByUser;
+            PositionPublisher p = publisher;
+            publisher = null;
+            if (p != null) p.stop(true);
             stopSelf();
             if (r != null) r.run();
             return START_NOT_STICKY;
@@ -64,15 +81,15 @@ public class LocationService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
-        String title = intent != null && intent.hasExtra(EXTRA_TITLE) ? intent.getStringExtra(EXTRA_TITLE) : "Polowanie";
-        String text = intent != null && intent.hasExtra(EXTRA_TEXT) ? intent.getStringExtra(EXTRA_TEXT) : "";
-        String stop = intent != null && intent.hasExtra(EXTRA_STOP) ? intent.getStringExtra(EXTRA_STOP) : "Stop";
+        if (intent != null && intent.hasExtra(EXTRA_TITLE)) title = intent.getStringExtra(EXTRA_TITLE);
+        if (intent != null && intent.hasExtra(EXTRA_TEXT)) text = intent.getStringExtra(EXTRA_TEXT);
+        if (intent != null && intent.hasExtra(EXTRA_STOP)) stopLabel = intent.getStringExtra(EXTRA_STOP);
         long interval = intent != null ? intent.getLongExtra(EXTRA_INTERVAL, 3000) : 3000;
 
         ServiceCompat.startForeground(
             this,
             NOTIFICATION_ID,
-            buildNotification(title, text, stop),
+            buildNotification(0),
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION : 0
         );
         startUpdates(interval);
@@ -80,7 +97,8 @@ public class LocationService extends Service {
         return START_NOT_STICKY;
     }
 
-    private Notification buildNotification(String title, String text, String stopLabel) {
+    /** `sentAt`: when a position last reached the database (shown as the notification's time), 0 = not yet. */
+    private Notification buildNotification(long sentAt) {
         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm.getNotificationChannel(CHANNEL) == null) {
             NotificationChannel ch = new NotificationChannel(CHANNEL, "Udostępnianie położenia", NotificationManager.IMPORTANCE_LOW);
@@ -99,6 +117,8 @@ public class LocationService extends Service {
             .setContentIntent(openPi)
             .addAction(0, stopLabel, stopPi)
             .setOngoing(true)
+            .setShowWhen(sentAt > 0)
+            .setWhen(sentAt > 0 ? sentAt : System.currentTimeMillis())
             .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
@@ -110,6 +130,8 @@ public class LocationService extends Service {
             feed = new LocationFeed(this, new LocationFeed.Sink() {
                 @Override
                 public void onFix(Location location) {
+                    PositionPublisher p = publisher;
+                    if (p != null) p.onFix(location);
                     Consumer<Location> s = sink;
                     if (s != null) s.accept(location);
                 }
@@ -128,9 +150,67 @@ public class LocationService extends Service {
         }
     }
 
+    /** Called by the publisher (its own thread). */
+    private final PositionPublisher.Listener publishListener = new PositionPublisher.Listener() {
+        @Override
+        public void onSent(long at) {
+            // The time in the notification shows, also on the lock screen, that positions are going out.
+            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (running) nm.notify(NOTIFICATION_ID, buildNotification(at));
+            java.util.function.LongConsumer s = onSent;
+            if (s != null) s.accept(at);
+        }
+
+        @Override
+        public void onDenied(PositionPublisher p) {
+            if (publisher != p) return; // an earlier hunt's, already replaced
+            publisher = null;
+            Runnable r = LocationService.onDenied;
+            stopSelf();
+            if (r != null) r.run();
+        }
+    };
+
+    /** Listener a publisher made by the plugin should report to (the running service's). */
+    static PositionPublisher.Listener listener() {
+        return relay;
+    }
+
+    private static volatile LocationService instance;
+
+    /** Forwards to whichever service runs when the publisher reports. */
+    private static final PositionPublisher.Listener relay = new PositionPublisher.Listener() {
+        @Override
+        public void onSent(long at) {
+            LocationService s = instance;
+            if (s != null) s.publishListener.onSent(at);
+        }
+
+        @Override
+        public void onDenied(PositionPublisher p) {
+            LocationService s = instance;
+            if (s != null) s.publishListener.onDenied(p);
+            else if (publisher == p) {
+                publisher = null;
+                Runnable r = LocationService.onDenied;
+                if (r != null) r.run();
+            }
+        }
+    };
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        instance = this;
+    }
+
     @Override
     public void onDestroy() {
         running = false;
+        if (instance == this) instance = null;
+        PositionPublisher p = publisher;
+        publisher = null;
+        if (p != null) p.stop(false);
         if (feed != null) feed.stop();
         super.onDestroy();
     }

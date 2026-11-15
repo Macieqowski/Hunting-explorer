@@ -3,7 +3,8 @@
 // keeps working with the screen off. Knows nothing about Firebase; huntUi wires it to the backend.
 
 import { sendDecision } from './hunt';
-import { hasBackgroundLocation, watchBackgroundLocation, type BackgroundWatch } from './native';
+import { MIN_MOVE_M } from './hunt';
+import { hasBackgroundLocation, watchBackgroundLocation, type BackgroundWatch, type NativePublish } from './native';
 import { watchLocation, type Satellites } from './geo';
 
 export type ShareState = 'off' | 'starting' | 'on' | 'denied' | 'unavailable' | 'error';
@@ -28,6 +29,13 @@ export interface SharerOptions {
   notification?(): { title: string; text: string; stop: string };
   /** App only: the person tapped Stop in that notification (sharing has stopped). */
   onStoppedOutside?(): void;
+  /**
+   * App only: what the location service needs to send my positions to the database itself, so
+   * they keep going with the screen locked (this page is paused then). Null = the page sends them.
+   */
+  nativePublish?(): Promise<Omit<NativePublish, 'heartbeatMs' | 'minMoveM'> | null>;
+  /** Shown when the database refused a position the service sent (the hunt ended, I was removed). */
+  deniedText?(): string;
 }
 
 type WakeLock = { release(): Promise<void> };
@@ -67,9 +75,37 @@ export class Sharer {
     else this.startBrowser();
   }
 
-  /** The app: a foreground service sends positions with the screen off, so no wake lock. */
+  /**
+   * The app: a foreground service gets positions with the screen off, so no wake lock. In a
+   * group hunt it also sends them to the database itself; the page only shows them.
+   */
   private startBackground() {
     const gen = ++this.gen;
+    if (!this.opts.nativePublish) return this.watchNative(gen, undefined);
+    this.opts.nativePublish().catch(() => null).then((a) => {
+      if (gen !== this.gen) return;
+      const publish = a
+        ? {
+            config: { ...a, heartbeatMs: this.opts.heartbeatMs(), minMoveM: MIN_MOVE_M },
+            onSent: (at: number) => {
+              if (gen !== this.gen) return;
+              this.lastSentAt = at;
+              this.opts.onChange();
+            },
+            onDenied: () => {
+              if (gen !== this.gen) return;
+              this.stop(false);
+              this.error = this.opts.deniedText?.() ?? '';
+              this.state = 'error';
+              this.opts.onChange();
+            },
+          }
+        : undefined;
+      this.watchNative(gen, publish);
+    });
+  }
+
+  private watchNative(gen: number, publish: Parameters<typeof watchBackgroundLocation>[5]) {
     watchBackgroundLocation(
       this.opts.notification!(),
       (f) => this.onFix({ lat: f.lat, lng: f.lng, acc: f.acc ?? null }),
@@ -78,6 +114,8 @@ export class Sharer {
         this.stop();
       },
       (s) => this.onSats(s),
+      3000,
+      publish,
     ).then(
       (w) => {
         if (gen === this.gen) this.native = w;
@@ -144,8 +182,10 @@ export class Sharer {
     this.lastFix = fix;
     this.opts.onFix?.(fix);
     const now = Date.now();
-    const d = sendDecision(this.last, fix, now, this.opts.heartbeatMs());
     if (this.state === 'starting') this.set('on');
+    // The location service sends it to the database itself (see startBackground).
+    if (this.native?.publishing) return;
+    const d = sendDecision(this.last, fix, now, this.opts.heartbeatMs());
     if (!d.send || this.sending) return;
     this.sending = true;
     // Optimistic: firebase queues the write while offline and sends it on reconnect.

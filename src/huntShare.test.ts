@@ -5,7 +5,8 @@ const native = vi.hoisted(() => ({
   starts: [] as {
     onFix: (f: NativeFix) => void;
     onStopped: () => void;
-    resolve: () => void;
+    publish?: { config: Record<string, unknown>; onSent: (at: number) => void; onDenied: () => void };
+    resolve: (publishing?: boolean) => void;
     reject: (e: unknown) => void;
     stop: ReturnType<typeof vi.fn>;
     detach: ReturnType<typeof vi.fn>;
@@ -15,9 +16,24 @@ const native = vi.hoisted(() => ({
 
 vi.mock('./native', () => ({
   hasBackgroundLocation: () => native.app,
-  watchBackgroundLocation: (_t: unknown, onFix: (f: NativeFix) => void, onStopped: () => void) =>
+  watchBackgroundLocation: (
+    _t: unknown,
+    onFix: (f: NativeFix) => void,
+    onStopped: () => void,
+    _sats: unknown,
+    _interval: unknown,
+    publish?: { config: Record<string, unknown>; onSent: (at: number) => void; onDenied: () => void },
+  ) =>
     new Promise((resolve, reject) => {
-      const s = { onFix, onStopped, stop: vi.fn(), detach: vi.fn(), resolve: () => resolve({ stop: s.stop, detach: s.detach }), reject };
+      const s = {
+        onFix,
+        onStopped,
+        publish,
+        stop: vi.fn(),
+        detach: vi.fn(),
+        resolve: (publishing = false) => resolve({ publishing, stop: s.stop, detach: s.detach }),
+        reject,
+      };
       native.starts.push(s);
     }),
 }));
@@ -135,5 +151,65 @@ describe('Sharer in the app (background location)', () => {
     expect(native.starts).toHaveLength(0);
     expect(navigator.geolocation.watchPosition).toHaveBeenCalled();
     s.stop();
+  });
+
+  describe('the service sends positions itself (screen locked)', () => {
+    const auth = { dbUrl: 'https://db', apiKey: 'k', refreshToken: 'r', uid: 'u1', huntId: 'h1' };
+
+    it('hands the sign-in to the service and does not send from the page', async () => {
+      const { s, opts } = make({ nativePublish: async () => auth });
+      s.start();
+      await tick();
+      const st = native.starts[0];
+      expect(st.publish?.config).toEqual({ ...auth, heartbeatMs: 90_000, minMoveM: 20 });
+      st.resolve(true);
+      await tick();
+      st.onFix({ lat: 52, lng: 21, acc: 8, time: 1 });
+      await tick();
+      expect(s.state).toBe('on');
+      expect(opts.onFix).toHaveBeenCalledWith({ lat: 52, lng: 21, acc: 8 });
+      expect(opts.publish).not.toHaveBeenCalled();
+      st.publish!.onSent(12345);
+      expect(s.lastSentAt).toBe(12345);
+    });
+
+    it('sends from the page when the service did not take it (older app)', async () => {
+      const { s, opts } = make({ nativePublish: async () => auth });
+      s.start();
+      await tick();
+      native.starts[0].resolve(false);
+      await tick();
+      native.starts[0].onFix({ lat: 52, lng: 21, acc: 8, time: 1 });
+      await tick();
+      expect(opts.publish).toHaveBeenCalled();
+    });
+
+    it('sends from the page when there is no sign-in to hand over', async () => {
+      const { s } = make({ nativePublish: async () => null });
+      s.start();
+      await tick();
+      expect(native.starts[0].publish).toBeUndefined();
+    });
+
+    it('stops with a message when the database refuses', async () => {
+      const { s, opts } = make({ nativePublish: async () => auth, deniedText: () => 'koniec' });
+      s.start();
+      await tick();
+      native.starts[0].resolve(true);
+      await tick();
+      native.starts[0].publish!.onDenied();
+      expect(s.state).toBe('error');
+      expect(s.error).toBe('koniec');
+      expect(native.starts[0].stop).toHaveBeenCalled();
+      expect(opts.clear).not.toHaveBeenCalled();
+    });
+
+    it('does not start the service when stopped while getting the sign-in', async () => {
+      const { s } = make({ nativePublish: async () => auth });
+      s.start();
+      s.stop();
+      await tick();
+      expect(native.starts.length).toBe(0);
+    });
   });
 });

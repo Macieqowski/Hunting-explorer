@@ -13,12 +13,30 @@ export interface NativeFix {
   time: number;
 }
 
+/**
+ * What the location service needs to send my position to the hunt's database itself, with the
+ * screen locked (see PositionPublisher.java): the page's anonymous Firebase sign-in and the hunt.
+ */
+export interface NativePublish {
+  dbUrl: string;
+  apiKey: string;
+  refreshToken: string;
+  idToken?: string;
+  idTokenExpiresAt?: number;
+  uid: string;
+  huntId: string;
+  heartbeatMs: number;
+  minMoveM: number;
+}
+
 interface BackgroundLocationPlugin {
-  start(o: { title: string; text: string; stopLabel: string; intervalMs: number }): Promise<void>;
+  start(o: { title: string; text: string; stopLabel: string; intervalMs: number; publish?: NativePublish }): Promise<{ publishing?: boolean } | undefined>;
   stop(): Promise<void>;
   addListener(e: 'location', f: (p: NativeFix) => void): Promise<PluginListenerHandle>;
   addListener(e: 'stopped', f: () => void): Promise<PluginListenerHandle>;
   addListener(e: 'satellites', f: (s: { visible: number; used: number }) => void): Promise<PluginListenerHandle>;
+  addListener(e: 'sent', f: (s: { at: number }) => void): Promise<PluginListenerHandle>;
+  addListener(e: 'denied', f: () => void): Promise<PluginListenerHandle>;
 }
 interface AlertsPlugin {
   vibrate(o: { pattern: number[]; alarm?: boolean }): Promise<void>;
@@ -120,6 +138,8 @@ export const nativeTileDownload = (): TileDownloadPlugin | null =>
 export const hasBackgroundLocation = (): boolean => isApp();
 
 export interface BackgroundWatch {
+  /** The service sends my positions to the database itself (a `publish` option was given and taken). */
+  publishing: boolean;
   /** Stops the service and the listeners. */
   stop(): void;
   /** Only removes this watch's listeners (another watch uses the service). */
@@ -131,6 +151,10 @@ export interface BackgroundWatch {
  * (a notification with a Stop button is shown meanwhile). `onStopped` runs when the person taps
  * Stop there; `onSatellites` gets the satellites GPS sees and uses (newer apps only). Rejects with
  * code 'DENIED' when location permission is refused.
+ *
+ * With `publish.config` the service also sends my positions to the hunt's database (so they keep
+ * going with the screen locked, when this page is paused): `onSent` after each one that got there,
+ * `onDenied` when the database refused it (the service has stopped then).
  */
 export async function watchBackgroundLocation(
   text: { title: string; text: string; stop: string },
@@ -138,20 +162,27 @@ export async function watchBackgroundLocation(
   onStopped: () => void,
   onSatellites?: (s: { visible: number; used: number }) => void,
   intervalMs = 3000,
+  publish?: { config: NativePublish; onSent: (at: number) => void; onDenied: () => void },
 ): Promise<BackgroundWatch> {
   const handles = await Promise.all([
     BackgroundLocation.addListener('location', onFix),
     BackgroundLocation.addListener('stopped', onStopped),
     ...(onSatellites ? [BackgroundLocation.addListener('satellites', onSatellites)] : []),
+    ...(publish
+      ? [BackgroundLocation.addListener('sent', (s) => publish.onSent(s.at)), BackgroundLocation.addListener('denied', publish.onDenied)]
+      : []),
   ]);
   const removeAll = () => handles.forEach((h) => void h.remove());
+  let publishing = false;
   try {
-    await BackgroundLocation.start({ title: text.title, text: text.text, stopLabel: text.stop, intervalMs });
+    const r = await BackgroundLocation.start({ title: text.title, text: text.text, stopLabel: text.stop, intervalMs, publish: publish?.config });
+    publishing = !!publish && !!r?.publishing;
   } catch (e) {
     removeAll();
     throw e;
   }
   return {
+    publishing,
     stop() {
       removeAll();
       void BackgroundLocation.stop().catch(() => {});

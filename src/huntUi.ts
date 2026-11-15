@@ -1614,6 +1614,11 @@ function startSharing() {
       onFix: (f) => guideFix({ lat: f.lat, lng: f.lng }, f.acc),
       notification: () => ({ title: l('shareNotifTitle'), text: l('shareNotifText'), stop: l('shareStop') }),
       onStoppedOutside: forgetSharing,
+      nativePublish: async () => {
+        const a = be.nativeAuth ? await be.nativeAuth() : null;
+        return a && { ...a, huntId: id };
+      },
+      deniedText: () => l('shareNotLive'),
     });
   try {
     localStorage.setItem(SHARE_KEY, id);
