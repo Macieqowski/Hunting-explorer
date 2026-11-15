@@ -257,6 +257,20 @@ export const HEARTBEAT_MS = 30e3;
 export const HUNTER_HEARTBEAT_MS = 90e3;
 export const heartbeatFor = (role: Role): number => (role === 'beater' ? HEARTBEAT_MS : HUNTER_HEARTBEAT_MS);
 
+/**
+ * The beaters' tracks from `since` on (field mode shows where the beater line has been in the
+ * running drive). Only tracks of people who are beaters now, and with at least two points left.
+ */
+export function beaterTracks(tracks: Map<string, TrackPoint[]>, roleOf: (uid: string) => Role | undefined, since: number): Map<string, TrackPoint[]> {
+  const out = new Map<string, TrackPoint[]>();
+  for (const [uid, pts] of tracks) {
+    if (roleOf(uid) !== 'beater') continue;
+    const kept = pts.filter((p) => p.ts >= since);
+    if (kept.length >= 2) out.set(uid, kept);
+  }
+  return out;
+}
+
 /** Coordinates are stored rounded to 5 decimals (about 1 m), which keeps each update small. */
 export const roundCoord = (v: number): number => Math.round(v * 1e5) / 1e5;
 /** Positions and tracks are deleted this long after the hunt ends. */

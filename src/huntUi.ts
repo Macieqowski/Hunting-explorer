@@ -22,6 +22,7 @@ import {
   type Position,
   shouldPurge,
   heartbeatFor,
+  beaterTracks,
   toGpx,
   gpxFileName,
   type TrackPoint,
@@ -341,6 +342,8 @@ const L = {
   visible: { pl: 'na mapie', en: 'on the map' },
   showTracks: { pl: 'Pokaż ślady', en: 'Show tracks' },
   hideTracks: { pl: 'Ukryj ślady', en: 'Hide tracks' },
+  fmTrails: { pl: 'Ślady naganki', en: 'Beater tracks' },
+  fmTrailsHint: { pl: 'Pokaż na mapie, którędy szli naganiacze w trwającym miocie', en: 'Show where the beaters have walked in the running drive' },
   fitAll: { pl: 'Pokaż wszystkich', en: 'Show everyone' },
   centerMe: { pl: 'Moje położenie', en: 'My position' },
   justNow: { pl: 'przed chwilą', en: 'just now' },
@@ -695,6 +698,14 @@ let positions: Position[] = [];
 let posUnsub: Unsubscribe | null = null;
 let tracksUnsub: Unsubscribe | null = null;
 let showTracks = false;
+/** Field mode: the beaters' tracks of the running drive on the map (remembered on this device). */
+let fieldTrails = (() => {
+  try {
+    return localStorage.getItem('huntFieldTrails') === '1';
+  } catch {
+    return false;
+  }
+})();
 let ticker: ReturnType<typeof setInterval> | undefined;
 let sharer: Sharer | null = null;
 let drives: Drive[] = [];
@@ -948,6 +959,7 @@ function stopLive() {
   posUnsub = null;
   tracksUnsub?.();
   tracksUnsub = null;
+  lastTracks = null;
   drivesUnsub?.();
   drivesUnsub = null;
   standsUnsub?.();
@@ -1488,7 +1500,7 @@ export function mountHuntMap() {
   drawShots();
   drawCrew();
   syncGuide();
-  if (showTracks) m.setTracks(lastTracks, people());
+  syncTracks();
   updateLiveText();
   const body = document.querySelector('.hf-panel-body');
   if (body) body.scrollTop = fieldPanelScroll;
@@ -1526,21 +1538,50 @@ function toggleTracks() {
   if (!watched || conn.s !== 'ready') return;
   showTracks = !showTracks;
   queueMicrotask(drawSightings); // old sightings show with the tracks
-  tracksUnsub?.();
-  tracksUnsub = null;
-  if (showTracks)
+  syncTracks();
+}
+
+function toggleFieldTrails() {
+  fieldTrails = !fieldTrails;
+  try {
+    localStorage.setItem('huntFieldTrails', fieldTrails ? '1' : '0');
+  } catch {
+    /* no storage: it lasts until the page is closed */
+  }
+  syncTracks();
+}
+
+/** Tracks are shown with "Pokaż ślady" on the hunt page, and in field mode with "Ślady naganki". */
+const wantTracks = () => (fieldMode ? fieldTrails : showTracks);
+
+/** Listens to the tracks while they are shown (and only then: they are the biggest download), and draws them. */
+function syncTracks() {
+  if (!watched || conn.s !== 'ready') return;
+  if (wantTracks() && !tracksUnsub)
     tracksUnsub = conn.be.watchTracks(
       watched,
       (t) => {
         lastTracks = t;
-        hmap?.setTracks(t, people());
+        drawTracks();
       },
       () => {},
     );
-  else {
+  else if (!wantTracks() && tracksUnsub) {
+    tracksUnsub();
+    tracksUnsub = null;
     lastTracks = null;
-    hmap?.setTracks(null, people());
   }
+  drawTracks();
+}
+
+function drawTracks() {
+  if (!hmap) return;
+  if (!wantTracks() || !lastTracks) return hmap.setTracks(null, people());
+  if (!fieldMode) return hmap.setTracks(lastTracks, people());
+  // The running drive's beater line; between drives, the last drive's.
+  const run = drives.filter((d) => d.startedAt != null).sort((a, b) => b.startedAt! - a.startedAt!)[0];
+  const ps = people();
+  hmap.setTracks(beaterTracks(lastTracks, (uid) => ps.get(uid)?.role, run?.startedAt ?? 0), ps);
 }
 
 /** Counts and the "last sent" line change with every position; update them without re-rendering the page. */
@@ -2093,6 +2134,7 @@ function renderField(h: Hunt, me: Participant, isLead: boolean): string {
     <div class="hf-info">${first}${cell('drives', l('fmDrive'), driveNo)}${loc}</div>
     ${ask}${t}${picking}${renderMyRoute(me)}
     <div class="hf-map"><div class="hm-slot"></div>
+      <button type="button" class="hf-trails${fieldTrails ? ' on' : ''}" data-hunt="fieldTrails" aria-pressed="${fieldTrails}" title="${esc(l('fmTrailsHint'))}">${ic('trail', 20)}<span>${l('fmTrails')}</span></button>
       ${iShare ? `<button type="button" class="hf-center" data-hunt="centerMe" aria-label="${esc(l('centerMe'))}" title="${esc(l('centerMe'))}">${ic('locate', 22)}</button>` : ''}
     </div>
     <footer class="hf-bottom">
@@ -3770,6 +3812,9 @@ export function handleHuntClick(el: HTMLElement): boolean {
       break;
     case 'tracks':
       toggleTracks();
+      break;
+    case 'fieldTrails':
+      toggleFieldTrails();
       break;
     case 'fitAll':
       hmap?.fitAll();

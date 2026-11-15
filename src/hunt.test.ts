@@ -1,4 +1,4 @@
-import { toGpx, gpxFileName, freshness, distanceM, sendDecision, shouldPurge, parsePositions, parseTracks, STALE_MS, LOST_MS, HEARTBEAT_MS, HUNTER_HEARTBEAT_MS, heartbeatFor, roundCoord, RETENTION_MS, validateHunt, huntWindow, sortHunts, sortParticipants, countRoles, parseHunt, parseParticipants, cleanText, validPersonName, nextStatuses, validateDrive, encodeArea, decodeArea, sortDrives, driveState, activeDrive, nextDriveDefaults, parseDrives, splitByDrive, parseSightings, compassPoint, bearing, angleDiff, offsetPoint, headingToward, sightLook, headingFromOrientation, declination, type Hunt } from './hunt';
+import { toGpx, gpxFileName, freshness, distanceM, sendDecision, shouldPurge, parsePositions, parseTracks, STALE_MS, LOST_MS, HEARTBEAT_MS, HUNTER_HEARTBEAT_MS, heartbeatFor, roundCoord, beaterTracks, RETENTION_MS, validateHunt, huntWindow, sortHunts, sortParticipants, countRoles, parseHunt, parseParticipants, cleanText, validPersonName, nextStatuses, validateDrive, encodeArea, decodeArea, sortDrives, driveState, activeDrive, nextDriveDefaults, parseDrives, splitByDrive, parseSightings, compassPoint, bearing, angleDiff, offsetPoint, headingToward, sightLook, headingFromOrientation, declination, type Hunt } from './hunt';
 
 const base: Hunt = {
   id: 'x',
@@ -277,4 +277,21 @@ describe('leader devices and deputies', () => {
     expect(['phone', 'pc', 'dep'].map((u) => isDeputy(h, u))).toEqual([false, false, true]);
   });
   it('lists the devices other than the one in the field', () => expect(otherLeaderDevices(h)).toEqual(['pc']));
+});
+
+describe('beaterTracks', () => {
+  const pt = (ts: number) => ({ lat: 52, lng: 21, ts });
+  it('keeps only beaters, from the drive start, with at least two points', () => {
+    const tracks = new Map([
+      ['b1', [pt(1), pt(10), pt(20), pt(30)]],
+      ['b2', [pt(5), pt(25)]],
+      ['h1', [pt(10), pt(20), pt(30)]],
+      ['gone', [pt(10), pt(20)]],
+    ]);
+    const roles: Record<string, 'beater' | 'hunter'> = { b1: 'beater', b2: 'beater', h1: 'hunter' };
+    const out = beaterTracks(tracks, (u) => roles[u], 10);
+    expect([...out.keys()]).toEqual(['b1']);
+    expect(out.get('b1')!.map((p) => p.ts)).toEqual([10, 20, 30]);
+    expect(beaterTracks(tracks, (u) => roles[u], 0).has('b2')).toBe(true);
+  });
 });
