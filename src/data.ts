@@ -51,20 +51,87 @@ export function fold(s: string): string {
     .replace(/[̀-ͯ]/g, '');
 }
 
+/**
+ * Polish alphabetical order. One shared collator: `a.localeCompare(b, 'pl')` builds a new one on
+ * every call, which made sorting the 4818 districts take a large part of a second on a slow phone.
+ */
+export const plCompare = new Intl.Collator('pl').compare;
+/** The same, with numbers inside names in numeric order ("Ambona 2" before "Ambona 10"). */
+export const plCompareNumeric = new Intl.Collator('pl', { numeric: true }).compare;
+
+// Folded search text, worked out once per district or club instead of on every key press.
+const districtText = new WeakMap<District, string>();
+const clubText = new WeakMap<Club, string>();
+const clubNameText = new WeakMap<Club, string>();
+
+function cached<T extends object>(m: WeakMap<T, string>, o: T, make: () => string): string {
+  let s = m.get(o);
+  if (s === undefined) m.set(o, (s = fold(make())));
+  return s;
+}
+
 /** Whether a district matches every search word: its exact number, or text in holder, forest district, powiat, voivodeship or PZŁ board. */
 export function districtMatches(d: District, terms: string[]): boolean {
-  return terms.every(
-    (tm) =>
-      d.hunt_dist_nr === tm ||
-      fold([d.lease_holder_name, d.inspectorate_name, d.district_name, d.county_name, d.reg_mng_board_name].join(' ')).includes(tm),
+  if (!terms.length) return true;
+  const text = cached(districtText, d, () =>
+    [d.lease_holder_name, d.inspectorate_name, d.district_name, d.county_name, d.reg_mng_board_name].join(' '),
   );
+  return terms.every((tm) => d.hunt_dist_nr === tm || text.includes(tm));
+}
+
+/** Whether a club matches every search word in its name, forest districts or powiats. */
+export function clubMatches(c: Club, terms: string[]): boolean {
+  if (!terms.length) return true;
+  const text = cached(clubText, c, () => c.name + ' ' + c.forestDistricts.join(' ') + ' ' + c.powiats.join(' '));
+  return terms.every((tm) => text.includes(tm));
+}
+
+/** Whether every search word is in the club's name. */
+export function clubNameMatches(c: Club, terms: string[]): boolean {
+  const text = cached(clubNameText, c, () => c.name);
+  return terms.every((tm) => text.includes(tm));
+}
+
+/**
+ * Works out the search texts and list order ahead, in small pieces while the phone is idle,
+ * so the first letter typed in a search does not wait for thousands of names to be folded.
+ */
+export function prepareSearch(districts: District[], clubs: Club[]): void {
+  const idle: (cb: () => void) => void =
+    typeof requestIdleCallback === 'function' ? (cb) => requestIdleCallback(cb, { timeout: 2000 }) : (cb) => setTimeout(cb, 50);
+  let i = 0;
+  const step = () => {
+    const end = Math.min(i + 400, districts.length + clubs.length);
+    for (; i < end; i++) {
+      if (i < districts.length) districtMatches(districts[i], ['\u0000']);
+      else {
+        const c = clubs[i - districts.length];
+        clubMatches(c, ['\u0000']);
+        clubNameMatches(c, ['\u0000']);
+      }
+    }
+    if (i < districts.length + clubs.length) idle(step);
+    else districtsInOrder(districts);
+  };
+  idle(step);
+}
+
+/** Districts in list order (voivodeship, then number), sorted once per list. */
+const sortedLists = new WeakMap<District[], District[]>();
+export function districtsInOrder(ds: District[]): District[] {
+  let s = sortedLists.get(ds);
+  if (!s) {
+    s = [...ds].sort((a, b) => plCompare(a.county_name ?? '', b.county_name ?? '') || Number(a.hunt_dist_nr) - Number(b.hunt_dist_nr));
+    sortedLists.set(ds, s);
+  }
+  return s;
 }
 
 /** Splits a search into folded words. */
 export const searchTerms = (q: string) => fold(q.trim()).split(/\s+/).filter(Boolean);
 
 const uniqSorted = (xs: (string | null)[]) =>
-  [...new Set(xs.filter((x): x is string => !!x))].sort((a, b) => a.localeCompare(b, 'pl'));
+  [...new Set(xs.filter((x): x is string => !!x))].sort(plCompare);
 
 export function groupClubs(districts: District[]): Club[] {
   const map = new Map<string, District[]>();
@@ -95,7 +162,7 @@ export function groupClubs(districts: District[]): Club[] {
       powiats: uniqSorted(ds.map((d) => d.district_name)),
     });
   }
-  return clubs.sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+  return clubs.sort((a, b) => plCompare(a.name, b.name));
 }
 
 export interface GroupStat {

@@ -1,5 +1,5 @@
 import type { District } from './bdl';
-import { groupClubs, statsBy, countByType, clubKey, fold, districtSlug, findBySlug } from './data';
+import { groupClubs, statsBy, countByType, clubKey, fold, districtSlug, findBySlug, clubMatches, clubNameMatches, districtMatches, districtsInOrder, plCompare, searchTerms } from './data';
 
 const base: District = {
   objectid: 1, hd_int_num: 1, hunt_dist_nr: '1', a_year: 2026, total_area: 1000, forest_area: 400, after_exclusion_area: 950,
@@ -17,6 +17,28 @@ const sample = [
 ];
 
 describe('data', () => {
+  it('searches clubs and districts by folded words', () => {
+    const clubs = groupClubs(sample);
+    const lesnik = clubs.find((c) => c.name.includes('Leśnik'))!;
+    expect(clubMatches(lesnik, searchTerms('lesnik babki'))).toBe(true);
+    expect(clubMatches(lesnik, searchTerms('POZNANSKI'))).toBe(true);
+    expect(clubMatches(lesnik, searchTerms('czempin'))).toBe(false);
+    expect(clubNameMatches(lesnik, searchTerms('babki'))).toBe(false);
+    expect(clubNameMatches(lesnik, searchTerms('łowieckie 14'))).toBe(true);
+    expect(districtMatches(sample[2], searchTerms('5'))).toBe(true);
+    expect(districtMatches(sample[2], searchTerms('czempiń wielkopolskie'))).toBe(true);
+    expect(districtMatches(sample[2], searchTerms('lublin'))).toBe(false);
+    expect(districtMatches(sample[2], [])).toBe(true);
+  });
+
+  it('sorts districts by voivodeship and number once per list', () => {
+    const order = districtsInOrder(sample);
+    expect(order.map((x) => x.hunt_dist_nr)).toEqual(['56', '5', '139', '208']);
+    expect(districtsInOrder(sample)).toBe(order);
+    expect(sample.map((x) => x.hunt_dist_nr)).toEqual(['208', '139', '5', '56']);
+    expect(['Żary', 'Łódź', 'Zabrze', 'Lublin'].sort(plCompare)).toEqual(['Lublin', 'Łódź', 'Zabrze', 'Żary']);
+  });
+
   it('groups districts into clubs by normalised name', () => {
     const clubs = groupClubs(sample);
     expect(clubs).toHaveLength(2);

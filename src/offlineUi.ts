@@ -25,7 +25,7 @@ import { boxKm2, DETAILS, isDetail, type Box, type Detail } from './tiles';
 import { isApp } from './platform';
 import { nativeTileDownload } from './native';
 import { fetchDistrictsAtPoint, fetchDistrictsByIds, fetchOutlinesInBounds, type District, type DistrictWithGeometry } from './bdl';
-import { districtMatches, fold, searchTerms, type Club } from './data';
+import { clubNameMatches, districtMatches, districtsInOrder, plCompare, searchTerms, type Club } from './data';
 import { cap, pickName } from './offlinePick';
 import { ic } from './icons';
 
@@ -242,6 +242,8 @@ export function initOfflineUi(h: OfflineUiHost) {
 }
 
 function refreshStorage() {
+  // The app keeps saved tiles as files and shows none of the browser's storage numbers.
+  if (isApp()) return;
   if (Date.now() - storageAt < 3000) return;
   storageAt = Date.now();
   void storageInfo().then((s) => {
@@ -325,9 +327,9 @@ function renderPick(): string {
   let more = false;
   let note = '';
   if (terms.length) {
-    const found = all
+    const found = districtsInOrder(all)
       .filter((d) => districtMatches(d, terms))
-      .sort((a, b) => (a.county_name ?? '').localeCompare(b.county_name ?? '', 'pl') || Number(a.hunt_dist_nr) - Number(b.hunt_dist_nr));
+      ; // already in list order
     more = found.length > PICK_RESULTS;
     results = found.slice(0, PICK_RESULTS);
     if (!found.length) note = l('pickNoResults');
@@ -359,13 +361,14 @@ function renderPick(): string {
     <p class="muted small">${l('pickHint')}</p>
     ${!all.length ? `<p class="muted">${l('pickLoadingList')}</p>` : `
     <div class="searchbar"><input type="search" data-offline-q placeholder="${esc(l('pickSearch'))}" value="${esc(pick.q)}" aria-label="${esc(l('pickSearch'))}" /></div>
+    <div id="pickresults">
     <div class="actions"><button type="button" class="btn small ghost" data-offline="pickInView"${viewOk ? '' : ' disabled'}>${ic('map', 16)} ${l('pickInView')}</button></div>
     ${box && !viewOk ? `<p class="muted small">${l('pickInViewTooBig')}</p>` : ''}
     ${clubs.length ? `<p class="off-pick-sub small">${l('pickClubs')}</p><ul class="off-pick-clubs">${clubs.map(clubRow).join('')}</ul>${clubsAll.length > clubs.length ? `<p class="muted small">${l('pickMoreClubs')} (${clubsAll.length})</p>` : ''}${results.length ? `<p class="off-pick-sub small">${l('pickDistrictsList')}</p>` : ''}` : ''}
     ${note && !clubs.length ? `<p class="muted small">${esc(note)}</p>` : ''}
     ${pick.tapNote ? `<p class="notice small">${esc(pick.tapNote)}</p>` : ''}
     ${results.length ? `<ul class="off-pick-list">${results.map((d) => pickRow(d, selected.has(d.objectid), full)).join('')}</ul>` : ''}
-    ${more ? `<p class="muted small">${l('pickMoreResults')}</p>` : ''}`}
+    ${more ? `<p class="muted small">${l('pickMoreResults')}</p>` : ''}</div>`}
     <p class="off-pick-head small"><b>${l('pickSelected')}: ${pick.ids.length}</b>${pick.ids.length ? ` <button type="button" class="btn small ghost" data-offline="pickClear">${l('pickClear')}</button>` : ''}</p>
     ${chosen.length ? `<ul class="off-pick-chosen">${chosen
       .map((d) => `<li class="chip">${l('districtNo')} ${esc(d.hunt_dist_nr)} · ${esc(cap(d.county_name))}
@@ -383,21 +386,29 @@ function matchingClubs(q: string): Club[] {
   if (terms.join('').length < 3) return [];
   return host
     .clubs()
-    .filter((c) => c.districts.length && terms.every((tm) => fold(c.name).includes(tm)))
-    .sort((a, b) => b.districts.length - a.districts.length || a.name.localeCompare(b.name, 'pl'));
+    .filter((c) => c.districts.length && clubNameMatches(c, terms))
+    .sort((a, b) => b.districts.length - a.districts.length || plCompare(a.name, b.name));
 }
 
 /** Typing in the picker's search field; true when handled. */
+let pickTimer: ReturnType<typeof setTimeout> | undefined;
+
 export function handleOfflineInput(el: HTMLElement): boolean {
   if (!(el instanceof HTMLInputElement) || !('offlineQ' in el.dataset) || !pick) return false;
   pick.q = el.value;
-  const pos = el.selectionStart;
-  host.rerender();
-  const again = document.querySelector<HTMLInputElement>('input[data-offline-q]');
-  if (again) {
-    again.focus();
-    again.setSelectionRange(pos, pos);
-  }
+  // Only the results change, a moment after the last key press; the field keeps its caret.
+  clearTimeout(pickTimer);
+  pickTimer = setTimeout(() => {
+    const box = document.getElementById('pickresults');
+    const html = pick ? renderPick() : '';
+    if (box && html) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      const fresh = tmp.querySelector('#pickresults');
+      if (fresh) box.replaceWith(fresh);
+      else host.rerender();
+    } else host.rerender();
+  }, 150);
   return true;
 }
 

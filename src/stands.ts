@@ -2,6 +2,8 @@
 // My Maps KMZ or KML file, and the stored form. The leader loads the club's file into
 // a hunt; the points go to that hunt's private branch of the database, never into the
 // public app bundle. No DOM or Firebase here, so it runs in unit tests.
+import { plCompareNumeric } from './data';
+
 
 /** zwyżka = open seat on a ladder, ambona = closed hut on legs. */
 export type StandKind = 'zwyzka' | 'ambona';
@@ -163,7 +165,7 @@ export function parseStands(v: unknown): Stand[] {
 
 /** Natural order for a list: "2" before "10", "9" before "9A", names after numbers. */
 export const sortStands = <T extends Pick<Stand, 'name'>>(ss: T[]): T[] =>
-  [...ss].sort((a, b) => a.name.localeCompare(b.name, 'pl', { numeric: true }));
+  [...ss].sort((a, b) => plCompareNumeric(a.name, b.name));
 
 /** "54.0123, 18.5843" (as Google Maps copies it), also with spaces, semicolons or decimal commas and spaces. */
 export function parseLatLng(s: string): { lat: number; lng: number } | null {

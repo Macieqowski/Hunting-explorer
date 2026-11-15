@@ -62,7 +62,8 @@ export function createMap(el: HTMLElement, onClick: (lat: number, lng: number) =
   const map = L.map(el, { zoomControl: false, minZoom: 5, maxZoom: MAX_ZOOM, maxBounds: POLAND_BOUNDS.pad(0.6) });
   map.fitBounds(POLAND_BOUNDS);
   L.control.zoom({ position: 'topright' }).addTo(map);
-  L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);
+  // Redrawn when the map stops, not on every step of a drag (it measures the page each time).
+  L.control.scale({ imperial: false, position: 'bottomright', updateWhenIdle: true }).addTo(map);
 
   const { osm, topo, geotopo, sat } = baseLayers();
   osm.addTo(map);
@@ -157,13 +158,24 @@ function createOutlineLayer(map: L.Map): L.LayerGroup {
   group.on('add remove', updateHint);
   (group as L.LayerGroup & { updateHint?: () => void }).updateHint = updateHint;
 
+  /** What is drawn now, per district, and at which zoom (the outline detail and labels depend on it). */
+  let shown = new Map<number, L.Layer[]>();
+  let shownZoom = -1;
+  /** Label positions per district: the search for a good spot is the costly part on a slow phone. */
+  const labelAt = new Map<number, [number, number] | null>();
+  const clear = () => {
+    lines.clearLayers();
+    labels.clearLayers();
+    shown = new Map();
+    shownZoom = -1;
+  };
+
   const refresh = async () => {
     const my = ++token;
     const z = map.getZoom();
     updateHint();
     if (!map.hasLayer(group) || z < OUTLINE_MIN_ZOOM) {
-      lines.clearLayers();
-      labels.clearLayers();
+      clear();
       return;
     }
     const b = map.getBounds().pad(0.15);
@@ -172,25 +184,43 @@ function createOutlineLayer(map: L.Map): L.LayerGroup {
     try {
       const items = await fetchOutlinesInBounds(b.getSouth(), b.getWest(), b.getNorth(), b.getEast(), simplify);
       if (my !== token) return;
-      lines.clearLayers();
-      labels.clearLayers();
+      // After a pan at the same zoom only the districts that came into view are drawn and
+      // those that left are removed; the rest stay as they are.
+      if (z !== shownZoom) clear();
+      shownZoom = z;
+      const next = new Map<number, L.Layer[]>();
       for (const it of items) {
         if (!it.geometry.length) continue;
+        const have = shown.get(it.objectid);
+        if (have) {
+          next.set(it.objectid, have);
+          shown.delete(it.objectid);
+          continue;
+        }
         const ll = it.geometry as L.LatLngExpression[][][];
         // White halo under a dark line keeps borders readable on any base map.
-        L.polygon(ll, { renderer, interactive: false, fill: false, color: '#ffffff', weight: 4.5, opacity: 0.85 }).addTo(lines);
-        L.polygon(ll, { renderer, interactive: false, fill: false, color: '#7c2d12', weight: 1.8, opacity: 1 }).addTo(lines);
+        const layers: L.Layer[] = [
+          L.polygon(ll, { renderer, interactive: false, fill: false, color: '#ffffff', weight: 4.5, opacity: 0.85 }).addTo(lines),
+          L.polygon(ll, { renderer, interactive: false, fill: false, color: '#7c2d12', weight: 1.8, opacity: 1 }).addTo(lines),
+        ];
         if (z >= LABEL_MIN_ZOOM && it.number) {
-          const pt = labelPoint(it.geometry);
-          if (!pt) continue;
-          const holder = z >= HOLDER_MIN_ZOOM && it.holder ? `<small>${escapeHtml(shorten(it.holder, 30))}</small>` : '';
-          L.marker(pt, {
-            interactive: false,
-            keyboard: false,
-            icon: L.divIcon({ className: 'dist-label', html: `<span><b>${escapeHtml(it.number)}</b>${holder}</span>`, iconSize: [0, 0] }),
-          }).addTo(labels);
+          if (!labelAt.has(it.objectid)) labelAt.set(it.objectid, labelPoint(it.geometry));
+          const pt = labelAt.get(it.objectid);
+          if (pt) {
+            const holder = z >= HOLDER_MIN_ZOOM && it.holder ? `<small>${escapeHtml(shorten(it.holder, 30))}</small>` : '';
+            layers.push(
+              L.marker(pt, {
+                interactive: false,
+                keyboard: false,
+                icon: L.divIcon({ className: 'dist-label', html: `<span><b>${escapeHtml(it.number)}</b>${holder}</span>`, iconSize: [0, 0] }),
+              }).addTo(labels),
+            );
+          }
         }
+        next.set(it.objectid, layers);
       }
+      for (const gone of shown.values()) for (const l of gone) (lines.hasLayer(l) ? lines : labels).removeLayer(l);
+      shown = next;
     } catch {
       /* Borders are an enhancement; the WMS layer still shows the districts. */
     }
@@ -206,8 +236,7 @@ function createOutlineLayer(map: L.Map): L.LayerGroup {
   group.on('remove', () => {
     map.off('moveend', schedule);
     token++;
-    lines.clearLayers();
-    labels.clearLayers();
+    clear();
   });
   return group;
 }

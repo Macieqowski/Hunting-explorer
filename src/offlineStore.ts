@@ -54,15 +54,31 @@ function db(): Promise<IDBDatabase> {
   if (!dbp) {
     dbp = new Promise((resolve, reject) => {
       if (typeof indexedDB === 'undefined') return reject(new Error('IndexedDB unavailable'));
-      const req = indexedDB.open(DB_NAME, 1);
-      req.onupgradeneeded = () => {
+      const req = indexedDB.open(DB_NAME, 2);
+      req.onupgradeneeded = (e) => {
         const d = req.result;
-        d.createObjectStore('tiles').createIndex('t', 't');
-        d.createObjectStore('areas', { keyPath: 'id' });
-        d.createObjectStore('areaKeys');
-        d.createObjectStore('bdl');
+        if (e.oldVersion < 1) {
+          d.createObjectStore('tiles').createIndex('t', 't');
+          d.createObjectStore('areas', { keyPath: 'id' });
+          d.createObjectStore('areaKeys');
+          d.createObjectStore('bdl');
+        }
+        // Version 2: tiles by [uses, time], so the viewed tiles (uses 0) are found oldest first
+        // without reading every record. A saved area of 35 000 tiles made the old full scan hold
+        // the tile store for many seconds on a slow phone, and the map waited for it.
+        if (e.oldVersion < 2) req.transaction!.objectStore('tiles').createIndex('rt', ['r', 't']);
       };
-      req.onsuccess = () => resolve(req.result);
+      // Another tab still has version 1 open: it is asked to let go (see onversionchange below).
+      req.onblocked = () => {};
+      req.onsuccess = () => {
+        const d = req.result;
+        // A newer version opened elsewhere (another tab after an update): close so it can upgrade.
+        d.onversionchange = () => {
+          d.close();
+          dbp = null;
+        };
+        resolve(d);
+      };
       req.onerror = () => reject(req.error);
     });
     dbp.catch(() => (dbp = null));
@@ -177,34 +193,39 @@ export async function refTile(url: string): Promise<boolean> {
   return true;
 }
 
+/** Viewed (not saved) tiles, oldest first, in the [uses, time] index. */
+const VIEWED = () => IDBKeyRange.bound([-Infinity, -Infinity], [0, Infinity]);
+
 /** Drops the oldest viewed tiles beyond the cap. Saved-area tiles are never dropped here. */
 export async function evictViewed(cap = VIEWED_CAP): Promise<number> {
   const { s, tx } = await store('tiles', 'readwrite');
-  const viewed: { key: IDBValidKey; f?: string }[] = [];
+  const idx = s.index('rt');
+  const count = await done(idx.count(VIEWED()));
+  const extra = count - cap;
+  if (extra <= 0) {
+    await txDone(tx);
+    return 0;
+  }
+  const gone: { key: IDBValidKey; f?: string }[] = [];
   await new Promise<void>((resolve, reject) => {
-    const req = s.index('t').openCursor();
+    const req = idx.openCursor(VIEWED());
     req.onsuccess = () => {
       const c = req.result;
-      if (!c) return resolve();
+      if (!c || gone.length >= extra) return resolve();
       const v = c.value as TileRec;
-      if (v.r <= 0) viewed.push({ key: c.primaryKey, f: v.f });
+      gone.push({ key: c.primaryKey, f: v.f });
+      c.delete();
       c.continue();
     };
     req.onerror = () => reject(req.error);
   });
-  const extra = viewed.length - cap;
-  const gone: { key: IDBValidKey; f?: string }[] = [];
-  for (let i = 0; i < extra; i++) {
-    s.delete(viewed[i].key);
-    if (viewed[i].f) gone.push(viewed[i]);
-  }
   await txDone(tx);
   // Files of tiles no saved area uses any more go with their records, unless the same tile
   // was stored again meanwhile (same URL, same file name).
   const files: string[] = [];
-  for (const g of gone) if (!(await getRec(String(g.key)).catch(() => undefined))) files.push(g.f!);
+  for (const g of gone) if (g.f && !(await getRec(String(g.key)).catch(() => undefined))) files.push(g.f);
   await deleteTileFiles(files);
-  return Math.max(0, extra);
+  return gone.length;
 }
 
 /**
