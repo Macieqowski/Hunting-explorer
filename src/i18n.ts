@@ -172,8 +172,15 @@ export function setLang(l: Lang) {
 export const t = (k: Key): string => dict[k][lang];
 export const tt = (o: { pl: string; en: string }) => o[lang];
 
+// One formatter per language and digits: toLocaleString with options builds a new one per call,
+// slow when a list shows hundreds of numbers.
+const numFormats = new Map<string, Intl.NumberFormat>();
 export function fmtNum(n: number, digits = 0): string {
-  return n.toLocaleString(lang === 'pl' ? 'pl-PL' : 'en-GB', { maximumFractionDigits: digits, minimumFractionDigits: digits });
+  const key = `${lang}:${digits}`;
+  let f = numFormats.get(key);
+  if (!f)
+    numFormats.set(key, (f = new Intl.NumberFormat(lang === 'pl' ? 'pl-PL' : 'en-GB', { maximumFractionDigits: digits, minimumFractionDigits: digits })));
+  return f.format(n);
 }
 /** Hectares → "1 234 ha". */
 export const fmtHa = (ha: number | null | undefined) => (ha == null ? '—' : `${fmtNum(ha)} ha`);

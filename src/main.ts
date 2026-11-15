@@ -8,8 +8,11 @@ import {
   statsBy,
   countByType,
   clubKey,
-  fold,
   districtMatches,
+  clubMatches,
+  districtsInOrder,
+  prepareSearch,
+  plCompare,
   searchTerms,
   holderType,
   districtSlug,
@@ -270,7 +273,18 @@ function render() {
   }
   if (v.kind === 'hunt' || (v.kind === 'tab' && v.tab === 'hunt')) return renderHuntSection(v.kind === 'hunt' ? v.id : null, v.kind === 'hunt' ? v.invite : undefined);
   leaveHunts();
-  if (v.kind === 'tab' && v.tab === 'offline') return void (content.innerHTML = renderOffline());
+  if (v.kind === 'tab' && v.tab === 'offline') {
+    // Progress updates redraw this tab often: a search field being typed in stays focused.
+    const a = document.activeElement;
+    const keep = a instanceof HTMLInputElement && 'offlineQ' in a.dataset && content.contains(a) ? [a.selectionStart, a.selectionEnd] : null;
+    content.innerHTML = renderOffline();
+    const again = keep && content.querySelector<HTMLInputElement>('input[data-offline-q]');
+    if (again) {
+      again.focus();
+      again.setSelectionRange(keep![0], keep![1]);
+    }
+    return;
+  }
   if (v.kind === 'tab' && (v.tab === 'seasons' || v.tab === 'about' || v.tab === 'more')) {
     content.innerHTML = v.tab === 'seasons' ? renderSeasons() : v.tab === 'about' ? renderAbout() : renderMore();
     return;
@@ -329,13 +343,26 @@ function renderLoading() {
     <p class="muted small">${b ? `${fmtNum(a)} / ${fmtNum(b)}` : ''}</p><p class="muted small">${t('clickHint')}</p></div>`;
 }
 
+/** Choices of the filter menus, worked out once per district list and voivodeship. */
+let filterChoices: { list: District[]; voiv: string; voivs: string[]; boards: string[] } | null = null;
+function choices() {
+  if (filterChoices?.list !== state.districts || filterChoices.voiv !== state.voiv) {
+    const voivs =
+      filterChoices?.list === state.districts
+        ? filterChoices.voivs
+        : [...new Set(state.districts.map((d) => d.county_name).filter(Boolean) as string[])].sort(plCompare);
+    const boards = [
+      ...new Set(
+        state.districts.filter((d) => !state.voiv || d.county_name === state.voiv).map((d) => d.reg_mng_board_name).filter(Boolean) as string[],
+      ),
+    ].sort(plCompare);
+    filterChoices = { list: state.districts, voiv: state.voiv, voivs, boards };
+  }
+  return filterChoices;
+}
+
 function filterSelects(includeType: boolean) {
-  const voivs = [...new Set(state.districts.map((d) => d.county_name).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b, 'pl'));
-  const boards = [
-    ...new Set(
-      state.districts.filter((d) => !state.voiv || d.county_name === state.voiv).map((d) => d.reg_mng_board_name).filter(Boolean) as string[],
-    ),
-  ].sort((a, b) => a.localeCompare(b, 'pl'));
+  const { voivs, boards } = choices();
   const opt = (v: string, label: string, sel: string) => `<option value="${esc(v)}"${v === sel ? ' selected' : ''}>${esc(label)}</option>`;
   const types: HolderType[] = ['club', 'pzl', 'pgl', 'other'];
   return `<div class="filters">
@@ -357,17 +384,19 @@ function badge(h: HolderType) {
   return `<span class="badge b-${h}">${t(typeKey(h))}</span>`;
 }
 
+const noFilters = () => !state.voiv && !state.board && !state.type;
+
 function renderClubList() {
-  const q = fold(state.q.clubs.trim());
-  const terms = q.split(/\s+/).filter(Boolean);
-  const list = state.clubs.filter(
-    (c) =>
-      c.districts.some(matchFilters) &&
-      (!terms.length || terms.every((tm) => fold(c.name + ' ' + c.forestDistricts.join(' ') + ' ' + c.powiats.join(' ')).includes(tm))),
-  );
   return `<div class="searchbar"><input type="search" data-q="clubs" placeholder="${esc(t('searchClubs'))}" value="${esc(state.q.clubs)}" aria-label="${esc(t('searchClubs'))}" /></div>
     ${filterSelects(true)}
-    <p class="muted small">${fmtNum(list.length)} ${t('results')}</p>
+    <div id="listresults">${clubResults()}</div>`;
+}
+
+function clubResults() {
+  const terms = searchTerms(state.q.clubs);
+  const all = noFilters();
+  const list = state.clubs.filter((c) => clubMatches(c, terms) && (all || c.districts.some(matchFilters)));
+  return `<p class="muted small">${fmtNum(list.length)} ${t('results')}</p>
     <ul class="list">${list
       .slice(0, state.limit)
       .map(
@@ -383,14 +412,16 @@ function renderClubList() {
 }
 
 function renderDistrictList() {
-  const terms = searchTerms(state.q.districts);
-  const list = state.districts
-    .filter(matchFilters)
-    .filter((d) => districtMatches(d, terms))
-    .sort((a, b) => (a.county_name ?? '').localeCompare(b.county_name ?? '', 'pl') || Number(a.hunt_dist_nr) - Number(b.hunt_dist_nr));
   return `<div class="searchbar"><input type="search" data-q="districts" placeholder="${esc(t('searchDistricts'))}" value="${esc(state.q.districts)}" aria-label="${esc(t('searchDistricts'))}" /></div>
     ${filterSelects(true)}
-    <p class="muted small">${fmtNum(list.length)} ${t('results')}</p>
+    <div id="listresults">${districtResults()}</div>`;
+}
+
+function districtResults() {
+  const terms = searchTerms(state.q.districts);
+  const all = noFilters();
+  const list = districtsInOrder(state.districts).filter((d) => (all || matchFilters(d)) && districtMatches(d, terms));
+  return `<p class="muted small">${fmtNum(list.length)} ${t('results')}</p>
     <ul class="list">${list
       .slice(0, state.limit)
       .map(
@@ -939,6 +970,10 @@ content.addEventListener('click', (e) => {
   }
 });
 
+/** Wait after a key press before searching; a slow phone needs it more than a fast one. */
+const SEARCH_DELAY_MS = 150;
+let searchTimer: ReturnType<typeof setTimeout> | undefined;
+
 content.addEventListener('input', (e) => {
   const el = e.target as HTMLInputElement;
   if (handleOralInput(el)) return;
@@ -950,11 +985,14 @@ content.addEventListener('input', (e) => {
   if (!k) return;
   state.q[k] = el.value;
   state.limit = 100;
-  const pos = el.selectionStart;
-  render();
-  const again = $<HTMLInputElement>(`[data-q="${k}"]`, content);
-  again.focus();
-  again.setSelectionRange(pos, pos);
+  // Only the results change, a moment after the last key press: the field itself (with its caret
+  // and keyboard) stays, and fast typing does not redraw the list for every letter.
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    const box = document.getElementById('listresults');
+    if (box && state.view.kind === 'tab' && state.view.tab === k) box.innerHTML = k === 'clubs' ? clubResults() : districtResults();
+    else render();
+  }, SEARCH_DELAY_MS);
 });
 
 content.addEventListener('change', (e) => {
@@ -1028,6 +1066,7 @@ function useDistricts(list: DistrictList) {
   state.dataMeta = list.meta;
   state.clubs = groupClubs(state.districts);
   state.clubsByKey = new Map(state.clubs.map((c) => [c.key, c]));
+  prepareSearch(state.districts, state.clubs);
 }
 
 async function load() {
@@ -1103,8 +1142,27 @@ onOfflineChange(() => {
     else renderStatic();
   }, 300);
 });
+// The Offline tab shows what the map view allows (save this view, districts in view), so it is
+// redrawn when the map stops. Not while someone types in it: on a phone the keyboard shrinks
+// the page, the map "moves", and the redraw used to take away the field and close the keyboard.
+let offlineStale = false;
+const typingIn = () => {
+  const a = document.activeElement;
+  return a instanceof HTMLInputElement && a.type !== 'checkbox' && content.contains(a);
+};
 mapApi.map.on('moveend', () => {
-  if (state.view.kind === 'tab' && state.view.tab === 'offline') render();
+  if (!(state.view.kind === 'tab' && state.view.tab === 'offline')) return;
+  if (typingIn()) offlineStale = true;
+  else render();
+});
+content.addEventListener('focusout', () => {
+  if (!offlineStale) return;
+  // After the focus has moved on (a tap on a result keeps working).
+  setTimeout(() => {
+    if (!offlineStale || typingIn()) return;
+    offlineStale = false;
+    if (state.view.kind === 'tab' && state.view.tab === 'offline') render();
+  }, 300);
 });
 window.addEventListener('online', () => {
   renderStatic();

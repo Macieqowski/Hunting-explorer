@@ -1,6 +1,8 @@
 // Group hunt (polowanie zbiorowe): types and pure logic shared by the UI and the
 // backend adapter. No Firebase imports here so it stays unit-testable.
 
+import { plCompare, plCompareNumeric } from './data';
+
 export type Role = 'leader' | 'hunter' | 'beater';
 export type HuntStatus = 'open' | 'closed' | 'live' | 'ended';
 export type ParticipantStatus = 'registered' | 'confirmed';
@@ -144,7 +146,7 @@ const ROLE_ORDER: Record<Role, number> = { leader: 0, hunter: 1, beater: 2 };
 
 /** Leader first, then hunters, then beaters; each group alphabetically (Polish collation). */
 export function sortParticipants(ps: Participant[]): Participant[] {
-  return [...ps].sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role] || a.name.localeCompare(b.name, 'pl'));
+  return [...ps].sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role] || plCompare(a.name, b.name));
 }
 
 export function countRoles(ps: Participant[]): Record<Role, number> {
@@ -448,7 +450,7 @@ const sinceStart = (t: string, huntStart: string) => (minutes(t) - minutes(huntS
 
 /** By planned start (relative to the hunt's start), then name. */
 export function sortDrives<T extends DriveInput>(ds: T[], huntStart: string): T[] {
-  return [...ds].sort((a, b) => sinceStart(a.start, huntStart) - sinceStart(b.start, huntStart) || a.name.localeCompare(b.name, 'pl', { numeric: true }));
+  return [...ds].sort((a, b) => sinceStart(a.start, huntStart) - sinceStart(b.start, huntStart) || plCompareNumeric(a.name, b.name));
 }
 
 export const activeDrive = <T extends Pick<Drive, 'startedAt' | 'endedAt'>>(ds: T[]): T | null =>

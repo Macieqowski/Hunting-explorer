@@ -138,7 +138,7 @@ export function createHuntMap(text: HuntMapText): HuntMap {
   const map = L.map(el, { zoomControl: false, minZoom: 5, maxZoom: MAX_ZOOM, maxBounds: POLAND_BOUNDS.pad(0.6) });
   map.fitBounds(POLAND_BOUNDS);
   L.control.zoom({ position: 'topright' }).addTo(map);
-  L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);
+  L.control.scale({ imperial: false, position: 'bottomright', updateWhenIdle: true }).addTo(map);
   const { osm, topo, geotopo, sat } = baseLayers();
   osm.addTo(map);
   const stopOfflineSwitch = offlineBaseSwitch(map, [osm, topo], geotopo);

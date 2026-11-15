@@ -403,10 +403,26 @@ export function labelPoint(mp: LatLngMultiPolygon, grid = 14): [number, number] 
   const kx = Math.cos((((minLat + maxLat) / 2) * Math.PI) / 180);
   let bestPt: [number, number] = [(minLat + maxLat) / 2, (minLng + maxLng) / 2];
   let bestD = -1;
-  for (let i = 0; i <= grid; i++) {
-    for (let j = 0; j <= grid; j++) {
-      const p: [number, number] = [minLat + ((maxLat - minLat) * (i + 0.5)) / (grid + 1), minLng + ((maxLng - minLng) * (j + 0.5)) / (grid + 1)];
-      if (!pointInRing(p, outer) || best.slice(1).some((h) => pointInRing(p, h))) continue;
+  const lats: number[] = [];
+  for (let i = 0; i <= grid; i++) lats.push(minLat + ((maxLat - minLat) * (i + 0.5)) / (grid + 1));
+  const cross: number[] = [];
+  for (let j = 0; j <= grid; j++) {
+    const lng = minLng + ((maxLng - minLng) * (j + 0.5)) / (grid + 1);
+    // Where the polygon's edges (outer ring and holes) cross this line of longitude, once per
+    // column instead of once per grid point: a point is inside when an odd number of
+    // crossings lie north of it (the same rule as pointInRing).
+    cross.length = 0;
+    for (const ring of best)
+      for (let a = 0, b = ring.length - 1; a < ring.length; b = a++) {
+        const ya = ring[a][1], yb = ring[b][1];
+        if (ya > lng !== yb > lng) cross.push(((ring[b][0] - ring[a][0]) * (lng - ya)) / (yb - ya) + ring[a][0]);
+      }
+    if (!cross.length) continue;
+    for (const lat of lats) {
+      let n = 0;
+      for (const c of cross) if (lat < c) n++;
+      if (!(n & 1)) continue;
+      const p: [number, number] = [lat, lng];
       let d = Infinity;
       for (const ring of best)
         for (let k = 0; k < ring.length - 1 && d > bestD; k++) d = Math.min(d, distToSegment(p, ring[k], ring[k + 1], kx));
