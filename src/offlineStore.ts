@@ -29,6 +29,8 @@ export interface SavedArea {
   created: number;
   updated: number;
   districts: DistrictWithGeometry[];
+  /** Repairs done on the area's saved tiles (REPAIR_VERSION in offline.ts); missing on older saves. */
+  repaired?: number;
 }
 
 interface TileRec {
@@ -204,6 +206,56 @@ export async function evictViewed(cap = VIEWED_CAP): Promise<number> {
   await deleteTileFiles(files);
   return Math.max(0, extra);
 }
+
+/**
+ * Drops viewed (not saved) tiles whose key starts with `prefix`: a cache only, fetched again with
+ * signal. For tiles that may have been kept wrong (black photo, Nov 2026).
+ */
+export async function dropViewed(prefix: string): Promise<number> {
+  const { s, tx } = await store('tiles', 'readwrite');
+  const range = IDBKeyRange.bound(prefix, prefix + '\uffff');
+  const files: string[] = [];
+  let n = 0;
+  await new Promise<void>((resolve, reject) => {
+    const req = s.openCursor(range);
+    req.onsuccess = () => {
+      const c = req.result;
+      if (!c) return resolve();
+      const v = c.value as TileRec;
+      if (v.r <= 0) {
+        if (v.f) files.push(v.f);
+        c.delete();
+        n++;
+      }
+      c.continue();
+    };
+    req.onerror = () => reject(req.error);
+  });
+  await txDone(tx);
+  await deleteTileFiles(files);
+  return n;
+}
+
+/** Share of near-black pixels in a tile, sampled on a 32×32 grid (0 if it cannot be read). */
+export async function blackShare(blob: Blob): Promise<number> {
+  try {
+    const bmp = await createImageBitmap(blob);
+    const c = document.createElement('canvas');
+    c.width = c.height = 32;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return 0;
+    ctx.drawImage(bmp, 0, 0, 32, 32);
+    bmp.close?.();
+    const d = ctx.getImageData(0, 0, 32, 32).data;
+    let black = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i] <= BLACK && d[i + 1] <= BLACK && d[i + 2] <= BLACK) black++;
+    return black / (d.length / 4);
+  } catch {
+    return 0;
+  }
+}
+/** Darkest a channel may be to count as black; same as TileDownloadService.looksBlack. */
+const BLACK = 6;
 
 // ---------------------------------------------------------------- areas
 

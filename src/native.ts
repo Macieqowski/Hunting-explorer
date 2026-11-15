@@ -52,8 +52,11 @@ export interface TileDownloadUnit {
   n: number;
   /** Format the tiles are stored in. */
   m: string;
-  /** Tiles to cut: [column, row, file name]. */
-  t: [number, number, string][];
+  /**
+   * Tiles to cut: [column, row, file name], and 1 for a tile already saved that is fetched again
+   * only if it came out black (see REPAIR_VERSION in src/offline.ts).
+   */
+  t: ([number, number, string] | [number, number, string, 1])[];
 }
 /** Ready-made tiles in PUWG 1992 (EPSG:2180). */
 export interface TileDownloadSource {

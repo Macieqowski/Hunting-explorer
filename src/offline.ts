@@ -15,7 +15,10 @@ import { nativeTileDownload } from './native';
 import { limiter, nativeSources, nativeUnit, type Unit } from './offlineJob';
 import { WMTS_CONCURRENCY, wmtsTile } from './wmtsSave';
 import {
+  blackShare,
   deleteArea,
+  dropViewed,
+  getTile,
   getAreaKeys,
   getBdl,
   hasTile,
@@ -29,7 +32,7 @@ import {
   type SavedArea,
 } from './offlineStore';
 import { tileFileName } from './tileFiles';
-import { estimate, boxKm2, boxOf, padBox, savePlan, tileLister, wmsTileUrl, type Box, type Detail, type TileArea } from './tiles';
+import { estimate, boxKm2, boxOf, padBox, savePlan, tileLister, WMS, wmsTileUrl, type Box, type Detail, type TileArea } from './tiles';
 
 export type { SavedArea } from './offlineStore';
 
@@ -47,6 +50,16 @@ const CONCURRENCY = 12;
  */
 const NATIVE_CONCURRENCY = WMTS_CONCURRENCY;
 const NATIVE_WMS_CONCURRENCY = CONCURRENCY;
+
+/**
+ * Repairs of saved tiles. 1 (Nov 2026): the photo was saved black where Geoportal's
+ * high-resolution set answers a transparent image (no photo there; most of district 191 was
+ * black). Saved photo tiles are checked once and those that came out black fetched again.
+ */
+export const REPAIR_VERSION = 1;
+/** Share of black pixels from which a saved photo tile is fetched again. */
+export const BLACK_SHARE = 0.02;
+const needsRepair = (a: SavedArea) => (a.repaired ?? 0) < REPAIR_VERSION;
 
 let areas: SavedArea[] = [];
 const listeners = new Set<() => void>();
@@ -134,12 +147,40 @@ export async function initOffline(): Promise<void> {
   });
   areas = await listAreas();
   emit();
+  await dropBlackViewed();
   for (const a of areas) if (a.status === 'downloading') queue(a.id, false);
+  const repairAll = async () => {
+    for (const a of areas) if (a.status === 'done' && needsRepair(a) && !jobs.has(a.id)) await repair(a);
+  };
+  if (navigator.onLine) void repairAll();
   window.addEventListener('online', () => {
     for (const a of areas) if (a.status !== 'done' && !jobs.has(a.id)) queue(a.id, false);
+    void repairAll();
     emit();
   });
   window.addEventListener('offline', emit);
+}
+
+/** Photo tiles viewed (not saved) before REPAIR_VERSION 1 may be black: dropped once, fetched again with signal. */
+async function dropBlackViewed() {
+  const KEY = 'offline-viewed-repaired';
+  try {
+    if (Number(localStorage.getItem(KEY)) >= REPAIR_VERSION) return;
+  } catch {
+    /* no storage: drop them every start, it is only a cache */
+  }
+  await dropViewed(WMS.ortho.url).catch(() => 0);
+  try {
+    localStorage.setItem(KEY, String(REPAIR_VERSION));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Checks a finished area's photo tiles and fetches those that came out black (see REPAIR_VERSION). */
+async function repair(a: SavedArea) {
+  await setArea({ ...a, status: 'downloading', updated: Date.now() });
+  queue(a.id, false);
 }
 
 // ---------------------------------------------------------------- planning a save
@@ -223,6 +264,7 @@ export async function saveDraft(d: Draft, detail: Detail): Promise<SavedArea> {
     created: Date.now(),
     updated: Date.now(),
     districts: d.districts,
+    repaired: REPAIR_VERSION,
   };
   await putArea(a);
   areas = [a, ...areas];
@@ -244,7 +286,8 @@ export async function updateArea(id: string): Promise<void> {
       /* keep the old shapes */
     }
   }
-  await setArea({ ...a, status: 'downloading', done: 0, failed: 0, bytes: 0, updated: Date.now() });
+  // Every tile is fetched again, so nothing is left to repair.
+  await setArea({ ...a, status: 'downloading', done: 0, failed: 0, bytes: 0, updated: Date.now(), repaired: REPAIR_VERSION });
   queue(id, true);
 }
 
@@ -284,18 +327,22 @@ async function download(id: string, refresh: boolean, job: Job) {
   let total = 0;
   const held = new Set(await getAreaKeys(id));
   const list = tileLister(tileAreaOf(a));
+  // An older save: its photo tiles are checked and fetched again where they came out black.
+  const repairing = !refresh && needsRepair(a);
   for (const p of savePlan(a.detail)) {
     const n = p.def.meta ?? 1;
     const blocks = new Map<string, Unit>();
+    const checkable = repairing && !!p.def.wmts?.fallback;
     for (const [z, x, y] of list(p.minZ, p.maxZ)) {
       total++;
       const url = wmsTileUrl(p.def, z, x, y);
-      if (!refresh && held.has(url)) continue;
+      const check = !refresh && held.has(url);
+      if (check && !checkable) continue;
       const bx = x - (x % n), by = y - (y % n);
       const k = `${z}/${bx}/${by}`;
       let u = blocks.get(k);
       if (!u) blocks.set(k, (u = { def: p.def, z, x: bx, y: by, n, tiles: [] }));
-      u.tiles.push({ url, x, y });
+      u.tiles.push(check ? { url, x, y, check } : { url, x, y });
     }
     units.push(...blocks.values());
   }
@@ -314,7 +361,8 @@ async function download(id: string, refresh: boolean, job: Job) {
     const cur = areas.find((x) => x.id === id);
     if (!cur) return;
     await putAreaKeys(id, [...held]);
-    await setArea({ ...cur, ...progress, status: final ? (progress.failed || !navigator.onLine ? 'paused' : 'done') : cur.status });
+    const status = final ? (progress.failed || !navigator.onLine ? 'paused' : 'done') : cur.status;
+    await setArea({ ...cur, ...progress, status, ...(status === 'done' ? { repaired: REPAIR_VERSION } : {}) });
   };
   const store = async (url: string, blob: Blob) => {
     await putAreaTile(url, blob, !held.has(url));
@@ -330,6 +378,13 @@ async function download(id: string, refresh: boolean, job: Job) {
       // A tile another area already holds only needs another reference.
       const need: Unit['tiles'] = [];
       for (const t of unit.tiles) {
+        if (t.check) {
+          // Already saved: fetched again only if it came out black.
+          const hit = await getTile(t.url);
+          if (hit && (await blackShare(hit.blob)) < BLACK_SHARE) progress.done++;
+          else need.push(t);
+          continue;
+        }
         try {
           if (!refresh && !held.has(t.url) && (await hasTile(t.url)) && (await refTile(t.url))) {
             held.add(t.url);
@@ -437,9 +492,10 @@ async function downloadInApp(nt: NonNullable<ReturnType<typeof nativeTileDownloa
     if (s.state === 'none') return pause();
     const entries = (s.results ?? []).map(([ui, ti, size]) => {
       const u = units[ui];
-      const url = u.tiles[ti].url;
+      const { url, check } = u.tiles[ti];
       got++;
-      gotBytes += size;
+      // A checked tile was counted in the area's size already.
+      if (!check) gotBytes += size;
       return { url, f: tileFileName(url, u.def.format) };
     });
     await recordAreaFiles(entries, held);
@@ -455,7 +511,7 @@ async function downloadInApp(nt: NonNullable<ReturnType<typeof nativeTileDownloa
     const done = base.done + got;
     const failed = s.failed ?? 0;
     const status = finished ? (failed || done < cur.total ? 'paused' : 'done') : 'downloading';
-    await setArea({ ...cur, done, failed, bytes: base.bytes + gotBytes, status });
+    await setArea({ ...cur, done, failed, bytes: base.bytes + gotBytes, status, ...(status === 'done' ? { repaired: REPAIR_VERSION } : {}) });
     if (finished) {
       await nt.forget({ id }).catch(() => {});
       return;
