@@ -273,7 +273,18 @@ function render() {
   }
   if (v.kind === 'hunt' || (v.kind === 'tab' && v.tab === 'hunt')) return renderHuntSection(v.kind === 'hunt' ? v.id : null, v.kind === 'hunt' ? v.invite : undefined);
   leaveHunts();
-  if (v.kind === 'tab' && v.tab === 'offline') return void (content.innerHTML = renderOffline());
+  if (v.kind === 'tab' && v.tab === 'offline') {
+    // Progress updates redraw this tab often: a search field being typed in stays focused.
+    const a = document.activeElement;
+    const keep = a instanceof HTMLInputElement && 'offlineQ' in a.dataset && content.contains(a) ? [a.selectionStart, a.selectionEnd] : null;
+    content.innerHTML = renderOffline();
+    const again = keep && content.querySelector<HTMLInputElement>('input[data-offline-q]');
+    if (again) {
+      again.focus();
+      again.setSelectionRange(keep![0], keep![1]);
+    }
+    return;
+  }
   if (v.kind === 'tab' && (v.tab === 'seasons' || v.tab === 'about' || v.tab === 'more')) {
     content.innerHTML = v.tab === 'seasons' ? renderSeasons() : v.tab === 'about' ? renderAbout() : renderMore();
     return;
@@ -1131,8 +1142,27 @@ onOfflineChange(() => {
     else renderStatic();
   }, 300);
 });
+// The Offline tab shows what the map view allows (save this view, districts in view), so it is
+// redrawn when the map stops. Not while someone types in it: on a phone the keyboard shrinks
+// the page, the map "moves", and the redraw used to take away the field and close the keyboard.
+let offlineStale = false;
+const typingIn = () => {
+  const a = document.activeElement;
+  return a instanceof HTMLInputElement && a.type !== 'checkbox' && content.contains(a);
+};
 mapApi.map.on('moveend', () => {
-  if (state.view.kind === 'tab' && state.view.tab === 'offline') render();
+  if (!(state.view.kind === 'tab' && state.view.tab === 'offline')) return;
+  if (typingIn()) offlineStale = true;
+  else render();
+});
+content.addEventListener('focusout', () => {
+  if (!offlineStale) return;
+  // After the focus has moved on (a tap on a result keeps working).
+  setTimeout(() => {
+    if (!offlineStale || typingIn()) return;
+    offlineStale = false;
+    if (state.view.kind === 'tab' && state.view.tab === 'offline') render();
+  }, 300);
 });
 window.addEventListener('online', () => {
   renderStatic();

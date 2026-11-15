@@ -137,6 +137,104 @@ const HOLDER_MIN_ZOOM = 11;
 
 const shorten = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s);
 
+export interface MapLabel {
+  lat: number;
+  lng: number;
+  text: string;
+  sub?: string;
+}
+
+/**
+ * District numbers (and holders) painted on one canvas when the map stops, instead of one
+ * HTML element with a blurred text shadow each. At zoom 9 about 200 labels are on screen, and
+ * moving that many shadowed elements made a slow phone drop most frames while panning.
+ */
+export class CanvasLabels extends L.Layer {
+  private items: MapLabel[] = [];
+  private canvas: HTMLCanvasElement | null = null;
+  private font = 'sans-serif';
+  /** Extra canvas around the view, as a share of its size, so a short pan shows labels at once. */
+  private pad = 0.3;
+
+  setLabels(items: MapLabel[]) {
+    this.items = items;
+    this.redraw();
+    return this;
+  }
+
+  onAdd(map: L.Map) {
+    if (!map.getPane('distLabels')) {
+      const pane = map.createPane('distLabels');
+      pane.style.zIndex = '450';
+      pane.style.pointerEvents = 'none';
+    }
+    this.canvas = L.DomUtil.create('canvas', 'dist-label-canvas', map.getPane('distLabels'));
+    this.canvas.style.position = 'absolute';
+    this.font = getComputedStyle(map.getContainer()).fontFamily || 'sans-serif';
+    map.on('moveend viewreset resize', this.redraw, this);
+    map.on('zoomstart', this.hide, this);
+    this.redraw();
+    return this;
+  }
+
+  onRemove(map: L.Map) {
+    map.off('moveend viewreset resize', this.redraw, this);
+    map.off('zoomstart', this.hide, this);
+    this.canvas?.remove();
+    this.canvas = null;
+    return this;
+  }
+
+  private hide() {
+    if (this.canvas) this.canvas.style.visibility = 'hidden';
+  }
+
+  redraw() {
+    const map = this._map;
+    const c = this.canvas;
+    if (!map || !c) return;
+    const size = map.getSize();
+    const padX = Math.round(size.x * this.pad), padY = Math.round(size.y * this.pad);
+    const w = size.x + 2 * padX, h = size.y + 2 * padY;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const origin = map.containerPointToLayerPoint([-padX, -padY]);
+    L.DomUtil.setPosition(c, origin);
+    if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
+      c.width = Math.round(w * dpr);
+      c.height = Math.round(h * dpr);
+      c.style.width = `${w}px`;
+      c.style.height = `${h}px`;
+    }
+    const ctx = c.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+    ctx.fillStyle = '#431407';
+    const bold = `800 15px ${this.font}`, small = `600 11px ${this.font}`;
+    for (const it of this.items) {
+      const p = map.latLngToLayerPoint([it.lat, it.lng]).subtract(origin);
+      if (p.x < -100 || p.y < -30 || p.x > w + 100 || p.y > h + 30) continue;
+      // Same block as before: the number over the holder, centred on the point.
+      const y1 = it.sub ? p.y - 7 : p.y, y2 = p.y + 8;
+      ctx.font = bold;
+      ctx.lineWidth = 4;
+      ctx.strokeText(it.text, p.x, y1);
+      ctx.fillText(it.text, p.x, y1);
+      if (it.sub) {
+        ctx.font = small;
+        ctx.lineWidth = 3;
+        ctx.strokeText(it.sub, p.x, y2);
+        ctx.fillText(it.sub, p.x, y2);
+      }
+    }
+    c.style.visibility = '';
+  }
+}
+
 /**
  * Vector overlay with sharp district borders and district-number labels, loaded for the
  * current viewport from the BDL REST service. The BDL WMS image underneath supplies the colour fill.
@@ -145,7 +243,7 @@ function createOutlineLayer(map: L.Map): L.LayerGroup {
   const group = L.layerGroup();
   const renderer = L.canvas({ padding: 0.3 });
   const lines = L.layerGroup().addTo(group);
-  const labels = L.layerGroup().addTo(group);
+  const labels = new CanvasLabels().addTo(group);
   let timer: ReturnType<typeof setTimeout> | undefined;
   let token = 0;
 
@@ -159,13 +257,13 @@ function createOutlineLayer(map: L.Map): L.LayerGroup {
   (group as L.LayerGroup & { updateHint?: () => void }).updateHint = updateHint;
 
   /** What is drawn now, per district, and at which zoom (the outline detail and labels depend on it). */
-  let shown = new Map<number, L.Layer[]>();
+  let shown = new Map<number, { lines: L.Layer[]; label: MapLabel | null }>();
   let shownZoom = -1;
   /** Label positions per district: the search for a good spot is the costly part on a slow phone. */
   const labelAt = new Map<number, [number, number] | null>();
   const clear = () => {
     lines.clearLayers();
-    labels.clearLayers();
+    labels.setLabels([]);
     shown = new Map();
     shownZoom = -1;
   };
@@ -188,7 +286,7 @@ function createOutlineLayer(map: L.Map): L.LayerGroup {
       // those that left are removed; the rest stay as they are.
       if (z !== shownZoom) clear();
       shownZoom = z;
-      const next = new Map<number, L.Layer[]>();
+      const next = new Map<number, { lines: L.Layer[]; label: MapLabel | null }>();
       for (const it of items) {
         if (!it.geometry.length) continue;
         const have = shown.get(it.objectid);
@@ -199,28 +297,21 @@ function createOutlineLayer(map: L.Map): L.LayerGroup {
         }
         const ll = it.geometry as L.LatLngExpression[][][];
         // White halo under a dark line keeps borders readable on any base map.
-        const layers: L.Layer[] = [
+        const drawn: L.Layer[] = [
           L.polygon(ll, { renderer, interactive: false, fill: false, color: '#ffffff', weight: 4.5, opacity: 0.85 }).addTo(lines),
           L.polygon(ll, { renderer, interactive: false, fill: false, color: '#7c2d12', weight: 1.8, opacity: 1 }).addTo(lines),
         ];
+        let label: MapLabel | null = null;
         if (z >= LABEL_MIN_ZOOM && it.number) {
           if (!labelAt.has(it.objectid)) labelAt.set(it.objectid, labelPoint(it.geometry));
           const pt = labelAt.get(it.objectid);
-          if (pt) {
-            const holder = z >= HOLDER_MIN_ZOOM && it.holder ? `<small>${escapeHtml(shorten(it.holder, 30))}</small>` : '';
-            layers.push(
-              L.marker(pt, {
-                interactive: false,
-                keyboard: false,
-                icon: L.divIcon({ className: 'dist-label', html: `<span><b>${escapeHtml(it.number)}</b>${holder}</span>`, iconSize: [0, 0] }),
-              }).addTo(labels),
-            );
-          }
+          if (pt) label = { lat: pt[0], lng: pt[1], text: it.number, sub: z >= HOLDER_MIN_ZOOM && it.holder ? shorten(it.holder, 30) : undefined };
         }
-        next.set(it.objectid, layers);
+        next.set(it.objectid, { lines: drawn, label });
       }
-      for (const gone of shown.values()) for (const l of gone) (lines.hasLayer(l) ? lines : labels).removeLayer(l);
+      for (const gone of shown.values()) for (const l of gone.lines) lines.removeLayer(l);
       shown = next;
+      labels.setLabels([...next.values()].flatMap((v) => (v.label ? [v.label] : [])));
     } catch {
       /* Borders are an enhancement; the WMS layer still shows the districts. */
     }
@@ -239,8 +330,4 @@ function createOutlineLayer(map: L.Map): L.LayerGroup {
     clear();
   });
   return group;
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 }
