@@ -2,7 +2,8 @@
 // with the participant list and the leader's controls. Rendered as a string like
 // the other sections; main.ts forwards clicks, input and form submits here.
 
-import { getLang, tt } from './i18n';
+import { geoErrorText, locateWithStatus } from './gpsStatus';
+import { getLang, t as tr, tt } from './i18n';
 import {
   validateHunt,
   validPersonName,
@@ -1214,13 +1215,8 @@ function sightListHtml(): string {
 function getFix(): Promise<{ lat: number; lng: number }> {
   const known = sharer?.active && sharer.huntId === watched ? sharer.lastFix : null;
   if (known) return Promise.resolve(known);
-  return new Promise((resolve, reject) => {
-    if (!('geolocation' in navigator)) return reject(new Error(l('sightNoFix')));
-    navigator.geolocation.getCurrentPosition(
-      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      () => reject(new Error(l('sightNoFix'))),
-      { enableHighAccuracy: true, timeout: 20_000, maximumAge: 30_000 },
-    );
+  return locateWithStatus({ goodAcc: 50, maxAgeMs: 30_000 }).catch(() => {
+    throw new Error(l('sightNoFix'));
   });
 }
 
@@ -1949,7 +1945,11 @@ function renderLive(h: Hunt, me: Participant): string {
     const st = sharer && sharer.huntId === h.id ? sharer.state : 'off';
     if (st === 'on' || st === 'starting')
       share = `<div class="h-share on" role="status"><span class="h-share-dot" aria-hidden="true"></span>
-        <div><strong>${st === 'on' ? l('shareOn') : l('shareStarting')}</strong><br><small class="h-share-sent muted"></small>
+        <div><strong>${st === 'on' ? l('shareOn') : l('shareStarting')}</strong><br><small class="h-share-sent muted"></small>${
+          st === 'starting' && sharer?.sats
+            ? `<small class="muted">${esc(tr('gpsSats').replace('{v}', String(sharer.sats.visible)).replace('{u}', String(sharer.sats.used)))}. ${esc(tr('gpsColdHint'))}</small><br>`
+            : ''
+        }
         <small class="muted">${l(isApp() ? 'shareInBackground' : 'shareKeepOpen')}</small></div>
         <div class="h-share-btns"><button type="button" class="btn" data-hunt="pocket" title="${esc(l('pocketHint'))}">${l('fmPocket')}</button>
         <button type="button" class="btn danger" data-hunt="shareStop">${l('shareStop')}</button></div></div>`;
@@ -3544,21 +3544,21 @@ export function handleHuntClick(el: HTMLElement): boolean {
       }
       break;
     case 'standAddHere':
-      if (!standEdit || !('geolocation' in navigator)) break;
+      if (!standEdit) break;
       locatingStand = true;
       formError = '';
-      navigator.geolocation.getCurrentPosition(
+      // A stand is placed where the person stands: only a fresh, accurate GPS position.
+      locateWithStatus({ goodAcc: 25, maxAgeMs: 10_000, settleMs: 30_000 }).then(
         (p) => {
           locatingStand = false;
-          hmap?.centerOnPoint(p.coords.latitude, p.coords.longitude);
-          addStandAt(p.coords.latitude, p.coords.longitude);
+          hmap?.centerOnPoint(p.lat, p.lng);
+          addStandAt(p.lat, p.lng);
         },
-        () => {
+        (e) => {
           locatingStand = false;
-          formError = l('stErrLocate');
+          formError = geoErrorText(e, l('stErrLocate'));
           rerender();
         },
-        { enableHighAccuracy: true, timeout: 20000 },
       );
       break;
     case 'standsSave': {
@@ -3611,20 +3611,18 @@ export function handleHuntClick(el: HTMLElement): boolean {
       hmap?.undoCorner();
       return true;
     case 'driveLocate':
-      if (!('geolocation' in navigator)) break;
       locatingDrive = true;
-      navigator.geolocation.getCurrentPosition(
+      locateWithStatus({ goodAcc: 100, maxAgeMs: 60_000 }).then(
         (p) => {
           locatingDrive = false;
-          hmap?.showPoint(p.coords.latitude, p.coords.longitude);
+          hmap?.showPoint(p.lat, p.lng);
           rerender();
         },
-        () => {
+        (e) => {
           locatingDrive = false;
-          formError = l('shareDenied');
+          formError = geoErrorText(e, l('shareDenied'));
           rerender();
         },
-        { enableHighAccuracy: true, timeout: 20_000, maximumAge: 60_000 },
       );
       break;
     case 'driveCancel':
@@ -3733,13 +3731,12 @@ export function handleHuntClick(el: HTMLElement): boolean {
       break;
     case 'districtHere': {
       const form = el.dataset.form!;
-      if (!('geolocation' in navigator)) break;
       locatingDistrict = true;
       formError = '';
-      navigator.geolocation.getCurrentPosition(
+      locateWithStatus({ goodAcc: 2000, maxAgeMs: 60_000, highAccuracy: false, settleMs: 10_000 }).then(
         async (p) => {
           try {
-            const res = await fetchDistrictsAtPoint(p.coords.latitude, p.coords.longitude);
+            const res = await fetchDistrictsAtPoint(p.lat, p.lng);
             if (res[0]) draft.set(`${form}.district`, JSON.stringify(districtToHunt(res[0].attributes)));
             else formError = l('districtHereNone');
           } catch {
@@ -3748,12 +3745,11 @@ export function handleHuntClick(el: HTMLElement): boolean {
           locatingDistrict = false;
           rerender();
         },
-        () => {
+        (e) => {
           locatingDistrict = false;
-          formError = l('districtHereError');
+          formError = geoErrorText(e, l('districtHereError'));
           rerender();
         },
-        { enableHighAccuracy: false, timeout: 20_000, maximumAge: 60_000 },
       );
       break;
     }

@@ -6,6 +6,7 @@
 import { declination, distanceM, bearing, compassPoint } from './hunt';
 import { guide, buzzFor, arrowAngle, BUZZ, type Guidance, type GuideState, type Pt, type Route } from './huntCrew';
 import { vibrate } from './native';
+import { watchLocation } from './geo';
 import { askPermission, listenCompass } from './huntSighting';
 
 export type GuideTarget =
@@ -36,7 +37,7 @@ let fix: Pt | null = null;
 let fixAcc: number | null = null;
 let heading: number | null = null; // magnetic, smoothed
 let calib = false;
-let watchId: number | null = null;
+let stopGps: (() => void) | null = null;
 let stopCompass: (() => void) | null = null;
 let last: Guidance | null = null;
 let lastState: GuideState | null = null;
@@ -87,15 +88,14 @@ export function enableCompass() {
 }
 
 function startGps() {
-  if (watchId != null || !('geolocation' in navigator)) return;
-  watchId = navigator.geolocation.watchPosition(
+  if (stopGps) return;
+  stopGps = watchLocation(
     (p) => {
-      fix = { lat: p.coords.latitude, lng: p.coords.longitude };
-      fixAcc = isFinite(p.coords.accuracy) ? p.coords.accuracy : null;
+      fix = { lat: p.lat, lng: p.lng };
+      fixAcc = p.acc;
       recompute();
     },
-    () => paint(),
-    { enableHighAccuracy: true, maximumAge: 5000, timeout: 60_000 },
+    { maxAgeMs: 5000, onError: () => paint() },
   );
 }
 
@@ -109,8 +109,8 @@ function startCompass() {
 }
 
 function stopAll() {
-  if (watchId != null) navigator.geolocation.clearWatch(watchId);
-  watchId = null;
+  stopGps?.();
+  stopGps = null;
   stopCompass?.();
   stopCompass = null;
   heading = null;

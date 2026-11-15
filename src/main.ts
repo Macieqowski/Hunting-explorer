@@ -1,6 +1,7 @@
 import './fonts.css';
 import './tokens.css';
 import './style.css';
+import { geoErrorText, locateWithStatus } from './gpsStatus';
 import { fetchDistrictsAtPoint, fetchDistrictsByIds, BDL_WMS_DISTRICTS, type District } from './bdl';
 import {
   groupClubs,
@@ -988,16 +989,33 @@ content.addEventListener('submit', (e) => {
   else if (handleHuntSubmit(e.target as HTMLFormElement)) e.preventDefault();
 });
 
+// No time limit: without Google services the first GPS position can take a minute or two, and the
+// bar at the bottom shows the satellites meanwhile. Tapping again while searching changes nothing,
+// so the search is not restarted.
+let locatingHere = false;
 $('#locate').addEventListener('click', () => {
-  if (!navigator.geolocation) return toast(t('locateFail'));
-  toast(t('locating'));
-  navigator.geolocation.getCurrentPosition(
-    (p) => {
-      mapApi.map.flyTo([p.coords.latitude, p.coords.longitude], 12, { duration: 0.6 });
-      navigate({ kind: 'point', lat: p.coords.latitude, lng: p.coords.longitude });
+  if (locatingHere) return;
+  locatingHere = true;
+  let flown = false;
+  locateWithStatus({
+    goodAcc: 100,
+    // A rough or remembered position shows the area at once; the district is looked up at the end.
+    onProgress: (f) => {
+      if (flown) return;
+      flown = true;
+      mapApi.map.flyTo([f.lat, f.lng], 12, { duration: 0.6 });
     },
-    () => toast(t('locateFail')),
-    { enableHighAccuracy: true, timeout: 15000 },
+  }).then(
+    (p) => {
+      locatingHere = false;
+      mapApi.map.flyTo([p.lat, p.lng], 12, { duration: 0.6 });
+      navigate({ kind: 'point', lat: p.lat, lng: p.lng });
+    },
+    (e) => {
+      locatingHere = false;
+      const msg = geoErrorText(e);
+      if (msg) toast(msg);
+    },
   );
 });
 

@@ -2,6 +2,7 @@
 // hunter-oriented hints. Rendered as a string like the other sections; main.ts
 // forwards clicks, input and form submits here.
 
+import { locateWithStatus } from './gpsStatus';
 import { getLang, tt, fmtNum } from './i18n';
 import { sunTimes, sunAltitude, moonIllumination, moonTimes, moonPhaseName, nextMoonPhase, moonAltitudeDeg, type MoonPhaseName } from './astro';
 import {
@@ -187,14 +188,11 @@ function persist() {
 }
 
 function locate() {
-  if (!navigator.geolocation) {
-    geo = 'denied';
-    return;
-  }
   geo = 'locating';
-  navigator.geolocation.getCurrentPosition(
+  // Weather needs only the area: a remembered position up to 10 minutes old, or anything within 5 km.
+  locateWithStatus({ goodAcc: 5000, maxAgeMs: 10 * 60e3, highAccuracy: false, settleMs: 5000 }).then(
     (p) => {
-      here = { lat: p.coords.latitude, lng: p.coords.longitude };
+      here = { lat: p.lat, lng: p.lng };
       writeLS(LS_HERE, here);
       geo = 'done';
       rerender();
@@ -203,7 +201,6 @@ function locate() {
       geo = 'denied';
       rerender();
     },
-    { enableHighAccuracy: false, timeout: 15000, maximumAge: 10 * 60e3 },
   );
 }
 

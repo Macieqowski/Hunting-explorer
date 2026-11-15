@@ -17,7 +17,7 @@ import com.getcapacitor.annotation.PermissionCallback;
 
 /**
  * Location sharing that keeps working with the screen off: start() starts {@link LocationService}
- * and positions arrive as "location" events; "stopped" when the user taps Stop in the notification.
+ * and positions arrive as "location" events, satellites GPS sees as "satellites" { visible, used }; "stopped" when the user taps Stop in the notification.
  * Used by src/native.ts.
  */
 @CapacitorPlugin(
@@ -32,6 +32,18 @@ public class BackgroundLocationPlugin extends Plugin {
     @Override
     public void load() {
         LocationService.sink = this::send;
+        LocationService.satellitesSink = new LocationFeed.Sink() {
+            @Override
+            public void onFix(Location location) {}
+
+            @Override
+            public void onSatellites(int visible, int used) {
+                JSObject o = new JSObject();
+                o.put("visible", visible);
+                o.put("used", used);
+                notifyListeners("satellites", o);
+            }
+        };
         LocationService.onStoppedByUser = () -> {
             keepRendererImportant(false);
             notifyListeners("stopped", new JSObject());
@@ -117,6 +129,7 @@ public class BackgroundLocationPlugin extends Plugin {
     protected void handleOnDestroy() {
         // The app was closed (swiped away): stop sharing rather than leave GPS running.
         LocationService.sink = null;
+        LocationService.satellitesSink = null;
         LocationService.onStoppedByUser = null;
         getContext().stopService(new Intent(getContext(), LocationService.class));
         super.handleOnDestroy();
