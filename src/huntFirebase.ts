@@ -9,6 +9,7 @@ import { parseShots, parseShotSpots, NOTE_MAX, type ShotInput } from './pokot';
 import { parseStands, encodeStands } from './stands';
 import { newInviteToken, inviteExpiry, parseInvites, PAIR_MS } from './invite';
 import { HuntError, type FirebaseConfig, type HuntBackend } from './huntBackend';
+import { parseAlarm, parseAlarms, parseAlerts, parseKits, alarmRecord, alertRecord } from './huntAlarm';
 import { encodePt, encodeRoute, parseAllRoutes, parseSeats, parsePhones, parseTransport, parseMessages, parseAcks, parseCarcassMarks, cleanPhone, cleanSeat, cleanMessage, CARCASS_KINDS, CREW_LIMITS } from './huntCrew';
 
 function wrap(e: unknown): HuntError {
@@ -92,6 +93,8 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
       [`messages/${id}`]: null,
       [`msgAcks/${id}`]: null,
       [`carcasses/${id}`]: null,
+      [`alarms/${id}`]: null,
+      [`alerts/${id}`]: null,
     });
   const watch = <T>(path: string, parse: (v: unknown) => T, cb: (v: T) => void, onDenied: () => void) =>
     onValue(
@@ -120,12 +123,17 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
       }),
     );
     // What hangs on the leader's uid moves along: phone number, stands, transport, shots.
-    const [phones, seats, shots, transport] = await Promise.all(['phones', 'seats', 'shots', 'transport'].map((k) => val(`${k}/${id}`)));
+    const [phones, seats, shots, transport, kits] = await Promise.all(['phones', 'seats', 'shots', 'transport', 'kits'].map((k) => val(`${k}/${id}`)));
     const upd: Record<string, unknown> = {};
     const ph = obj(phones);
     if (typeof ph[old] === 'string') {
       if (!ph[uid]) upd[`phones/${id}/${uid}`] = ph[old];
       upd[`phones/${id}/${old}`] = null;
+    }
+    const kt = obj(kits);
+    if (typeof kt[old] === 'string') {
+      if (!kt[uid]) upd[`kits/${id}/${uid}`] = kt[old];
+      upd[`kits/${id}/${old}`] = null;
     }
     for (const [d, m] of Object.entries(obj(seats))) {
       const mm = obj(m);
@@ -192,6 +200,9 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
           [`messages/${id}`]: null,
           [`msgAcks/${id}`]: null,
           [`carcasses/${id}`]: null,
+          [`alarms/${id}`]: null,
+          [`alerts/${id}`]: null,
+          [`kits/${id}`]: null,
           [`joins/${id}/${uid}`]: null,
           [`invites/${id}`]: null,
           [`leaderPair/${id}`]: null,
@@ -576,5 +587,54 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
 
     pickCarcass: (id, sid, picked) =>
       guard(update(child(root, `carcasses/${id}/${sid}`), picked ? { pickedBy: uid, pickedAt: serverTimestamp() } : { pickedBy: null, pickedAt: null })),
+
+    // ---- accident alarm and first-aid kits
+    watchAlarms: (id, cb, onDenied) => watch(`alarms/${id}`, parseAlarms, cb, onDenied),
+
+    watchMyAlarm: (id, cb, onDenied) => watch(`alarms/${id}/${uid}`, (v) => parseAlarm(uid, v), cb, onDenied),
+
+    async raiseAlarm(id, fix, note, lead) {
+      const rec = { ...alarmRecord(fix, note), uid, ts: serverTimestamp() };
+      if (!lead) return guard(set(child(root, `alarms/${id}/${uid}`), rec));
+      // A leader device or deputy approves its own alarm in the same write.
+      await guard(
+        update(root, {
+          [`alarms/${id}/${uid}`]: { ...rec, approvedBy: uid, approvedAt: serverTimestamp() },
+          [`alerts/${id}/${uid}`]: { ...rec, by: uid, at: serverTimestamp() },
+        }),
+      );
+    },
+
+    cancelAlarm: (id) => guard(update(root, { [`alarms/${id}/${uid}`]: null })),
+
+    approveAlarm: (id, a) =>
+      guard(
+        update(root, {
+          [`alarms/${id}/${a.uid}/approvedBy`]: uid,
+          [`alarms/${id}/${a.uid}/approvedAt`]: serverTimestamp(),
+          [`alarms/${id}/${a.uid}/rejectedBy`]: null,
+          [`alarms/${id}/${a.uid}/rejectedAt`]: null,
+          [`alerts/${id}/${a.uid}`]: { ...alertRecord(a), by: uid, at: serverTimestamp() },
+        }),
+      ),
+
+    rejectAlarm: (id, who) =>
+      guard(
+        update(root, {
+          [`alarms/${id}/${who}/rejectedBy`]: uid,
+          [`alarms/${id}/${who}/rejectedAt`]: serverTimestamp(),
+          [`alarms/${id}/${who}/approvedBy`]: null,
+          [`alarms/${id}/${who}/approvedAt`]: null,
+        }),
+      ),
+
+    watchAlerts: (id, cb, onDenied) => watch(`alerts/${id}`, parseAlerts, cb, onDenied),
+
+    // Closing also clears the reporter's alarm, so their screen is ready for a new one.
+    closeAlert: (id, who) => guard(update(root, { [`alerts/${id}/${who}/closedAt`]: serverTimestamp(), [`alarms/${id}/${who}`]: null })),
+
+    watchKits: (id, cb, onDenied) => watch(`kits/${id}`, parseKits, cb, onDenied),
+
+    setKit: (id, kit) => guard(set(child(root, `kits/${id}/${uid}`), kit)),
   };
 }

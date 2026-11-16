@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long-press on the app icon. "Wypadek" opens the first-aid screen with 112 and the position,
+     through the same link handling as invitations (initDeepLinks in src/platform.ts). -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="wypadek"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_sos"
+        android:shortcutShortLabel="@string/shortcut_sos_short"
+        android:shortcutLongLabel="@string/shortcut_sos_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="https://www.polowanie.org/app/#/wypadek"
+            android:targetPackage="org.polowanie.app"
+            android:targetClass="org.polowanie.app.MainActivity" />
+    </shortcut>
+</shortcuts>

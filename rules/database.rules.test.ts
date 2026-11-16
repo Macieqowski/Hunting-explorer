@@ -914,3 +914,114 @@ describe('leader devices and deputies', () => {
     );
   });
 });
+
+describe('accident alarm and first-aid kits', () => {
+  const at = { lat: 52.1, lng: 21.2 };
+  const alarm = (uid: string, extra: Record<string, unknown> = {}) => ({ uid, ...at, acc: 12, note: 'postrzał w udo', ts: serverTimestamp(), ...extra });
+  const setup = async () => {
+    await createHunt('lead');
+    for (const u of ['a', 'h', 'd']) {
+      await join(u);
+      await update(ref(db('lead'), `participants/h1/${u}`), { status: 'confirmed' });
+    }
+    await join('p'); // stays unconfirmed
+    await update(ref(db('lead'), 'hunts/h1/leaders'), { d: 'deputy' });
+  };
+  const tsOf = async (uid: string) => (await get(ref(db('lead'), `alarms/h1/${uid}/ts`))).val() as number;
+  const approve = (by: string, uid: string, ts: number) =>
+    update(ref(db(by)), {
+      [`alarms/h1/${uid}/approvedBy`]: by,
+      [`alarms/h1/${uid}/approvedAt`]: serverTimestamp(),
+      [`alarms/h1/${uid}/rejectedBy`]: null,
+      [`alarms/h1/${uid}/rejectedAt`]: null,
+      [`alerts/h1/${uid}`]: { uid, ...at, acc: 12, note: 'postrzał w udo', ts, by, at: serverTimestamp() },
+    });
+
+  it('a confirmed participant raises an alarm that only leader devices and deputies read', async () => {
+    await setup();
+    await assertFails(set(ref(db('p'), 'alarms/h1/p'), alarm('p')));
+    await assertFails(set(ref(db('a'), 'alarms/h1/h'), alarm('h')));
+    await assertFails(set(ref(db('stranger'), 'alarms/h1/stranger'), alarm('stranger')));
+    await assertSucceeds(set(ref(db('a'), 'alarms/h1/a'), alarm('a')));
+    await assertSucceeds(get(ref(db('a'), 'alarms/h1/a')));
+    await assertFails(get(ref(db('a'), 'alarms/h1')));
+    await assertFails(get(ref(db('h'), 'alarms/h1/a')));
+    await assertSucceeds(get(ref(db('lead'), 'alarms/h1')));
+    await assertSucceeds(get(ref(db('d'), 'alarms/h1')));
+  });
+
+  it('are checked: position, note, server time, no extra fields', async () => {
+    await setup();
+    await assertFails(set(ref(db('a'), 'alarms/h1/a'), alarm('a', { ts: 5 })));
+    await assertFails(set(ref(db('a'), 'alarms/h1/a'), alarm('a', { lat: 95 })));
+    await assertFails(set(ref(db('a'), 'alarms/h1/a'), alarm('a', { note: 'x'.repeat(121) })));
+    await assertFails(set(ref(db('a'), 'alarms/h1/a'), alarm('a', { extra: 1 })));
+    await assertFails(set(ref(db('a'), 'alarms/h1/a'), alarm('a', { uid: 'h' })));
+  });
+
+  it('reaches everyone only when a leader device or deputy approves it', async () => {
+    await setup();
+    await set(ref(db('a'), 'alarms/h1/a'), alarm('a'));
+    const ts = await tsOf('a');
+    // the reporter, another participant: neither approves nor writes the alert
+    await assertFails(update(ref(db('a'), 'alarms/h1/a'), { approvedBy: 'a', approvedAt: serverTimestamp() }));
+    await assertFails(approve('a', 'a', ts));
+    await assertFails(approve('h', 'a', ts));
+    await assertFails(set(ref(db('a'), 'alerts/h1/a'), { uid: 'a', ...at, ts, by: 'a', at: serverTimestamp() }));
+    // a deputy approves in their own name only
+    await assertFails(update(ref(db('d'), 'alarms/h1/a'), { approvedBy: 'lead', approvedAt: serverTimestamp() }));
+    await assertSucceeds(approve('d', 'a', ts));
+    await assertSucceeds(get(ref(db('h'), 'alerts/h1')));
+    await assertSucceeds(get(ref(db('a'), 'alerts/h1')));
+    await assertFails(get(ref(db('p'), 'alerts/h1')));
+    await assertFails(get(ref(db('stranger'), 'alerts/h1')));
+  });
+
+  it('a rejected alarm is either rejected or approved, never both', async () => {
+    await setup();
+    await set(ref(db('a'), 'alarms/h1/a'), alarm('a'));
+    await assertFails(update(ref(db('h'), 'alarms/h1/a'), { rejectedBy: 'h', rejectedAt: serverTimestamp() }));
+    await assertSucceeds(update(ref(db('lead'), 'alarms/h1/a'), { rejectedBy: 'lead', rejectedAt: serverTimestamp(), approvedBy: null, approvedAt: null }));
+    await assertFails(update(ref(db('lead'), 'alarms/h1/a'), { approvedBy: 'lead', approvedAt: serverTimestamp() }));
+    await assertSucceeds(approve('lead', 'a', await tsOf('a')));
+  });
+
+  it('the reporter cancels; a leader raises an approved alarm at once and ends it; none after the hunt', async () => {
+    await setup();
+    await set(ref(db('a'), 'alarms/h1/a'), alarm('a'));
+    await assertSucceeds(set(ref(db('a'), 'alarms/h1/a'), null));
+    await assertSucceeds(
+      update(ref(db('lead')), {
+        'alarms/h1/lead': alarm('lead', { approvedBy: 'lead', approvedAt: serverTimestamp() }),
+        'alerts/h1/lead': { uid: 'lead', ...at, ts: serverTimestamp(), by: 'lead', at: serverTimestamp() },
+      }),
+    );
+    await assertFails(update(ref(db('h')), { 'alerts/h1/lead/closedAt': serverTimestamp() }));
+    await assertSucceeds(update(ref(db('d')), { 'alerts/h1/lead/closedAt': serverTimestamp(), 'alarms/h1/lead': null }));
+    await update(ref(db('lead'), 'hunts/h1'), { status: 'ended' });
+    await assertFails(set(ref(db('a'), 'alarms/h1/a'), alarm('a')));
+  });
+
+  it('kits: each person marks their own, confirmed participants see them', async () => {
+    await setup();
+    await assertSucceeds(set(ref(db('a'), 'kits/h1/a'), 'at'));
+    await assertSucceeds(set(ref(db('h'), 'kits/h1/h'), 't'));
+    await assertFails(set(ref(db('a'), 'kits/h1/a'), 'bandage'));
+    await assertFails(set(ref(db('a'), 'kits/h1/h'), 'a'));
+    await assertFails(set(ref(db('stranger'), 'kits/h1/stranger'), 'a'));
+    await assertFails(set(ref(db('lead'), 'kits/h1/a'), 'a'));
+    await assertSucceeds(get(ref(db('h'), 'kits/h1')));
+    await assertSucceeds(get(ref(db('d'), 'kits/h1')));
+    await assertFails(get(ref(db('p'), 'kits/h1')));
+    await assertSucceeds(set(ref(db('a'), 'kits/h1/a'), null));
+    await assertSucceeds(set(ref(db('lead'), 'kits/h1/h'), null));
+  });
+
+  it('are purged and deleted by the leader', async () => {
+    await setup();
+    await set(ref(db('a'), 'alarms/h1/a'), alarm('a'));
+    await set(ref(db('a'), 'kits/h1/a'), 'a');
+    await assertFails(update(ref(db('h')), { 'alarms/h1': null, 'kits/h1': null }));
+    await assertSucceeds(update(ref(db('lead')), { 'alarms/h1': null, 'alerts/h1': null, 'kits/h1': null }));
+  });
+});

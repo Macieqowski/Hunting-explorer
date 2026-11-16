@@ -288,6 +288,53 @@ async function fetchDistrictsAtPointOnline(lat: number, lng: number): Promise<Di
   return (res.features ?? []).map(toDistrictWithGeometry);
 }
 
+/** Forest address of a point from the BDL forest map: nadleśnictwo, leśnictwo, oddział. */
+export interface ForestAddress {
+  inspectorate: string | null;
+  range: string | null;
+  compartment: string | null;
+}
+
+const BDL_FOREST_REST = 'https://mapserver.bdl.lasy.gov.pl/arcgis/rest/services/WMS_BDL/MapServer';
+
+/**
+ * Nadleśnictwo, leśnictwo and oddział at a point (layers 2: forest ranges, 3: compartments of
+ * State Forests, 4: compartments outside them). Null fields where the point is outside a forest.
+ * Online only, with a short time limit: it is extra detail on the emergency screen.
+ */
+export async function fetchForestAt(lat: number, lng: number, timeoutMs = 12000): Promise<ForestAddress> {
+  const url = (layer: number, fields: string) => {
+    const qs = new URLSearchParams({
+      f: 'json',
+      geometry: `${lng},${lat}`,
+      geometryType: 'esriGeometryPoint',
+      inSR: '4326',
+      spatialRel: 'esriSpatialRelIntersects',
+      outFields: fields,
+      returnGeometry: 'false',
+    });
+    return `${BDL_FOREST_REST}/${layer}/query?${qs}`;
+  };
+  const first = async (layer: number, fields: string) => {
+    const res = await jsonp<EsriQueryResponse>(url(layer, fields), timeoutMs);
+    return (res?.features?.[0]?.attributes ?? null) as Record<string, unknown> | null;
+  };
+  const clean = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
+  let failed = 0;
+  const soft = (p: Promise<Record<string, unknown> | null>) =>
+    p.catch(() => {
+      failed++;
+      return null;
+    });
+  const [range, comp, compOut] = await Promise.all([soft(first(2, 'forest_range_name,inspectorate_name')), soft(first(3, 'compartment_cd')), soft(first(4, 'compartment_cd'))]);
+  if (failed === 3) throw new Error('BDL unreachable');
+  return {
+    inspectorate: clean(range?.inspectorate_name),
+    range: clean(range?.forest_range_name),
+    compartment: clean(comp?.compartment_cd) ?? clean(compOut?.compartment_cd),
+  };
+}
+
 /** Geometry + attributes for the given object ids (in chunks to keep URLs short). */
 export async function fetchDistrictsByIds(ids: number[], simplify = 0.0001): Promise<DistrictWithGeometry[]> {
   const out: DistrictWithGeometry[] = [];

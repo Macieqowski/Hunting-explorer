@@ -4,4 +4,6 @@
     <string name="title_activity_main">Polowanie</string>
     <string name="package_name">org.polowanie.app</string>
     <string name="custom_url_scheme">org.polowanie.app</string>
+    <string name="shortcut_sos_short">Wypadek</string>
+    <string name="shortcut_sos_long">Wypadek: 112 i pierwsza pomoc</string>
 </resources>

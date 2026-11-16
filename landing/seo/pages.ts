@@ -14,6 +14,7 @@ import { groupClubs, districtSlug, holderType, clubKey, type Club } from '../../
 import type { District } from '../../src/bdl';
 import type { Bank, Question, Answer } from '../../src/exam';
 import { esc, slugify, ORIGIN, type Page } from './layout';
+import { aidPages } from './aid';
 
 export interface Inputs {
   districts: District[];
@@ -612,6 +613,7 @@ export function contentPages(inp: Inputs): Page[] {
     atlasIndex(inp),
     ...SPECIES.map((sp) => speciesPage(sp, inp)),
     ...inp.exams.map(examPage),
+    ...aidPages(),
   ];
 }
 
@@ -630,6 +632,7 @@ export function notFoundPage(): Page {
 <li><a href="/okresy-polowan/">Okresy polowań</a></li>
 <li><a href="/atlas-zwierzyny/">Atlas zwierzyny</a></li>
 <li><a href="/egzamin-na-mysliwego/">Egzamin na myśliwego</a></li>
+<li><a href="/pierwsza-pomoc/">Pierwsza pomoc na polowaniu</a></li>
 </ul>
 </article>`,
   };

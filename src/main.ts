@@ -26,6 +26,7 @@ import { ic } from './icons';
 import { applyTheme, getThemePref, nextThemePref, setThemePref, watchSystemTheme, type ThemePref } from './theme';
 import { AREAS, KNOW_PAGES, MAP_TABS, areaOf, knowPageOf, knowView, viewToHash, hashToView, type Area, type KnowPage, type MapTab, type Tab, type View, type GuideRole } from './nav';
 import { renderGuide } from './huntHelp';
+import { renderAid, refreshAid, leaveAid, handleAidClick, type AidContext } from './aidUi';
 import { createSheet } from './sheet';
 import { SEASONS, isOpen, effective, formatRanges, yearFrac, openOnlyIn, type Season } from './seasons';
 import { renderExams, handleExamClick, handleExamChange, drillSpecies } from './examUi';
@@ -92,6 +93,7 @@ app.innerHTML = `
     </div>
     <nav class="sections" id="sections"></nav>
     <span class="netbadge" id="netbadge" hidden></span>
+    <a class="sosbtn" id="sosbtn" href="#/wypadek"></a>
     <div class="topbar-tools" id="tools"></div>
   </header>
   <main class="layout">
@@ -121,10 +123,11 @@ const mapApi: MapApi = createMap($('#map'), (lat, lng) => {
 // "map" keeps the map with its lists; every other area is a full-width page without the map.
 const AREA_LABEL: Record<Area, Key> = { map: 'sectionMap', hunt: 'areaHunt', weather: 'tabWeather', know: 'areaKnow', more: 'areaMore' };
 const AREA_ICON = { map: 'map', hunt: 'users', weather: 'sunCloud', know: 'book', more: 'more' } as const;
-const KNOW_LABEL: Record<KnowPage, Key> = { seasons: 'knowSeasons', atlas: 'knowAtlas', exams: 'knowExams', ballistics: 'knowBallistics' };
-const KNOW_TITLE: Record<KnowPage, Key> = { seasons: 'tabSeasons', atlas: 'tabAtlas', exams: 'tabExams', ballistics: 'tabBallistics' };
+const KNOW_LABEL: Record<KnowPage, Key> = { seasons: 'knowSeasons', atlas: 'knowAtlas', exams: 'knowExams', ballistics: 'knowBallistics', aid: 'knowAid' };
+const KNOW_TITLE: Record<KnowPage, Key> = { seasons: 'tabSeasons', atlas: 'tabAtlas', exams: 'tabExams', ballistics: 'tabBallistics', aid: 'tabAid' };
 const MAP_TAB_LABEL: Record<MapTab, Key> = { clubs: 'tabClubs', districts: 'tabDistricts', stats: 'tabStats', offline: 'tabOffline' };
 let lastArea: Area = 'map';
+let lastKnow: KnowPage | null = null;
 /** Where each area was left, so coming back to it returns to the same place. */
 const lastIn: Partial<Record<Area, View>> = {};
 const areaHome = (a: Area): View =>
@@ -150,6 +153,15 @@ function navigate(v: View, push = true) {
   onViewMapEffects(v);
 }
 window.addEventListener('popstate', () => navigate(hashToView(location.hash), false));
+// A plain link to #/… (the alarm sheet's "Pierwsza pomoc"): followed when popstate did not already.
+window.addEventListener('hashchange', () => {
+  const v = hashToView(location.hash);
+  if (viewToHash(v) !== viewToHash(state.view)) navigate(v, false);
+});
+$('#sosbtn').addEventListener('click', (e) => {
+  e.preventDefault();
+  navigate({ kind: 'aid', page: null });
+});
 
 // ---------------------------------------------------------------- map effects
 
@@ -210,6 +222,11 @@ function areaButtons(area: Area, icons: boolean): string {
 function renderStatic() {
   document.querySelectorAll<HTMLElement>('[data-t]').forEach((el) => (el.textContent = t(el.dataset.t as Key)));
   $('#locate').innerHTML = `${ic('locate')}<span>${t('locate')}</span>`;
+  const sos = $('#sosbtn');
+  sos.innerHTML = `${ic('aid', 22)}<span>${t('sos')}</span>`;
+  sos.title = t('sosHint');
+  sos.setAttribute('aria-label', t('sosHint'));
+  sos.setAttribute('aria-current', state.view.kind === 'aid' && state.view.page === null ? 'page' : 'false');
   const nb = $('#netbadge');
   nb.hidden = navigator.onLine;
   nb.textContent = t('offlineBadge');
@@ -243,14 +260,50 @@ function renderStatic() {
       : area === 'know'
         ? KNOW_PAGES.map((id) => `<button role="tab" type="button" data-know="${id}" aria-selected="${know === id}">${t(KNOW_LABEL[id])}</button>`).join('')
         : '';
+  // On a phone the strip scrolls sideways: bring the newly opened page's tab into sight ("Pierwsza pomoc" is last).
+  if (know !== lastKnow) {
+    lastKnow = know;
+    $('#tabs').querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
 }
 
 /** The guide on screen ("role:lang"), so live hunt updates do not redraw it while it is read. */
 let guideShown: string | null = null;
+/** The "Wypadek" page on screen, so live hunt updates repaint only its live parts (refreshAid). */
+let aidShown: string | null = null;
+let aidDirty = false;
+const aidCtx: AidContext = {
+  change: () => {
+    aidDirty = true;
+    render();
+  },
+  live: () => render(),
+  go: (hash) => navigate(hashToView(hash)),
+  goHunt: (id) => navigate(id ? { kind: 'hunt', id } : { kind: 'tab', tab: 'hunt' }),
+};
 
 function render() {
   renderStatic();
   const v = state.view;
+  if (v.kind !== 'aid' && aidShown !== null) {
+    aidShown = null;
+    leaveAid();
+  }
+  // Like the guide, the emergency screen leaves a group hunt running: positions, alarms.
+  if (v.kind === 'aid') {
+    const key = v.page ?? '';
+    if (aidShown !== key || aidDirty) {
+      const fresh = aidShown !== key;
+      aidShown = key;
+      aidDirty = false;
+      content.innerHTML = renderAid(v.page, aidCtx);
+      if (fresh) {
+        content.scrollTop = 0;
+        window.scrollTo(0, 0);
+      }
+    } else refreshAid();
+    return;
+  }
   // The guide is part of the hunt area and leaves the hunt running (location sharing goes on).
   if (v.kind === 'guide') {
     const key = `${v.role}:${getLang()}`;
@@ -722,6 +775,7 @@ function renderMore() {
       </div></div>
     <h3>${t('moreSection')}</h3>
     <ul class="more-list">
+      <li><a href="#/wypadek" data-nav="aid">${ic('aid', 22)}<span><strong>${t('moreAid')}</strong><small class="muted">${t('moreAidHint')}</small></span>${ic('chevron', 20)}</a></li>
       ${row('#/offline', 'offline', ic('download', 22), t('moreOffline'), t('moreOfflineHint'))}
       <li><a href="#/instrukcja" data-nav="guide">${ic('book', 22)}<span><strong>${t('moreGuide')}</strong><small class="muted">${t('moreGuideHint')}</small></span>${ic('chevron', 20)}</a></li>
       ${isApp() ? '' : row('#/about', 'about', ic('android', 22), t('moreApp'), t('moreAppHint'))}
@@ -849,7 +903,7 @@ $('#tabs').addEventListener('click', (e) => {
 });
 // Escape closes what is on top: the hunt's field-mode list, then field mode itself.
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && areaOf(state.view) === 'hunt' && !document.querySelector('.hs-sheet, .hmsg-sheet, #pp-root') && huntBack()) e.preventDefault();
+  if (e.key === 'Escape' && areaOf(state.view) === 'hunt' && !document.querySelector('.hs-sheet, .hmsg-sheet, .halarm-sheet, #pp-root') && huntBack()) e.preventDefault();
 });
 // Typing in a search field needs the room: the sheet opens fully.
 content.addEventListener('focusin', (e) => {
@@ -889,6 +943,11 @@ content.addEventListener('click', (e) => {
   if (wx && handleWeatherClick(wx)) return;
   const ba = (e.target as HTMLElement).closest<HTMLElement>('[data-ball]');
   if (ba && handleBallisticsClick(ba)) return;
+  const ai = (e.target as HTMLElement).closest<HTMLElement>('[data-aid]');
+  if (ai) {
+    e.preventDefault();
+    if (handleAidClick(ai)) return;
+  }
   const hu = (e.target as HTMLElement).closest<HTMLElement>('[data-hunt]');
   if (hu) {
     e.preventDefault();
@@ -903,6 +962,8 @@ content.addEventListener('click', (e) => {
     if (nav === 'district') navigate({ kind: 'district', slug: el.dataset.slug! });
     if (nav === 'tab') navigate({ kind: 'tab', tab: el.dataset.tab as Tab });
     if (nav === 'guide') navigate({ kind: 'guide', role: (el.dataset.role as GuideRole | undefined) ?? null });
+    if (nav === 'aid') navigate({ kind: 'aid', page: el.dataset.page || null });
+    if (nav === 'huntPage') navigate({ kind: 'hunt', id: el.dataset.id! });
     $('#panel').scrollTop = 0;
     content.scrollTop = 0;
     return;

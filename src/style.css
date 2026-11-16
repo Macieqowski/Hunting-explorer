@@ -19,6 +19,7 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; text-transform: uppercase; le
   padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
 }
 .brand { display: flex; align-items: center; gap: 10px; color: var(--accent); min-width: 0; }
+.brand > div { min-width: 0; }
 .brand h1 { font-size: var(--brand-size); color: var(--text); }
 .brand p { margin: 0; font-size: 0.8rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lang, .themebtn { border: 1px solid var(--border); background: var(--surface-2); color: var(--text); border-radius: var(--r-s); min-width: 44px; min-height: 44px; padding: 6px 10px; font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
@@ -1238,3 +1239,209 @@ input[type='checkbox'], input[type='radio'] { width: 18px; height: 18px; accent-
 .off-pick-club > span { flex: 1 1 180px; min-width: 0; }
 .off-pick-club strong { display: block; font-size: 0.95rem; }
 .off-pick-club .meta { display: block; font-size: 0.82rem; color: var(--muted); }
+
+/* ---------------------------------------------------------------- Wypadek: first aid (aidUi.ts) */
+.sosbtn {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 12px; border-radius: var(--r-btn);
+  background: var(--danger); color: var(--on-danger); font-weight: 700; font-size: 0.92rem; text-decoration: none; white-space: nowrap;
+}
+.sosbtn[aria-current='page'] { outline: 2px solid var(--danger); outline-offset: 2px; }
+@media (max-width: 760px) {
+  .sosbtn { min-height: 36px; padding: 4px 10px; font-size: 0.85rem; }
+}
+
+.aid { display: grid; gap: 12px; }
+.aid > * { margin: 0; }
+.aid h3.aid-h { margin: 8px 0 0; }
+.aid-head h2 { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--danger); }
+.aid-head p { margin: 4px 0 0; }
+.aid-112 {
+  display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 76px; padding: 12px 18px; border-radius: var(--r-l);
+  background: var(--danger); color: var(--on-danger); text-decoration: none; font: var(--head-weight) 1.5rem var(--font-head); box-shadow: var(--shadow);
+}
+.aid-112 b { font: var(--num-weight) 1.9rem var(--font-num); letter-spacing: 0.04em; }
+.aid-112.small { min-height: 40px; padding: 4px 12px; font-size: 0.95rem; gap: 6px; border-radius: var(--r-btn); box-shadow: none; }
+.aid-112.small b { font-size: 1.05rem; }
+.aid-where { border: 1px solid var(--border); border-radius: var(--r-l); background: var(--surface); padding: 12px 14px; display: grid; gap: 6px; }
+.aid-where p { margin: 0; }
+.aid-where-h { font-weight: 700; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.aid-coords { font: var(--num-weight) 1.35rem/1.25 var(--font-num); letter-spacing: 0.01em; user-select: all; }
+.aid-addr { list-style: none; margin: 0; padding: 0; font-size: 0.92rem; }
+.aid-addr li + li { margin-top: 2px; }
+.aid-share { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.aid-geo-bad { color: var(--danger); font-weight: 600; }
+.aid-tqbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border-radius: var(--r-m); background: var(--danger-soft); border: 1px solid var(--danger); }
+.aid-tqbar > span { flex: 1; min-width: 12em; }
+.aid-say, .aid-kit, .aid-when { border: 1px solid var(--border); border-radius: var(--r-m); padding: 8px 12px; background: var(--surface); }
+.aid-say summary, .aid-kit summary, .aid-when summary { cursor: pointer; font-weight: 700; min-height: 32px; display: flex; align-items: center; }
+.aid-say-list, .aid-kit ul, .aid-when ul { margin: 6px 0 4px; padding-left: 1.3em; display: grid; gap: 4px; }
+.aid-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.aid-tile {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 112px; padding: 10px 8px;
+  border: 1px solid var(--border); border-radius: var(--r-l); background: var(--surface); color: var(--text); text-decoration: none; text-align: center; font-weight: 700; line-height: 1.2;
+}
+.aid-tile .aa { width: 96px; height: 52px; }
+@media (hover: hover) { .aid-tile:hover, .aid-list a:hover, .aid-startlink:hover { border-color: var(--danger); } }
+.aid-startlink {
+  display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--r-l);
+  background: var(--danger-soft); color: var(--text); text-decoration: none;
+}
+.aid-startlink > span { flex: 1; display: flex; flex-direction: column; }
+.aid-startlink small { color: var(--muted); }
+.aid-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+.aid-list a { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 4px; border-bottom: 1px solid var(--border); color: var(--text); text-decoration: none; font-weight: 600; }
+.aid-list a > span { flex: 1; }
+.aid-list a > .ic:last-child { color: var(--muted); }
+.aid-more a > .ic:first-child { color: var(--danger); }
+.aid-draft { margin: 0; padding: 8px 12px; border-radius: var(--r-m); border: 1px dashed var(--warn); color: var(--text); background: var(--surface-2); }
+.aid-disc { margin: 0; }
+.aid-en { margin: 0; }
+
+.aid-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.aid-bar .back { margin: 0; }
+.aid-bar .aid-112 { margin-left: auto; }
+.aid-title { display: flex; align-items: center; gap: 10px; margin: 0; }
+.aid-title .aa { width: 72px; height: 40px; flex: none; }
+.aid-first { border-radius: var(--r-m); padding: 10px 14px; background: var(--danger-soft); border-left: 4px solid var(--danger); }
+.aid-first-h { margin: 0 0 4px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.8rem; color: var(--danger); }
+.aid-first ol { margin: 0; padding-left: 1.3em; display: grid; gap: 2px; }
+.aid-first details { margin-top: 4px; }
+.aid-first summary { cursor: pointer; color: var(--muted); }
+.aid-first details ul { margin: 4px 0 0; padding-left: 1.3em; display: grid; gap: 4px; }
+.aid-step { border: 2px solid var(--border-strong); border-radius: var(--r-l); background: var(--surface); padding: 14px 16px; display: grid; gap: 8px; scroll-margin-top: 12px; }
+.aid-step h3 { margin: 0; font: var(--head-weight) 1.4rem/1.25 var(--font-head); text-transform: none; letter-spacing: var(--head-track); color: var(--text); }
+.aid-step .aa { width: 100%; max-width: 300px; height: auto; justify-self: center; }
+.aid-n { margin: 0; color: var(--muted); font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.aid-d { margin: 0; font-size: 1.05rem; line-height: 1.45; }
+.aid-nav { display: flex; gap: 8px; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.aid-nav .btn { min-height: 52px; font-size: 1.05rem; }
+.aid-next { flex: 1; max-width: 240px; margin-left: auto; }
+.aid-yn .btn { flex: 1; min-height: 60px; font-size: 1.2rem; }
+.aid-yes { background: var(--danger); border-color: var(--danger); color: var(--on-danger); }
+.aid-no { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
+.aid-done { border-color: var(--ok); }
+.aid-done p { margin: 0; }
+.aid-all { justify-self: start; }
+.aid-tool { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--r-m); background: var(--surface-2); }
+.aid-tool p { margin: 0; flex: 1 1 100%; display: flex; align-items: center; gap: 6px; }
+.aid-time { background: var(--danger); border-color: var(--danger); color: var(--on-danger); }
+.aid-metro { display: grid; justify-items: center; gap: 4px; text-align: center; }
+.aid-metro p { flex: none; justify-content: center; }
+.aid-beat { font: var(--num-weight) 1.4rem var(--font-num); align-items: baseline; }
+.aid-beat b { font-size: 3rem; min-width: 2ch; color: var(--danger); }
+.aid-steps { margin: 0; padding-left: 1.4em; display: grid; gap: 12px; }
+.aid-steps li { padding-left: 4px; }
+.aid-steps li > .aa { float: right; width: 84px; height: 46px; margin-left: 8px; }
+.aid-steps li p { margin: 2px 0 0; }
+.aid-extra, .aid-dont { border-radius: var(--r-m); padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); }
+.aid-extra h4, .aid-dont h4 { margin: 0 0 6px; display: flex; align-items: center; gap: 6px; }
+.aid-extra ul, .aid-dont ul { margin: 0; padding-left: 1.3em; display: grid; gap: 4px; }
+.aid-dont { border-color: var(--danger); }
+.aid-dont h4 { color: var(--danger); }
+.aid-src { margin: 0; }
+.aid-quiz { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+.aid-qz { border: 1px solid var(--border); border-radius: var(--r-l); padding: 12px 14px; background: var(--surface); }
+.aid-qz > p { margin: 0 0 8px; font-weight: 600; }
+.aid-opts { display: grid; gap: 6px; }
+.aid-opt {
+  min-height: 44px; padding: 8px 12px; text-align: left; border: 1px solid var(--border-strong); border-radius: var(--r-m);
+  background: var(--surface-2); color: var(--text); font: inherit; cursor: pointer;
+}
+.aid-opt[disabled] { cursor: default; }
+.aid-opt.right { border-color: var(--ok); background: var(--open-bg); font-weight: 700; }
+.aid-opt.wrong { border-color: var(--danger); background: var(--danger-soft); }
+.aid-why { margin: 8px 0 0; font-size: 0.9rem; }
+.aid-why.ok b, .aid-why.ok { color: var(--text); }
+.aid-score { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.aid-about h3 { margin-top: 1.2rem; }
+
+/* The drawings (aidArt.ts): text colour, the part that matters in red. */
+.aa { display: block; color: var(--text); }
+.aa .aa-h { stroke: var(--danger); }
+.aa .aa-f { fill: var(--danger); stroke: none; }
+.aa text.aa-f { fill: var(--danger); }
+
+/* The hunt part of the emergency screen, and the alarm on the hunt page (huntUi.ts) */
+.aid-huntbox { border: 2px solid var(--danger); border-radius: var(--r-l); padding: 12px 14px; background: var(--surface); display: grid; gap: 8px; }
+.aid-huntbox > p, .aid-huntbox .h-actions { margin: 0; }
+.aid-huntbox-h { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-weight: 700; }
+.aid-hunt-wait { margin: 0; }
+/* The first tap on the emergency screen is orange (warn), unlike 112; confirming and approving are red. */
+.aid-alarm .btn.danger, .halarm-card .btn.danger, .halarm-sheet .btn.danger {
+  background: var(--danger); border-color: var(--danger); color: var(--on-danger);
+}
+.aid-alarm-btn { width: 100%; min-height: 60px; font-size: 1.1rem; }
+.aid-alarm { display: grid; gap: 6px; border-radius: var(--r-m); padding: 10px 12px; background: var(--surface-2); }
+.aid-alarm p { margin: 0; }
+.aid-alarm.wait { border-left: 4px solid var(--warn); }
+.aid-alarm.ok { border-left: 4px solid var(--ok); }
+.aid-alarm.off { border-left: 4px solid var(--border-strong); }
+.aid-alarm.ask { border: 2px solid var(--danger); background: var(--danger-soft); }
+.aid-alarm-q { font-weight: 800; font-size: 1.1rem; }
+.aid-alarm .h-actions { margin-top: 2px; }
+
+.h-sos {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 8px 14px; margin-bottom: 10px;
+  border: 1px solid var(--danger); border-radius: var(--r-l); background: var(--danger-soft); color: var(--text); text-decoration: none;
+}
+.h-sos > span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.h-sos strong { font: var(--head-weight) 1.1rem var(--font-head); color: var(--danger); }
+.h-sos small { color: var(--muted); }
+.h-sos > .ic:first-child { color: var(--danger); }
+.halarm-card { border: 2px solid var(--danger); border-radius: var(--r-l); padding: 10px 14px; margin-bottom: 10px; background: var(--danger-soft); }
+.halarm-card p { margin: 4px 0; }
+.halarm-card.wait { border-color: var(--warn); background: var(--surface); }
+.halarm-card.off { border: 1px dashed var(--border-strong); background: var(--surface); }
+.aid-huntbox .halarm-card { margin: 0; }
+.halarm-h { display: flex; align-items: center; gap: 8px; font: 800 1.05rem var(--font-head); color: var(--danger); text-transform: uppercase; letter-spacing: 0.03em; }
+.halarm-card.wait .halarm-h { color: var(--text); }
+.halarm-note { font-size: 1.02rem; font-weight: 600; }
+.halarm-kits-h { margin-top: 8px !important; font-weight: 700; }
+.halarm-kits { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 0.9rem; }
+.halarm-kits li { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.halarm-presets .btn { text-align: left; justify-content: flex-start; }
+.hr-kit { background: var(--danger-soft); color: var(--danger); }
+.hr-kitpick { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 8px; }
+.hr-kitpick label { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; font-weight: 600; }
+.hr-kitpick input { width: 20px; height: 20px; accent-color: var(--danger); }
+.hr-kithint { flex-basis: 100%; }
+
+/* Field mode: the cross in the top bar, a line per alarm above the map */
+.hf-sos {
+  flex: none; width: 44px; height: 44px; margin-left: 8px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--r-btn); background: var(--danger); color: var(--on-danger); border: 2px solid var(--surface);
+}
+.hf-alarm { display: flex; align-items: center; gap: 10px; flex: none; padding: 8px 12px; background: var(--danger); color: var(--on-danger); font-size: 0.92rem; }
+.hf-alarm span { flex: 1; min-width: 0; }
+.hf-alarm.wait { background: var(--warn); color: var(--on-warn); }
+.hf-alarm .btn { background: var(--surface); color: var(--text); border-color: var(--surface); }
+
+/* The sheet over everything: a leader's decision, or the approved alarm for everyone */
+.halarm-sheet { position: fixed; inset: 0; z-index: 6500; background: rgb(0 0 0 / 0.8); display: grid; place-items: center; padding: 16px; overflow-y: auto; }
+.halarm-box {
+  background: var(--surface); color: var(--text); border-radius: var(--r-xl); padding: 18px; width: min(100%, 480px); display: grid; gap: 10px;
+  border: 4px solid var(--warn);
+}
+.halarm-sheet.alert .halarm-box { border-color: var(--danger); }
+.halarm-box p { margin: 0; }
+.halarm-box .halarm-h { font-size: 1.3rem; }
+.halarm-sheet:not(.alert) .halarm-h { color: var(--text); }
+.halarm-who { font-size: 1.02rem; }
+.halarm-do { font-weight: 700; }
+.halarm-main { min-height: 60px; font-size: 1.15rem; }
+.halarm-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.halarm-row .btn { flex: 1 1 auto; }
+.halarm-muted { color: var(--muted); }
+.halarm-later { justify-self: center; }
+
+/* On the hunt map: where the injured is */
+.hm-alarm { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; }
+.hm-alarm-dot {
+  width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: #c62828; color: #fff;
+  font: 900 26px/1 var(--font-body); border: 3px solid #fff; box-shadow: 0 0 0 0 rgb(198 40 40 / 0.7); animation: hm-alarm-pulse 1.4s infinite;
+}
+.hm-alarm.pending .hm-alarm-dot { background: #fff; color: #c62828; border: 3px dashed #c62828; animation: none; }
+.hm-alarm .hm-label { color: #fff; background: #c62828; }
+.hm-alarm.pending .hm-label { color: #7f1d1d; background: rgb(255 255 255 / 0.92); }
+@keyframes hm-alarm-pulse { 0% { box-shadow: 0 0 0 0 rgb(198 40 40 / 0.7); } 70% { box-shadow: 0 0 0 16px rgb(198 40 40 / 0); } 100% { box-shadow: 0 0 0 0 rgb(198 40 40 / 0); } }
+@media (prefers-reduced-motion: reduce) { .hm-alarm-dot { animation: none; } }

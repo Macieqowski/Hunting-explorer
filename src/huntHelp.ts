@@ -111,6 +111,26 @@ const MESSAGES_IN: GuideSection = {
   tips: ['Wiadomość nie dotrze do telefonu z zamkniętą aplikacją. Nie zastępuje sygnałów rogiem ani radia.'],
 };
 
+const ACCIDENT: GuideSection = {
+  id: 'wypadek',
+  title: 'Wypadek: 112, alarm i pierwsza pomoc',
+  where: ['Wypadek'],
+  text: [
+    'Czerwony przycisk [[Wypadek]] jest na górze ekranu, w zakładce [[Teren]] i w trybie terenowym. Otwiera ekran z przyciskiem 112, Twoją pozycją do przeczytania dyspozytorowi i instrukcjami pierwszej pomocy krok po kroku. W aplikacji na Androida ten ekran otworzysz też, przytrzymując ikonę aplikacji.',
+    'W czasie polowania na tym ekranie jest też alarm do prowadzącego. Najpierw trafia tylko do prowadzącego i zastępców; dopiero gdy któryś go zatwierdzi, dostają go wszyscy uczestnicy.',
+  ],
+  steps: [
+    'Najpierw zadzwoń na 112 albo poproś o to kogoś obok.',
+    'Dotknij [[Wyślij alarm do prowadzącego]], wpisz krótko, co się stało (nie musisz), i dotknij [[Potwierdzam: wyślij alarm]]. Pomyłkę cofniesz przyciskiem [[Odwołaj alarm]].',
+    'Pod przyciskiem zobaczysz, czy prowadzący zatwierdził alarm. Jeśli długo nikt nie odpowiada, dotknij [[Zadzwoń do prowadzącego]].',
+    'Gdy alarm zatwierdzi prowadzący, u wszystkich telefon długo wibruje i wyskakuje okno [[WYPADEK]] z miejscem rannego i odległością. Przerwij polowanie, rozładuj broń i czekaj na polecenia. [[Pokaż na mapie]] pokazuje rannego, [[Pierwsza pomoc]] otwiera instrukcje.',
+  ],
+  tips: [
+    'Jeśli masz przy sobie apteczkę albo opaskę uciskową, zaznacz to w zakładce [[Uczestnicy]] przy [[Masz przy sobie:]]. Przy wypadku prowadzący zobaczy, kto ma je najbliżej rannego.',
+    'Alarm, tak jak wiadomości, dociera tylko do telefonów z otwartą aplikacją (także w trybie kieszeni). Nie zastępuje telefonu na 112, sygnałów rogiem ani radia.',
+  ],
+};
+
 const CARRIER: GuideSection = {
   id: 'transport',
   title: 'Jeśli zbierasz tusze',
@@ -303,6 +323,26 @@ const LEADER: Guide = {
       tips: ['Wiadomość dociera tylko do telefonów z otwartą aplikacją (także w trybie kieszeni). Nie zastępuje sygnałów rogiem ani radia.'],
     },
     {
+      id: 'wypadek',
+      title: 'Wypadek: zatwierdź alarm',
+      where: ['Wypadek'],
+      text: [
+        'Uczestnik, który zgłasza wypadek, wysyła alarm najpierw do Ciebie i zastępców. Pozostali uczestnicy nie widzą go, dopóki ktoś z Was go nie zatwierdzi. Telefon długo wibruje i wyskakuje okno z nazwiskiem zgłaszającego, opisem i odległością do rannego.',
+      ],
+      steps: [
+        'Sprawdź zgłoszenie: [[Pokaż na mapie]] pokazuje rannego, [[Zadzwoń]] łączy ze zgłaszającym, jeśli podał telefon.',
+        'Prawdziwy wypadek: dotknij [[Zatwierdź: wyślij wszystkim]]. Wszyscy uczestnicy dostają alarm z miejscem rannego.',
+        'Pomyłka: dotknij [[Odrzuć: fałszywy alarm]]. Zgłaszający zobaczy, kto odrzucił alarm. Gdyby jednak był potrzebny, [[Zatwierdź jednak]] wyśle go dalej.',
+        'Po zatwierdzeniu na górze zakładki [[Teren]] widać, kto z apteczką lub opaską uciskową jest najbliżej rannego, i gotowe wiadomości do wszystkich, wysyłane jednym dotknięciem, np. „WYPADEK! Przerwa w polowaniu. Rozładować broń i zostać na miejscu.”',
+        'Gdy ranny jest pod opieką ratowników, dotknij [[Zakończ alarm]].',
+      ],
+      tips: [
+        'Alarm wysłany przez Ciebie albo zastępcę (przycisk [[Wypadek]], potem [[Wyślij alarm wszystkim uczestnikom]]) od razu trafia do wszystkich.',
+        'Nic nie trafia do wszystkich samo z siebie: jeśli nikt z prowadzących nie zatwierdzi alarmu, widzą go tylko prowadzący i zastępcy. Dlatego w czasie polowania miej telefon przy sobie albo wyznacz zastępcę.',
+        '[[Zdecyduję za chwilę]] chowa okno; alarm czeka wtedy na górze zakładki [[Teren]].',
+      ],
+    },
+    {
       id: 'tusze',
       title: 'Tusze po miocie',
       where: ['Teren', 'Tusze do zabrania'],
@@ -399,6 +439,7 @@ const HUNTER: Guide = {
       ],
     },
     MESSAGES_IN,
+    ACCIDENT,
     {
       id: 'mapa',
       title: 'Co widać na mapie',
@@ -457,6 +498,7 @@ const BEATER: Guide = {
     FIELD(true),
     SIGHTING,
     MESSAGES_IN,
+    ACCIDENT,
     {
       id: 'po-miocie',
       title: 'Po miocie',
