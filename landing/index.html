@@ -44,6 +44,50 @@
             "description": "Polowanie zbiorowe na jednej mapie: mioty, stanowiska, naganka i pokot. Mapa obwodów łowieckich w Polsce, także offline, okresy polowań, atlas zwierzyny i pytania egzaminacyjne.",
             "offers": { "@type": "Offer", "price": "0", "priceCurrency": "PLN" },
             "publisher": { "@id": "https://www.polowanie.org/#org" }
+          },
+          {
+            "@type": "VideoObject",
+            "name": "Jedno polowanie, trzy telefony",
+            "description": "Ten sam miot polowania zbiorowego w aplikacji Polowanie u prowadzącego, myśliwego i naganiacza naraz.",
+            "thumbnailUrl": "https://www.polowanie.org/filmy/trzy-telefony.jpg",
+            "contentUrl": "https://www.polowanie.org/filmy/trzy-telefony.mp4",
+            "uploadDate": "2026-11-16",
+            "duration": "PT3M20S",
+            "inLanguage": "pl",
+            "publisher": { "@id": "https://www.polowanie.org/#org" }
+          },
+          {
+            "@type": "VideoObject",
+            "name": "Prowadzący w aplikacji Polowanie",
+            "description": "Jak prowadzący przygotowuje i prowadzi polowanie zbiorowe w aplikacji Polowanie: mioty, stanowiska, komunikaty, pokot.",
+            "thumbnailUrl": "https://www.polowanie.org/filmy/prowadzacy.jpg",
+            "contentUrl": "https://www.polowanie.org/filmy/prowadzacy.mp4",
+            "uploadDate": "2026-11-16",
+            "duration": "PT5M21S",
+            "inLanguage": "pl",
+            "publisher": { "@id": "https://www.polowanie.org/#org" }
+          },
+          {
+            "@type": "VideoObject",
+            "name": "Myśliwy w aplikacji Polowanie",
+            "description": "Jak myśliwy korzysta z aplikacji Polowanie na polowaniu zbiorowym: zapis, stanowisko, alarm o zwierzynie, strzał i pokot.",
+            "thumbnailUrl": "https://www.polowanie.org/filmy/mysliwy.jpg",
+            "contentUrl": "https://www.polowanie.org/filmy/mysliwy.mp4",
+            "uploadDate": "2026-11-16",
+            "duration": "PT3M20S",
+            "inLanguage": "pl",
+            "publisher": { "@id": "https://www.polowanie.org/#org" }
+          },
+          {
+            "@type": "VideoObject",
+            "name": "Naganiacz w aplikacji Polowanie",
+            "description": "Jak naganiacz korzysta z aplikacji Polowanie: trasa ze strzałką, zgłaszanie zwierzyny, ostrzeżenie przed linią myśliwych i zbiórka.",
+            "thumbnailUrl": "https://www.polowanie.org/filmy/naganiacz.jpg",
+            "contentUrl": "https://www.polowanie.org/filmy/naganiacz.mp4",
+            "uploadDate": "2026-11-16",
+            "duration": "PT3M4S",
+            "inLanguage": "pl",
+            "publisher": { "@id": "https://www.polowanie.org/#org" }
           }
         ]
       }
@@ -88,6 +132,7 @@
         <nav class="top-nav" aria-label="Strona">
           <a class="top-link" href="#funkcje">Funkcje</a>
           <a class="top-link" href="#kola">Dla kół</a>
+          <a class="top-link" href="#filmy">Filmy</a>
           <a class="top-link" href="#pobierz">Pobierz</a>
           <a class="btn btn-primary btn-s" href="./app/">Otwórz aplikację</a>
         </nav>
@@ -203,6 +248,41 @@
         </div>
       </section>
 
+      <section id="filmy" class="wrap sec">
+        <div class="sec-head">
+          <span class="kicker">Filmy instruktażowe</span>
+          <h2>Zobacz polowanie z aplikacją, zanim wyjdziesz do lasu</h2>
+          <p class="sec-lead">Jedno polowanie zbiorowe nagrane z telefonów prowadzącego, myśliwego i naganiacza, z lektorem i napisami w obrazie.</p>
+        </div>
+        <figure class="film film-main">
+            <video controls preload="none" playsinline poster="./filmy/trzy-telefony.jpg" width="1920" height="1080" aria-label="Film: Jedno polowanie, trzy telefony">
+              <source src="./filmy/trzy-telefony.mp4" type="video/mp4" />
+            </video>
+            <figcaption><strong>Jedno polowanie, trzy telefony</strong> <span class="film-len">3:20 min</span><span>Ten sam miot u prowadzącego, myśliwego i naganiacza naraz: kto co widzi i kiedy.</span></figcaption>
+          </figure>
+        <div class="films">
+          <figure class="film">
+            <video controls preload="none" playsinline poster="./filmy/prowadzacy.jpg" width="1920" height="1080" aria-label="Film: Prowadzący">
+              <source src="./filmy/prowadzacy.mp4" type="video/mp4" />
+            </video>
+            <figcaption><strong>Prowadzący</strong> <span class="film-len">5:21 min</span><span>Przygotowanie polowania na komputerze, mioty, stanowiska, komunikaty, pokot i przekazanie prowadzenia.</span></figcaption>
+          </figure>
+          <figure class="film">
+            <video controls preload="none" playsinline poster="./filmy/mysliwy.jpg" width="1920" height="1080" aria-label="Film: Myśliwy">
+              <source src="./filmy/mysliwy.mp4" type="video/mp4" />
+            </video>
+            <figcaption><strong>Myśliwy</strong> <span class="film-len">3:20 min</span><span>Zapis na polowanie, stanowisko, alarm o zwierzynie, zgłoszenie strzału i pokot.</span></figcaption>
+          </figure>
+          <figure class="film">
+            <video controls preload="none" playsinline poster="./filmy/naganiacz.jpg" width="1920" height="1080" aria-label="Film: Naganiacz">
+              <source src="./filmy/naganiacz.mp4" type="video/mp4" />
+            </video>
+            <figcaption><strong>Naganiacz</strong> <span class="film-len">3:04 min</span><span>Trasa ze strzałką, zgłaszanie zwierzyny, ostrzeżenie przed linią myśliwych i zbiórka.</span></figcaption>
+          </figure>
+        </div>
+        <a class="more" href="./app/#/instrukcja">Instrukcje krok po kroku w aplikacji</a>
+      </section>
+
       <section id="pobierz" class="band band-last">
         <div class="wrap sec get">
           <div class="get-text">
@@ -231,6 +311,7 @@
         </div>
         <nav aria-label="Stopka">
           <a href="./app/">Otwórz aplikację</a>
+          <a href="#filmy">Filmy instruktażowe</a>
           <a href="./obwody-lowieckie/">Obwody łowieckie</a>
           <a href="./kola-lowieckie/">Koła łowieckie</a>
           <a href="./okresy-polowan/">Okresy polowań</a>

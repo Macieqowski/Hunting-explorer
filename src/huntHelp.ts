@@ -9,6 +9,7 @@ import { getLang } from './i18n';
 import { roleIcon } from './huntIcons';
 import { ic } from './icons';
 import { GUIDE_ROLES, GUIDE_SLUG, type GuideRole } from './nav';
+import { ROLE_FILMS, THREE_PHONES, filmPlayer, type Film } from './films';
 
 export type GuideSection = {
   id: string;
@@ -492,7 +493,14 @@ function section(s: GuideSection, i: number): string {
     <h3 id="hg-${s.id}-h"><span class="hg-num">${i + 1}</span>${esc(s.title)}</h3>${where}${text}${steps}${tips}</section>`;
 }
 
-/** The guide page: role switcher, contents, then the sections. */
+/** A film with its title and length; `more` adds a line under it. */
+function filmCard(f: Film, more = ''): string {
+  return `<section class="hg-film card" aria-label="Film: ${esc(f.title)}">
+    <h3>${ic('play', 18)} Film: ${esc(f.title)}</h3>${filmPlayer(f)}
+    <p class="small muted">${esc(f.about)} ${f.length} min, ok. ${f.mb} MB: na danych komórkowych lepiej obejrzeć przez Wi-Fi.</p>${more}</section>`;
+}
+
+/** The guide page: role switcher, film, contents, then the sections. */
 export function renderGuide(role: GuideRole | null): string {
   const g = role ? GUIDES[role] : null;
   const pick = GUIDE_ROLES.map(
@@ -505,10 +513,12 @@ export function renderGuide(role: GuideRole | null): string {
     <nav class="hg-roles" role="tablist" aria-label="Instrukcja dla">${pick}</nav>`;
   if (!g)
     return `<div class="hguide">${head}<p>Wybierz swoją rolę w polowaniu. Każda instrukcja opisuje krok po kroku wszystko, co ta rola może zrobić w aplikacji.</p>
-      <ul class="hg-pick">${GUIDE_ROLES.map((r) => `<li><a href="#/instrukcja/${GUIDE_SLUG[r]}" data-nav="guide" data-role="${r}">${roleIcon(r, 28)}<span><strong>${GUIDES[r].short}</strong><small class="muted">${esc(GUIDES[r].intro)}</small></span>${ic('chevron', 20)}</a></li>`).join('')}</ul></div>`;
+      <ul class="hg-pick">${GUIDE_ROLES.map((r) => `<li><a href="#/instrukcja/${GUIDE_SLUG[r]}" data-nav="guide" data-role="${r}">${roleIcon(r, 28)}<span><strong>${GUIDES[r].short}</strong><small class="muted">${esc(GUIDES[r].intro)}</small></span>${ic('chevron', 20)}</a></li>`).join('')}</ul>
+      ${filmCard(THREE_PHONES)}</div>`;
   const toc = `<details class="hg-toc card" open><summary><strong>Spis treści</strong></summary><ol>${g.sections
     .map((s, i) => `<li><button type="button" data-action="guideJump" data-target="hg-${s.id}"><span class="hg-tocn">${i + 1}.</span><span>${esc(s.title)}</span></button></li>`)
     .join('')}</ol></details>`;
-  return `<div class="hguide">${head}<p class="hg-intro">${esc(g.intro)}</p>${toc}${g.sections.map(section).join('')}
+  const also = `<p class="small"><a href="#/instrukcja" data-nav="guide">Zobacz też film „${esc(THREE_PHONES.title)}”</a></p>`;
+  return `<div class="hguide">${head}<p class="hg-intro">${esc(g.intro)}</p>${filmCard(ROLE_FILMS[g.role], also)}${toc}${g.sections.map(section).join('')}
     <p class="muted small">Coś się nie zgadza albo czegoś brakuje? Powiedz prowadzącemu albo autorowi aplikacji.</p></div>`;
 }
