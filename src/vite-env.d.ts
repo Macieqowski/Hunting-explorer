@@ -10,8 +10,6 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_EMULATOR?: string;
   /** Address of the oral-exam grading service (worker/), e.g. https://polowanie-oral.example.workers.dev. Empty = self-rating only. */
   readonly VITE_ORAL_API_URL?: string;
-  /** Welcome page only: contact address shown to clubs (repository variable CONTACT_EMAIL). */
-  readonly VITE_CONTACT_EMAIL?: string;
 }
 
 interface ImportMeta {

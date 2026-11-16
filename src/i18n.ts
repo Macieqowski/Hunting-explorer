@@ -24,6 +24,8 @@ const dict = {
   moreGuideHint: { pl: 'Krok po kroku dla prowadzącego, myśliwego i naganiacza', en: 'Step by step for the leader, hunters and beaters (in Polish)' },
   moreAbout: { pl: 'O aplikacji i danych', en: 'About the app and data' },
   moreAboutHint: { pl: 'Skąd pochodzą dane, wersja, przydatne linki', en: 'Data sources, version, useful links' },
+  moreContact: { pl: 'Kontakt', en: 'Contact' },
+  moreContactHint: { pl: 'Pytania, uwagi, polowanie z aplikacją w Twoim kole', en: 'Questions, feedback, trying the app in your club' },
   moreApp: { pl: 'Aplikacja na Androida', en: 'Android app' },
   moreAppHint: { pl: 'Pobierz i zainstaluj na telefonie', en: 'Download and install on your phone' },
   sheetToggle: { pl: 'Rozwiń lub zwiń listę', en: 'Expand or collapse the list' },
