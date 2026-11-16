@@ -24,6 +24,10 @@ const PATHS = {
   download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/>',
   upload: '<path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 21h16"/>',
   wind: '<path d="M3 8h10a3 3 0 1 0-3-3"/><path d="M3 12h15a3 3 0 1 1-3 3"/><path d="M3 16h6"/>',
+  /** First aid: a cross in a rounded square (the "Wypadek" section and its SOS button). */
+  aid: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 7.500v9M7.500 12h9"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  alert: '<path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v4"/><path d="M12 17h.010" stroke-width="2.600"/>',
   // navigation
   map: '<path d="m9 4-6 2.500v13.500l6-2.500 6 2.500 6-2.500V4l-6 2.500L9 4Z"/><path d="M9 4v13.500M15 6.500V20"/>',
   users: '<circle cx="9" cy="8" r="3.500"/><path d="M2.500 20a6.500 6.500 0 0 1 13 0"/><path d="M16 4.700a3.500 3.500 0 0 1 0 6.600M18.500 14.300A6.500 6.500 0 0 1 21.500 20"/>',

@@ -15,6 +15,8 @@ describe('areas', () => {
     expect(areaOf({ kind: 'tab', tab: 'exams' })).toBe('know');
     expect(areaOf({ kind: 'tab', tab: 'about' })).toBe('more');
     expect(areaOf({ kind: 'tab', tab: 'more' })).toBe('more');
+    expect(areaOf({ kind: 'aid', page: null })).toBe('know');
+    expect(areaOf({ kind: 'aid', page: 'krwotok' })).toBe('know');
   });
 
   it('knows the pages of "Wiedza"', () => {
@@ -23,6 +25,8 @@ describe('areas', () => {
     expect(knowPageOf({ kind: 'tab', tab: 'weather' })).toBeNull();
     expect(knowView('atlas')).toEqual({ kind: 'atlas', slug: null });
     expect(knowView('seasons')).toEqual({ kind: 'tab', tab: 'seasons' });
+    expect(knowPageOf({ kind: 'aid', page: 'rko' })).toBe('aid');
+    expect(knowView('aid')).toEqual({ kind: 'aid', page: null });
   });
 });
 
@@ -40,6 +44,9 @@ describe('addresses', () => {
     { kind: 'atlas', slug: 'dzik' },
     { kind: 'district', slug: '12-mazowieckie' },
     { kind: 'club', key: 'koło łowieckie "bór"' },
+    { kind: 'aid', page: null },
+    { kind: 'aid', page: 'krwotok' },
+    { kind: 'aid', page: 'sprawdzian' },
   ];
   it('round-trips every view', () => {
     for (const v of views) expect(hashToView(viewToHash(v))).toEqual(v);
@@ -53,6 +60,13 @@ describe('addresses', () => {
     expect(hashToView('#/punkt/52.10000,21.00000')).toEqual({ kind: 'point', lat: 52.1, lng: 21 });
     expect(hashToView('')).toEqual({ kind: 'tab', tab: 'clubs' });
     expect(hashToView('#/nonsense')).toEqual({ kind: 'tab', tab: 'clubs' });
+  });
+
+  it('opens the emergency screen from the Android shortcut link, whatever follows', () => {
+    expect(hashToView('#/wypadek')).toEqual({ kind: 'aid', page: null });
+    expect(hashToView('#/wypadek/postrzal-tulowia')).toEqual({ kind: 'aid', page: 'postrzal-tulowia' });
+    expect(hashToView('#/wypadek/<script>')).toEqual({ kind: 'aid', page: null });
+    expect(viewToHash({ kind: 'aid', page: null })).toBe('#/wypadek');
   });
 
   it('does not throw on a mangled link', () => {

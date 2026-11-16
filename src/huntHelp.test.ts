@@ -37,6 +37,9 @@ describe('guides', () => {
     expect(all('hunter')).toContain('[[Strzał]]');
     expect(all('beater')).toContain('[[Prowadź mnie]]');
     expect(all('beater')).not.toContain('[[Strzał]]');
+    expect(all('leader')).toContain('[[Zatwierdź: wyślij wszystkim]]');
+    expect(all('hunter')).toContain('[[Wyślij alarm do prowadzącego]]');
+    expect(all('beater')).toContain('[[Wyślij alarm do prowadzącego]]');
   });
 
   it('escapes text and turns labels into chips', () => {

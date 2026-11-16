@@ -50,7 +50,7 @@ import { currentInvite, inviteExpiry, inviteLink, leaderPairLink, pairTokenOf, v
 import type { District } from './bdl';
 import { fetchDistrictsAtPoint } from './bdl';
 import { fold, districtSlug } from './data';
-import { createHuntMap, type HuntMap, type PersonInfo, type DriveView, type SightView, type ShotView, type RouteView, type MeetView, type SeatView } from './huntMap';
+import { createHuntMap, type HuntMap, type PersonInfo, type DriveView, type SightView, type ShotView, type RouteView, type MeetView, type SeatView, type AlarmView } from './huntMap';
 import {
   spreadRoutes,
   focusDrive,
@@ -95,6 +95,25 @@ import { GAMES, NO_SHOOTER, OUTCOMES, outOfSeason, voivodeshipOf, type Outcome, 
 import { firebaseConfig, getBackend, HuntError, type HuntBackend, type Unsubscribe } from './huntBackend';
 import { ic } from './icons';
 import { GUIDE_ROLES, GUIDE_SLUG, type GuideRole } from './nav';
+import {
+  alarmState,
+  alarmKey,
+  openAlerts,
+  pendingAlarms,
+  cleanAlarmNote,
+  kitCarriers,
+  kitOf,
+  hasAid,
+  hasTq,
+  ALARM_PRESETS,
+  ALARM_NOTE_MAX,
+  ALARM_BUZZ,
+  ALARM_POPUP_MS,
+  type Alarm,
+  type Alert,
+  type Kit,
+} from './huntAlarm';
+import type { GeoFix } from './geo';
 
 const esc = (s: unknown) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -630,6 +649,75 @@ const L = {
   guideOthers: { pl: 'Pozostałe instrukcje', en: 'Other guides' },
   guideJoin: { pl: 'Jak to działa?', en: 'How does it work?' },
   fmPendingPokot: { pl: 'Pokot zobaczysz, gdy prowadzący potwierdzi Twój udział.', en: 'You will see the bag once the leader confirms you.' },
+  // accident alarm (huntAlarm.ts) and first-aid kits
+  alarmSos: { pl: 'Wypadek', en: 'Accident' },
+  alarmSosSub: { pl: '112, pierwsza pomoc, alarm do prowadzącego', en: '112, first aid, alarm to the leader' },
+  alarmHuntOf: { pl: 'Polowanie zbiorowe', en: 'Group hunt' },
+  alarmConnecting: { pl: 'Łączę z polowaniem…', en: 'Connecting to the hunt…' },
+  alarmRaise: { pl: 'Wyślij alarm do prowadzącego', en: 'Send an alarm to the leader' },
+  alarmRaiseLead: { pl: 'Wyślij alarm wszystkim uczestnikom', en: 'Send an alarm to all participants' },
+  alarmRaiseHint: {
+    pl: 'Alarm z Twoją pozycją dostaną prowadzący i zastępcy. Gdy jeden z nich go zatwierdzi, zobaczą go wszyscy uczestnicy.',
+    en: 'The leader and the deputies get the alarm with your position. Once one of them approves it, every participant sees it.',
+  },
+  alarmRaiseLeadHint: { pl: 'Jako prowadzący lub zastępca wysyłasz alarm od razu do wszystkich uczestników.', en: 'As the leader or a deputy you send the alarm straight to every participant.' },
+  alarmConfirmQ: { pl: 'Potwierdź alarm', en: 'Confirm the alarm' },
+  alarmConfirmText: { pl: 'Wyślesz swoją pozycję:', en: 'You will send your position:' },
+  alarmNote: { pl: 'Co się stało? (nie musisz pisać)', en: 'What happened? (optional)' },
+  alarmNotePh: { pl: 'np. postrzał w udo, silny krwotok', en: 'e.g. gunshot to the thigh, heavy bleeding' },
+  alarmSend: { pl: 'Potwierdzam: wyślij alarm', en: 'Confirm: send the alarm' },
+  alarmSendAll: { pl: 'Potwierdzam: wyślij wszystkim', en: 'Confirm: send to everyone' },
+  alarmNoFix: {
+    pl: 'Czekam na położenie z GPS. Bez niego alarm nie pokaże miejsca: zadzwoń do prowadzącego.',
+    en: 'Waiting for a GPS position. Without it the alarm cannot show the place: call the leader.',
+  },
+  alarmPending: { pl: 'Alarm wysłany o {t}. Czeka na zatwierdzenie przez prowadzącego lub zastępcę.', en: 'Alarm sent at {t}. Waiting for the leader or a deputy to approve it.' },
+  alarmPendingHint: { pl: 'Dopóki go nie zatwierdzą, pozostali uczestnicy go nie widzą.', en: 'Until they approve it, the other participants do not see it.' },
+  alarmCancel: { pl: 'Odwołaj alarm', en: 'Cancel the alarm' },
+  alarmApprovedMine: { pl: '{n} zatwierdza alarm ({t}): widzą go wszyscy uczestnicy.', en: '{n} approved the alarm ({t}): every participant sees it.' },
+  alarmSentAll: { pl: 'Alarm wysłany wszystkim uczestnikom o {t}.', en: 'Alarm sent to every participant at {t}.' },
+  alarmRejectedMine: { pl: '{n} odrzuca alarm ({t}). Jeśli potrzebna jest pomoc, zadzwoń do prowadzącego.', en: '{n} rejected the alarm ({t}). If help is needed, call the leader.' },
+  alarmAgain: { pl: 'Wyślij ponownie', en: 'Send again' },
+  alarmClear: { pl: 'Usuń', en: 'Remove' },
+  alarmCallLeader: { pl: 'Zadzwoń do prowadzącego', en: 'Call the leader' },
+  alarmWaitLead: { pl: 'Alarm czeka na Twoją decyzję', en: 'An alarm waits for your decision' },
+  alarmWaitShort: { pl: 'Alarm czeka:', en: 'Alarm waiting:' },
+  alarmDecide: { pl: 'Zdecyduj', en: 'Decide' },
+  alarmFrom: { pl: 'Zgłasza', en: 'Reported by' },
+  alarmApprove: { pl: 'Zatwierdź: wyślij wszystkim', en: 'Approve: send to everyone' },
+  alarmReject: { pl: 'Odrzuć: fałszywy alarm', en: 'Reject: false alarm' },
+  alarmRejectedBy: { pl: 'Odrzucony: {n}, {t}', en: 'Rejected: {n}, {t}' },
+  alarmApproveAnyway: { pl: 'Zatwierdź jednak', en: 'Approve after all' },
+  alarmLeadOnly: { pl: 'Dopóki nie zatwierdzisz, alarm widzą tylko prowadzący i zastępcy.', en: 'Until you approve it, only the leader and the deputies see the alarm.' },
+  alarmLater: { pl: 'Zdecyduję za chwilę', en: 'Decide in a moment' },
+  alarmShow: { pl: 'Pokaż na mapie', en: 'Show on the map' },
+  alarmShowShort: { pl: 'Pokaż', en: 'Show' },
+  alarmNavigate: { pl: 'Nawiguj', en: 'Navigate' },
+  alarmAid: { pl: 'Pierwsza pomoc', en: 'First aid' },
+  alarmMineWaiting: { pl: 'Twój alarm czeka na zatwierdzenie', en: 'Your alarm waits for approval' },
+  alarmMineRejected: { pl: 'Prowadzący odrzucił Twój alarm', en: 'The leader rejected your alarm' },
+  alarmOpenAid: { pl: 'Otwórz', en: 'Open' },
+  alarmHere: { pl: 'tuż obok Ciebie', en: 'right next to you' },
+  alarmFromYou: { pl: 'od Ciebie', en: 'from you' },
+  alarmMapLabel: { pl: 'Wypadek: {n}', en: 'Accident: {n}' },
+  alarmMapPending: { pl: 'Alarm (czeka): {n}', en: 'Alarm (waiting): {n}' },
+  alertTitle: { pl: 'WYPADEK', en: 'ACCIDENT' },
+  alertWho: { pl: 'Zgłasza {n}, {t}', en: 'Reported by {n}, {t}' },
+  alertBy: { pl: 'Zatwierdza: {n}', en: 'Approved by {n}' },
+  alertDo: { pl: 'Przerwij polowanie, rozładuj broń i czekaj na polecenia prowadzącego.', en: "Stop hunting, unload your gun and wait for the leader's instructions." },
+  alertOk: { pl: 'Rozumiem', en: 'Understood' },
+  alertPresets: { pl: 'Wiadomość do wszystkich, jednym dotknięciem:', en: 'Message to everyone, one tap:' },
+  alertSent: { pl: 'Wysłano do wszystkich', en: 'Sent to everyone' },
+  alertClose: { pl: 'Zakończ alarm', en: 'End the alarm' },
+  alertCloseSure: { pl: 'Tak, zakończ alarm', en: 'Yes, end the alarm' },
+  kitNearest: { pl: 'Najbliżej z apteczką lub opaską:', en: 'Nearest with a first-aid kit or tourniquet:' },
+  kitNone: { pl: 'Nikt nie zaznaczył, że ma apteczkę lub opaskę uciskową.', en: 'Nobody has marked a first-aid kit or tourniquet.' },
+  kitMine: { pl: 'Masz przy sobie:', en: 'You carry:' },
+  kitAid: { pl: 'apteczkę', en: 'a first-aid kit' },
+  kitTq: { pl: 'opaskę uciskową', en: 'a tourniquet' },
+  kitAidShort: { pl: 'apteczka', en: 'first-aid kit' },
+  kitTqShort: { pl: 'opaska', en: 'tourniquet' },
+  kitHint: { pl: 'Przy wypadku prowadzący zobaczy, kto ma je najbliżej rannego.', en: 'In an accident the leader sees who has one nearest to the injured.' },
 } as const;
 const l = (k: keyof typeof L) => tt(L[k]);
 
@@ -851,6 +939,27 @@ let routeEdit: {
 } | null = null;
 /** Picking a point on the map for the hunt's meeting point or a carcass. */
 let pickMode: { kind: 'huntMeet' } | { kind: 'carcass'; shotId: string } | null = null;
+// ---- accident alarm and first-aid kits (see the section at the end of this file)
+/** Leader devices and deputies: everyone's alarms; the others: only their own. */
+let alarms: Alarm[] = [];
+let myAlarm: Alarm | null = null;
+let alerts: Alert[] = [];
+let kits = new Map<string, Kit>();
+let alarmUnsubs: Unsubscribe[] = [];
+/** Whether alarmUnsubs watch all alarms (as a leader) or only mine; null = not watching. */
+let alarmsLead: boolean | null = null;
+/** The reporter's confirmation step on the emergency screen is open. */
+let alarmAsk = false;
+let alarmBusy = false;
+let alarmError = '';
+/** "<alarm key>:<state>" of my alarm, to buzz when the leader decides. */
+let myAlarmSeen: string | null = null;
+let seenAlarms: Set<string> | null = null;
+let seenAlerts: Set<string> | null = null;
+/** Alarms a leader put off with "Zdecyduję za chwilę" or "Pokaż na mapie" (no sheet until asked). */
+const shelvedAlarms = new Set<string>();
+/** Centre the map here once it is on screen ("Pokaż na mapie" from another page). */
+let pendingCenter: { lat: number; lng: number } | null = null;
 /** Drive whose route guidance I turned off; carcass I asked to be guided to. */
 let guideDismissed: string | null = null;
 let guideCarcass: string | null = null;
@@ -903,7 +1012,7 @@ export function huntBack(): boolean {
  * then the field-mode list, then field mode.
  */
 export function huntPhoneBack(): boolean {
-  if (document.querySelector('#pp-root, .hmsg-sheet')) return true;
+  if (document.querySelector('#pp-root, .hmsg-sheet, .halarm-sheet')) return true;
   if (document.querySelector('.hs-sheet')) {
     closeReport();
     closeShotSheet();
@@ -1012,6 +1121,7 @@ function stopLive() {
   driveListOpen = null;
   showTracks = false;
   positions = [];
+  stopAlarms();
   clearInterval(ticker);
   ticker = undefined;
   hmap?.destroy();
@@ -1111,6 +1221,7 @@ function syncLive() {
       updateLiveText();
     }, 15_000);
   }
+  syncAlarms(id, allowed);
   // Sharing follows the hunt: only while it is live and I am confirmed.
   // (Deferred: these re-render, and syncLive runs during rendering.)
   if (sharer && sharer.huntId === id && sharer.active && (!allowed || hunt?.status !== 'live')) {
@@ -1499,9 +1610,15 @@ export function mountHuntMap() {
   drawSightings();
   drawShots();
   drawCrew();
+  drawAlarms();
   syncGuide();
   syncTracks();
   updateLiveText();
+  if (pendingCenter) {
+    m.centerOnPoint(pendingCenter.lat, pendingCenter.lng);
+    pendingCenter = null;
+    setTimeout(() => m.el.scrollIntoView({ block: 'center' }), 0);
+  }
   const body = document.querySelector('.hf-panel-body');
   if (body) body.scrollTop = fieldPanelScroll;
 }
@@ -2038,7 +2155,11 @@ function renderLive(h: Hunt, me: Participant): string {
     isLead && !drawing && !planning && (h.status === 'open' || h.status === 'closed')
       ? `<div class="h-actions h-startbar"><button type="button" class="btn" data-hunt="status" data-to="live"${btnBusy()}>${l('to_live')}</button></div>`
       : '';
-  return `${t}${isLead ? '' : errorBox()}${enter}${start}${mine}${msgs}${report}${share}${renderDrives(h, isLead)}${drawing || planning ? '' : `${isLead ? renderSeatsLeader() : ''}${renderStands(isLead)}`}
+  const sos =
+    h.status === 'live' && !remote
+      ? `<a class="h-sos" href="#/wypadek" data-nav="aid">${ic('aid', 24)}<span><strong>${l('alarmSos')}</strong><small>${l('alarmSosSub')}</small></span>${ic('chevron', 20)}</a>`
+      : '';
+  return `${t}${isLead ? '' : errorBox()}${alarmCards(isLead, remote)}${enter}${start}${sos}${mine}${msgs}${report}${share}${renderDrives(h, isLead)}${drawing || planning ? '' : `${isLead ? renderSeatsLeader() : ''}${renderStands(isLead)}`}
     <div class="hm-bar"${drawing ? ' hidden' : ''}><div class="hm-counts">${liveCounts()}</div>
       <div class="hm-tools">
         ${iShare ? `<button type="button" class="btn small ghost" data-hunt="centerMe">${ic('locate', 16)} ${l('centerMe')}</button>` : ''}
@@ -2130,9 +2251,10 @@ function renderField(h: Hunt, me: Participant, isLead: boolean): string {
       <button type="button" class="hf-exit" data-hunt="fieldOff" aria-label="${esc(l('fmExit'))}" title="${esc(l('fmExit'))}">${ic('back', 24)}</button>
       <h2>${act ? '<span class="hd-dot" aria-hidden="true"></span>' : ''}<span>${esc(title)}</span></h2>${timer}
       ${iShare ? `<button type="button" class="hf-pocket" data-hunt="pocket" title="${esc(l('pocketHint'))}">${l('fmPocket')}</button>` : ''}
+      <a class="hf-sos" href="#/wypadek" data-nav="aid" aria-label="${esc(l('alarmSos'))}: ${esc(l('alarmSosSub'))}" title="${esc(l('alarmSos'))}">${ic('aid', 26)}</a>
     </header>
     <div class="hf-info">${first}${cell('drives', l('fmDrive'), driveNo)}${loc}</div>
-    ${ask}${t}${picking}${renderMyRoute(me)}
+    ${alarmBanner(isLead)}${ask}${t}${picking}${renderMyRoute(me)}
     <div class="hf-map"><div class="hm-slot"></div>
       <button type="button" class="hf-trails${fieldTrails ? ' on' : ''}" data-hunt="fieldTrails" aria-pressed="${fieldTrails}" title="${esc(l('fmTrailsHint'))}">${ic('trail', 20)}<span>${l('fmTrails')}</span></button>
       ${iShare ? `<button type="button" class="hf-center" data-hunt="centerMe" aria-label="${esc(l('centerMe'))}" title="${esc(l('centerMe'))}">${ic('locate', 22)}</button>` : ''}
@@ -2302,6 +2424,13 @@ function renderStands(isLeader: boolean): string {
 
 /** The leader picked a KMZ/KML file: read it and put its points into this hunt. */
 export function handleHuntChange(el: HTMLElement): boolean {
+  if (el instanceof HTMLInputElement && 'huntKit' in el.dataset) {
+    const id = watched;
+    const box = el.closest('.hr-kitpick');
+    const has = (k: string) => !!box?.querySelector<HTMLInputElement>(`[data-hunt-kit="${k}"]`)?.checked;
+    if (id) run((be) => be.setKit(id, kitOf(has('a'), has('t'))));
+    return true;
+  }
   if (!(el instanceof HTMLInputElement) || !('standsFile' in el.dataset)) return false;
   const f = el.files?.[0];
   el.value = '';
@@ -2446,7 +2575,7 @@ function renderMe(me: Participant, isLeader: boolean): string {
       : `<button type="button" class="btn ghost" data-hunt="askWithdraw">${l('withdraw')}</button>`;
   return `<div class="notice h-me">${roleIcon(me.role, 22)}<div><strong>${l('youAre')} ${l(`r_${me.role}`).toLocaleLowerCase(locale())}</strong>
       ${me.status === 'registered' ? `<br><span class="small">${l('youPending')}</span>` : ''}</div>
-      ${withdraw ? `<div class="h-actions">${withdraw}</div>` : ''}</div>${me.status === 'confirmed' ? renderPhone() : ''}${!isLeader ? errorBox() : ''}`;
+      ${withdraw ? `<div class="h-actions">${withdraw}</div>` : ''}</div>${me.status === 'confirmed' ? `${renderPhone()}${renderKit()}` : ''}${!isLeader ? errorBox() : ''}`;
 }
 
 function renderInvite(h: Hunt): string {
@@ -2588,7 +2717,7 @@ function renderMembers(uid: string, isLeader: boolean): string {
     const carries = myCarcassKinds(transport, p.uid);
     const ph = phones.get(p.uid);
     return `<li class="h-person${p.status === 'registered' ? ' pending' : ''}">${roleIcon(p.role)}
-      <span class="h-pname">${esc(p.name)}${p.uid === uid ? ` <span class="muted">(${l('you')})</span>` : ''}${deputy ? ` <span class="hr-badge">${roleIcon('leader', 12)} ${l('deputyBadge')}</span>` : ''}${seat ? ` <span class="hr-badge" title="${esc(l('seat'))}">${standIcon('zwyzka', false, 12)} ${esc(seat)}</span>` : ''}${carries.length ? ` <span class="hr-badge hr-badge-tr">${esc(carries.map(kindName).join(', '))}</span>` : ''}
+      <span class="h-pname">${esc(p.name)}${p.uid === uid ? ` <span class="muted">(${l('you')})</span>` : ''}${deputy ? ` <span class="hr-badge">${roleIcon('leader', 12)} ${l('deputyBadge')}</span>` : ''}${seat ? ` <span class="hr-badge" title="${esc(l('seat'))}">${standIcon('zwyzka', false, 12)} ${esc(seat)}</span>` : ''}${carries.length ? ` <span class="hr-badge hr-badge-tr">${esc(carries.map(kindName).join(', '))}</span>` : ''}${kitBadge(p.uid)}
         ${p.status === 'registered' ? `<small class="muted">${l('pending')}</small>` : ''}${ph && p.uid !== uid ? `<small>${telLink(ph)}</small>` : ''}</span>
       ${controls ? `<span class="h-pctl">${controls}</span>` : ''}</li>`;
   };
@@ -3162,6 +3291,44 @@ export function handleHuntClick(el: HTMLElement): boolean {
     case 'htab':
       htab = el.dataset.pane as HTab;
       break;
+    case 'alarmApprove': {
+      const a = alarms.find((x) => x.uid === uid);
+      if (id && a) run((be) => be.approveAlarm(id, a));
+      return true;
+    }
+    case 'alarmReject':
+      if (id && uid) run((be) => be.rejectAlarm(id, uid));
+      return true;
+    case 'alarmShow': {
+      const p = el.dataset.kind === 'alert' ? alerts.find((x) => x.uid === uid) : alarms.find((x) => x.uid === uid);
+      if (p) showAlarmOnMap(p);
+      return true;
+    }
+    case 'alarmOpen': {
+      const a = alarms.find((x) => x.uid === uid);
+      if (a) shelvedAlarms.delete(alarmKey(a));
+      syncAlarmSheet();
+      return true;
+    }
+    case 'alarmCancelMine':
+      if (id) run((be) => be.cancelAlarm(id));
+      return true;
+    case 'alarmPreset': {
+      const text = ALARM_PRESETS[+el.dataset.i!];
+      if (id && text)
+        run(async (be) => {
+          await be.sendMessage(id, text, 'all');
+          showToast(l('alertSent'), undefined, 'sight', 4000);
+        });
+      return true;
+    }
+    case 'alertAskClose':
+      confirming = `alert:${uid}`;
+      break;
+    case 'alertClose':
+      confirming = null;
+      if (id && uid) run((be) => be.closeAlert(id, uid));
+      return true;
     case 'fieldOn':
       tick();
       setFieldMode(true);
@@ -4082,5 +4249,519 @@ export function handleHuntSubmit(form: HTMLFormElement): boolean {
       watchMembers(id);
     }, token ? 'errInvite' : 'errDeniedJoin');
   }
+  return true;
+}
+
+// ---------------------------------------------------------------- accident alarm and first-aid kits
+//
+// Anyone confirmed raises an alarm on the emergency screen (#/wypadek, aidUi.ts), after
+// confirming it there. It reaches the leader's devices and the deputies first: a sheet over
+// whatever is on screen, and a card on the hunt page. Only when one of them approves it does it
+// reach every participant (Maciej's decision, 16.11.2026: nothing goes to everyone without that).
+// An alarm raised by a leader device or a deputy is approved at once.
+
+/** "{n} …{t}" filled in. */
+const fill = (s: string, v: Record<string, string>) => s.replace(/\{(\w+)\}/g, (m, k: string) => v[k] ?? m);
+/** A participant's name, or the leader's for a leader device that is not on the list. */
+const nameOf = (uid: string) => members?.find((p) => p.uid === uid)?.name ?? (hunt && isLeaderDevice(hunt, uid) ? hunt.leaderName : '?');
+const kitShort = (k: Kit) => [hasAid(k) && l('kitAidShort'), hasTq(k) && l('kitTqShort')].filter(Boolean).join(' + ');
+const kitBadge = (uid: string) => {
+  const k = kits.get(uid);
+  return k ? ` <span class="hr-badge hr-kit">${ic('aid', 12)} ${esc(kitShort(k))}</span>` : '';
+};
+
+function stopAlarms() {
+  alarmUnsubs.forEach((u) => u());
+  alarmUnsubs = [];
+  alarmsLead = null;
+  alarms = [];
+  myAlarm = null;
+  myAlarmSeen = null;
+  alerts = [];
+  kits = new Map();
+  seenAlarms = null;
+  seenAlerts = null;
+  alarmAsk = false;
+  alarmBusy = false;
+  alarmError = '';
+  closeAlarmSheet();
+}
+
+/** Alarms, alerts and kits are read by the same people as positions; a new deputy starts seeing all alarms. */
+function syncAlarms(id: string | null, allowed: boolean) {
+  if (!allowed || !id || !hunt || conn.s !== 'ready') {
+    if (alarmUnsubs.length) stopAlarms();
+    return;
+  }
+  const be = conn.be;
+  const lead = leads(hunt, be.uid);
+  if (alarmUnsubs.length && alarmsLead === lead) return;
+  alarmUnsubs.forEach((u) => u());
+  alarmsLead = lead;
+  seenAlarms = null;
+  alarmUnsubs = [
+    lead
+      ? be.watchAlarms(
+          id,
+          (as) => {
+            alarms = as;
+            myAlarm = as.find((a) => a.uid === be.uid) ?? null;
+            onAlarms();
+          },
+          () => {},
+        )
+      : be.watchMyAlarm(
+          id,
+          (a) => {
+            myAlarm = a;
+            alarms = a ? [a] : [];
+            onAlarms();
+          },
+          () => {},
+        ),
+    be.watchAlerts(
+      id,
+      (as) => {
+        alerts = as;
+        onAlerts();
+      },
+      () => {},
+    ),
+    be.watchKits(
+      id,
+      (k) => {
+        kits = k;
+        rerender();
+      },
+      () => {},
+    ),
+  ];
+}
+
+function onAlarms() {
+  const me = myUid();
+  if (alarmsLead) {
+    const pend = pendingAlarms(alarms, me);
+    // The first reading after opening the app does not buzz; the sheet still shows (syncAlarmSheet).
+    const fresh = seenAlarms ? pend.filter((a) => !seenAlarms!.has(alarmKey(a))) : [];
+    seenAlarms ??= new Set();
+    pend.forEach((a) => seenAlarms!.add(alarmKey(a)));
+    if (fresh.length) alertUser(l('alarmWaitLead'), fresh.map((a) => `${nameOf(a.uid)}${a.note ? `: ${a.note}` : ''}`).join('\n'), ALARM_BUZZ);
+  }
+  // The reporter feels it when the leader decides.
+  const k = myAlarm ? `${alarmKey(myAlarm)}:${alarmState(myAlarm)}` : null;
+  if (myAlarm && myAlarmSeen === `${alarmKey(myAlarm)}:pending` && k !== myAlarmSeen && myAlarm.approvedBy !== me) vibrate(alarmState(myAlarm) === 'approved' ? [300, 100, 300] : [900], true);
+  myAlarmSeen = k;
+  syncAlarmSheet();
+  drawAlarms();
+  rerender();
+}
+
+function onAlerts() {
+  const me = myUid();
+  const open = openAlerts(alerts);
+  const fresh = seenAlerts ? open.filter((a) => !seenAlerts!.has(alarmKey(a))) : [];
+  seenAlerts ??= new Set();
+  open.forEach((a) => seenAlerts!.add(alarmKey(a)));
+  // Not for whoever approved it or raised it: they know.
+  const loud = fresh.filter((a) => a.by !== me && a.uid !== me);
+  if (loud.length) alertUser(l('alertTitle'), loud.map((a) => `${nameOf(a.uid)}${a.note ? `: ${a.note}` : ''}`).join('\n'), ALARM_BUZZ);
+  syncAlarmSheet();
+  drawAlarms();
+  rerender();
+  updatePocket();
+}
+
+// ---- the sheet over the screen: a leader's decision first, then an alert for everyone
+
+let alarmSheet: HTMLElement | null = null;
+let alarmSheetKey: string | null = null;
+const SEEN_ALERTS_KEY = 'huntAlertsSeen';
+
+function dismissedAlerts(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(SEEN_ALERTS_KEY) ?? '[]') as string[]);
+  } catch {
+    return new Set();
+  }
+}
+function dismissAlert(a: Alert) {
+  try {
+    const list = [...dismissedAlerts(), alarmKey(a)].slice(-30);
+    localStorage.setItem(SEEN_ALERTS_KEY, JSON.stringify(list));
+  } catch {
+    /* no storage: it comes back after a reload */
+  }
+}
+
+function closeAlarmSheet() {
+  alarmSheet?.remove();
+  alarmSheet = null;
+  alarmSheetKey = null;
+}
+
+function syncAlarmSheet() {
+  const me = myUid();
+  const t = now();
+  const lead = alarmsLead ? pendingAlarms(alarms, me).find((a) => t - a.ts < ALARM_POPUP_MS && !shelvedAlarms.has(alarmKey(a))) : undefined;
+  if (lead) {
+    if (alarmSheetKey !== `lead:${alarmKey(lead)}`) openAlarmSheet('lead', lead);
+    return;
+  }
+  const seen = dismissedAlerts();
+  const al = openAlerts(alerts).find((a) => a.by !== me && a.uid !== me && t - a.at < ALARM_POPUP_MS && !seen.has(alarmKey(a)));
+  if (al) {
+    if (alarmSheetKey !== `alert:${alarmKey(al)}`) openAlarmSheet('alert', al);
+    return;
+  }
+  closeAlarmSheet();
+}
+
+/** "350 m NE od Ciebie", from my last known position. */
+function whereFrom(p: Pt): string {
+  const from = myPos();
+  if (!from) return '';
+  const d = distanceM(from, p);
+  return d < 25 ? l('alarmHere') : `${fmtDist(d)} ${compassPoint(bearingTo(from, p))} ${l('alarmFromYou')}`;
+}
+
+const callBtn = (uid: string, label: string, cls = 'btn ghost') => {
+  const ph = phones.get(uid);
+  return ph && uid !== myUid() ? `<a class="${cls}" href="tel:${esc(ph)}">${ic('phone', 18)} ${esc(label)}</a>` : '';
+};
+
+function openAlarmSheet(kind: 'lead' | 'alert', a: Alarm | Alert) {
+  closeAlarmSheet();
+  const el = document.createElement('div');
+  el.className = `halarm-sheet${kind === 'alert' ? ' alert' : ''}`;
+  el.setAttribute('role', 'alertdialog');
+  el.setAttribute('aria-modal', 'true');
+  el.setAttribute('aria-label', l(kind === 'lead' ? 'alarmWaitLead' : 'alertTitle'));
+  const where = whereFrom(a);
+  const note = a.note ? `<p class="halarm-note">„${esc(a.note)}”</p>` : '';
+  const call = callBtn(a.uid, `${l('call')}: ${nameOf(a.uid)}`);
+  el.innerHTML =
+    kind === 'lead'
+      ? `<div class="halarm-box"><p class="halarm-h">${ic('aid', 28)} ${l('alarmWaitLead')}</p>
+        <p class="halarm-who">${l('alarmFrom')}: <strong>${esc(nameOf(a.uid))}</strong> · ${clock(a.ts)}${where ? `<br>${esc(where)}` : ''}</p>${note}
+        <button type="button" class="btn danger halarm-main" data-alarm="approve">${l('alarmApprove')}</button>
+        <div class="halarm-row"><button type="button" class="btn ghost" data-alarm="show">${ic('pin', 18)} ${l('alarmShow')}</button>${call}</div>
+        <button type="button" class="btn ghost" data-alarm="reject">${l('alarmReject')}</button>
+        <p class="small halarm-muted">${l('alarmLeadOnly')}</p>
+        <p class="h-error halarm-err" role="alert" hidden></p>
+        <button type="button" class="btn ghost small halarm-later" data-alarm="later">${l('alarmLater')}</button></div>`
+      : `<div class="halarm-box"><p class="halarm-h">${ic('aid', 28)} ${l('alertTitle')}</p>
+        <p class="halarm-who">${esc(fill(l('alertWho'), { n: nameOf(a.uid), t: clock(a.ts) }))}${where ? `<br><strong>${esc(where)}</strong>` : ''}</p>${note}
+        <p class="halarm-do">${l('alertDo')}</p>
+        <div class="halarm-row"><button type="button" class="btn ghost" data-alarm="show">${ic('pin', 18)} ${l('alarmShow')}</button>
+          <a class="btn ghost" href="${esc(mapsLink(a))}" target="_blank" rel="noopener">${ic('navigate', 18)} ${l('alarmNavigate')}</a>
+          <button type="button" class="btn ghost" data-alarm="aid">${ic('aid', 18)} ${l('alarmAid')}</button>${call}</div>
+        <button type="button" class="btn halarm-main" data-alarm="ok">${l('alertOk')}</button></div>`;
+  el.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-alarm]');
+    if (b) onAlarmSheetClick(kind, a, b);
+  });
+  document.body.append(el);
+  alarmSheet = el;
+  alarmSheetKey = `${kind}:${alarmKey(a)}`;
+}
+
+function onAlarmSheetClick(kind: 'lead' | 'alert', a: Alarm | Alert, b: HTMLElement) {
+  const id = watched;
+  switch (b.dataset.alarm) {
+    case 'approve':
+    case 'reject': {
+      if (!id || conn.s !== 'ready') return;
+      const be = conn.be;
+      const err = alarmSheet?.querySelector<HTMLElement>('.halarm-err');
+      alarmSheet?.querySelectorAll('button').forEach((x) => x.setAttribute('disabled', ''));
+      (b.dataset.alarm === 'approve' ? be.approveAlarm(id, a as Alarm) : be.rejectAlarm(id, a.uid)).then(
+        () => {
+          // The new state arrives with the alarm and moves the sheet on; this is for a slow echo.
+          shelvedAlarms.add(alarmKey(a));
+          syncAlarmSheet();
+        },
+        (e) => {
+          alarmSheet?.querySelectorAll('button').forEach((x) => x.removeAttribute('disabled'));
+          if (err) {
+            err.textContent = errText(e);
+            err.hidden = false;
+          }
+        },
+      );
+      return;
+    }
+    case 'later':
+      shelvedAlarms.add(alarmKey(a));
+      syncAlarmSheet();
+      rerender();
+      return;
+    case 'ok':
+      dismissAlert(a as Alert);
+      syncAlarmSheet();
+      return;
+    case 'show':
+      if (kind === 'lead') shelvedAlarms.add(alarmKey(a));
+      else dismissAlert(a as Alert);
+      closeAlarmSheet();
+      showAlarmOnMap(a);
+      return;
+    case 'aid':
+      dismissAlert(a as Alert);
+      closeAlarmSheet();
+      location.hash = '#/wypadek';
+      return;
+  }
+}
+
+/** The hunt page's map, centred on the alarm (from any page). */
+function showAlarmOnMap(p: Pt) {
+  const id = watched;
+  if (!id) return;
+  htab = 'field';
+  fieldPanel = null;
+  if (hmap && document.contains(hmap.el)) {
+    hmap.centerOnPoint(p.lat, p.lng);
+    hmap.el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    rerender();
+    return;
+  }
+  pendingCenter = { lat: p.lat, lng: p.lng };
+  go(id);
+}
+
+function drawAlarms() {
+  if (!hmap) return;
+  const open = openAlerts(alerts);
+  const views: AlarmView[] = open.map((a) => ({ lat: a.lat, lng: a.lng, approved: true, label: fill(l('alarmMapLabel'), { n: nameOf(a.uid) }) }));
+  for (const a of alarms)
+    if (alarmState(a) === 'pending' && !open.some((x) => x.uid === a.uid))
+      views.push({ lat: a.lat, lng: a.lng, approved: false, label: fill(l('alarmMapPending'), { n: nameOf(a.uid) }) });
+  hmap.setAlarms(views);
+}
+
+// ---- cards on the hunt page and the emergency screen
+
+/** Who has a kit or a tourniquet, nearest to the injured first. */
+function kitsNear(at: Pt, exclude: string): string {
+  const ppl = (members ?? []).filter((p) => p.status === 'confirmed' && p.uid !== exclude);
+  const list = kitCarriers(kits, ppl, new Map(positions.map((p) => [p.uid, p])), at).slice(0, 4);
+  if (!list.length) return `<p class="small muted">${l('kitNone')}</p>`;
+  return `<p class="small halarm-kits-h">${l('kitNearest')}</p><ul class="halarm-kits">${list
+    .map(
+      ({ person, kit, dist }) =>
+        `<li><span>${esc(person.name)} <span class="hr-badge hr-kit">${ic('aid', 12)} ${esc(kitShort(kit))}</span>${dist != null ? ` · ${fmtDist(dist)}` : ''}</span>${
+          phones.get(person.uid) ? telLink(phones.get(person.uid)!) : ''
+        }</li>`,
+    )
+    .join('')}</ul>`;
+}
+
+/** An alarm waiting for a leader's decision. */
+function leadAlarmHtml(a: Alarm): string {
+  const where = whereFrom(a);
+  return `<section class="halarm-card wait" role="alert"><p class="halarm-h">${ic('aid', 22)} ${l('alarmWaitLead')}</p>
+    <p>${l('alarmFrom')}: <strong>${esc(nameOf(a.uid))}</strong> · ${clock(a.ts)}${where ? ` · ${esc(where)}` : ''}</p>
+    ${a.note ? `<p class="halarm-note">„${esc(a.note)}”</p>` : ''}
+    <div class="h-actions"><button type="button" class="btn danger" data-hunt="alarmApprove" data-uid="${esc(a.uid)}"${btnBusy()}>${l('alarmApprove')}</button>
+      <button type="button" class="btn ghost" data-hunt="alarmShow" data-uid="${esc(a.uid)}">${ic('pin', 16)} ${l('alarmShow')}</button>
+      ${callBtn(a.uid, l('call'), 'btn ghost')}
+      <button type="button" class="btn ghost" data-hunt="alarmReject" data-uid="${esc(a.uid)}"${btnBusy()}>${l('alarmReject')}</button></div>
+    <p class="small muted">${l('alarmLeadOnly')}</p></section>`;
+}
+
+/** A rejected alarm stays in sight of the leaders for an hour, in case it was a mistake. */
+function rejectedHtml(a: Alarm): string {
+  return `<section class="halarm-card off"><p class="small">${ic('aid', 16)} ${l('alarmFrom')}: <strong>${esc(nameOf(a.uid))}</strong> · ${clock(a.ts)} · ${esc(
+    fill(l('alarmRejectedBy'), { n: nameOf(a.rejectedBy ?? ''), t: clock(a.rejectedAt ?? a.ts) }),
+  )}</p>
+    <div class="h-actions"><button type="button" class="btn small ghost" data-hunt="alarmApprove" data-uid="${esc(a.uid)}"${btnBusy()}>${l('alarmApproveAnyway')}</button></div></section>`;
+}
+
+/** An approved alarm: everyone sees it; leaders also send the ready-made messages and end it. */
+function alertHtml(a: Alert, isLead: boolean): string {
+  const where = whereFrom(a);
+  const lead = isLead
+    ? `<p class="small halarm-kits-h">${l('alertPresets')}</p><div class="hmsg-presets halarm-presets">${ALARM_PRESETS.map(
+        (p, i) => `<button type="button" class="btn small ghost" data-hunt="alarmPreset" data-i="${i}"${btnBusy()}>${esc(p)}</button>`,
+      ).join('')}</div>
+      <div class="h-actions">${
+        confirming === `alert:${a.uid}`
+          ? `<button type="button" class="btn small danger" data-hunt="alertClose" data-uid="${esc(a.uid)}"${btnBusy()}>${l('alertCloseSure')}</button>
+             <button type="button" class="btn small ghost" data-hunt="unconfirm">${l('cancel')}</button>`
+          : `<button type="button" class="btn small ghost" data-hunt="alertAskClose" data-uid="${esc(a.uid)}">${l('alertClose')}</button>`
+      }</div>`
+    : '';
+  return `<section class="halarm-card" role="alert"><p class="halarm-h">${ic('aid', 22)} ${l('alertTitle')}</p>
+    <p>${esc(fill(l('alertWho'), { n: a.uid === myUid() ? l('you') : nameOf(a.uid), t: clock(a.ts) }))}${where ? ` · <strong>${esc(where)}</strong>` : ''}</p>
+    ${a.note ? `<p class="halarm-note">„${esc(a.note)}”</p>` : ''}
+    <p class="small muted">${esc(fill(l('alertBy'), { n: nameOf(a.by) }))}, ${clock(a.at)}</p>
+    <div class="h-actions"><button type="button" class="btn small" data-hunt="alarmShow" data-uid="${esc(a.uid)}" data-kind="alert">${ic('pin', 16)} ${l('alarmShow')}</button>
+      <a class="btn small ghost" href="${esc(mapsLink(a))}" target="_blank" rel="noopener">${ic('navigate', 16)} ${l('alarmNavigate')}</a>
+      <a class="btn small ghost" href="#/wypadek" data-nav="aid">${ic('aid', 16)} ${l('alarmAid')}</a>
+      ${callBtn(a.uid, l('call'), 'btn small ghost')}</div>
+    ${kitsNear(a, a.uid)}${lead}</section>`;
+}
+
+/** My own alarm on the hunt page (the emergency screen has the full version). */
+function myAlarmLine(): string {
+  const a = myAlarm;
+  if (!a || alarmState(a) === 'approved') return '';
+  const rejected = alarmState(a) === 'rejected';
+  return `<div class="halarm-card ${rejected ? 'off' : 'wait'}" role="status"><p>${ic('aid', 18)} <strong>${l(rejected ? 'alarmMineRejected' : 'alarmMineWaiting')}</strong> · ${clock(a.ts)}</p>
+    <div class="h-actions"><a class="btn small" href="#/wypadek" data-nav="aid">${l('alarmSos')}</a>
+    <button type="button" class="btn small ghost" data-hunt="alarmCancelMine"${btnBusy()}>${l(rejected ? 'alarmClear' : 'alarmCancel')}</button></div></div>`;
+}
+
+/** Everything about alarms at the top of the hunt page's "Teren". */
+function alarmCards(isLead: boolean, remote = false): string {
+  const me = myUid();
+  const t = now();
+  const out: string[] = [];
+  if (isLead) {
+    for (const a of pendingAlarms(alarms, me)) out.push(leadAlarmHtml(a));
+    for (const a of alarms) if (a.uid !== me && alarmState(a) === 'rejected' && t - (a.rejectedAt ?? 0) < 3600e3) out.push(rejectedHtml(a));
+  }
+  for (const a of openAlerts(alerts)) out.push(alertHtml(a, isLead));
+  if (!remote) out.push(myAlarmLine());
+  return out.join('');
+}
+
+/** Field mode: one line per alarm above the map. */
+function alarmBanner(isLead: boolean): string {
+  const out: string[] = [];
+  if (isLead)
+    for (const a of pendingAlarms(alarms, myUid()))
+      out.push(`<div class="hf-alarm wait" role="alert">${ic('aid', 20)}<span><b>${l('alarmWaitShort')}</b> ${esc(nameOf(a.uid))}${whereFrom(a) ? ` · ${esc(whereFrom(a))}` : ''}</span>
+        <button type="button" class="btn small" data-hunt="alarmOpen" data-uid="${esc(a.uid)}">${l('alarmDecide')}</button></div>`);
+  for (const a of openAlerts(alerts))
+    out.push(`<div class="hf-alarm" role="alert">${ic('aid', 20)}<span><b>${l('alertTitle')}</b> ${esc(a.uid === myUid() ? l('you') : nameOf(a.uid))}${whereFrom(a) ? ` · ${esc(whereFrom(a))}` : ''}</span>
+      <button type="button" class="btn small" data-hunt="alarmShow" data-uid="${esc(a.uid)}" data-kind="alert">${l('alarmShowShort')}</button></div>`);
+  if (myAlarm && alarmState(myAlarm) !== 'approved')
+    out.push(`<div class="hf-alarm wait" role="status">${ic('aid', 20)}<span>${l(alarmState(myAlarm) === 'rejected' ? 'alarmMineRejected' : 'alarmMineWaiting')}</span>
+      <a class="btn small" href="#/wypadek" data-nav="aid">${l('alarmOpenAid')}</a></div>`);
+  return out.join('');
+}
+
+/** "Masz przy sobie: apteczkę, opaskę uciskową" under "Ty jesteś…". */
+function renderKit(): string {
+  const k = kits.get(myUid());
+  return `<div class="small hr-kitpick"><span>${ic('aid', 16)} ${l('kitMine')}</span>
+    <label><input type="checkbox" data-hunt-kit="a"${hasAid(k) ? ' checked' : ''}${btnBusy()} /> ${l('kitAid')}</label>
+    <label><input type="checkbox" data-hunt-kit="t"${hasTq(k) ? ' checked' : ''}${btnBusy()} /> ${l('kitTq')}</label>
+    <span class="muted hr-kithint">${l('kitHint')}</span></div>`;
+}
+
+// ---- the emergency screen (aidUi.ts) asks the hunt for its part
+
+/**
+ * The emergency screen opened without the hunt page (the Android shortcut, a cold start): connect
+ * to the hunt this phone was sharing its position in or had field mode on, so alarms work there too.
+ */
+export function aidHuntWake(live: () => void, goHunt: (id: string | null) => void): void {
+  rerender = live;
+  go = goHunt;
+  if (!firebaseConfig()) return;
+  if (!watched) {
+    const id = rememberedSharing() ?? rememberedField();
+    if (id) setRoute(id);
+  }
+  if (watched) connect();
+}
+
+/** The hunt part of the emergency screen: send an alarm, its state, alarms of others. Empty outside a hunt. */
+export function aidHuntBox(fix: GeoFix | null): string {
+  if (!watched || !firebaseConfig() || conn.s === 'error') return '';
+  if (conn.s !== 'ready' || hunt === undefined || !membersLoaded) return `<p class="muted small aid-hunt-wait">${l('alarmConnecting')}</p>`;
+  const h = hunt;
+  if (!h || h.status === 'ended') return '';
+  const uid = myUid();
+  const isLead = leads(h, uid);
+  const me = members?.find((p) => p.uid === uid);
+  const remote = isLead && !me;
+  if (!remote && me?.status !== 'confirmed') return '';
+  syncLive();
+  const leaderCall = isLead ? '' : callBtn(h.leaderUid, l('alarmCallLeader'), 'btn small ghost');
+  return `<section class="aid-huntbox"><p class="aid-huntbox-h">${roleIcon(me?.role ?? 'leader', 18)} ${l('alarmHuntOf')}:
+      <a href="#/polowanie/${esc(encodeURIComponent(h.id))}" data-nav="huntPage" data-id="${esc(h.id)}">${esc(h.name)}</a></p>
+    ${remote ? '' : raiseHtml(fix, isLead, leaderCall)}${alarmCards(isLead, true)}</section>`;
+}
+
+function raiseHtml(fix: GeoFix | null, isLead: boolean, call: string): string {
+  const a = myAlarm;
+  const st = a ? alarmState(a) : null;
+  const err = alarmError ? `<p class="h-error" role="alert">${esc(alarmError)}</p>` : '';
+  if (a && st === 'pending')
+    return `<div class="aid-alarm wait" role="status"><p><strong>${esc(fill(l('alarmPending'), { t: clock(a.ts) }))}</strong></p><p class="small">${l('alarmPendingHint')}</p>
+      <div class="h-actions">${call}<button type="button" class="btn small ghost" data-aid="alarmCancel">${l('alarmCancel')}</button></div>${err}</div>`;
+  if (a && st === 'approved')
+    return `<div class="aid-alarm ok" role="status"><p>${ic('check', 18)} ${esc(
+      a.approvedBy === myUid() ? fill(l('alarmSentAll'), { t: clock(a.ts) }) : fill(l('alarmApprovedMine'), { n: nameOf(a.approvedBy ?? ''), t: clock(a.approvedAt ?? a.ts) }),
+    )}</p></div>`;
+  if (a && st === 'rejected')
+    return `<div class="aid-alarm off" role="status"><p>${esc(fill(l('alarmRejectedMine'), { n: nameOf(a.rejectedBy ?? ''), t: clock(a.rejectedAt ?? a.ts) }))}</p>
+      <div class="h-actions">${call}<button type="button" class="btn small danger" data-aid="alarmAsk">${l('alarmAgain')}</button>
+      <button type="button" class="btn small ghost" data-aid="alarmCancel">${l('alarmClear')}</button></div>${err}</div>`;
+  if (!alarmAsk)
+    return `<button type="button" class="btn danger aid-alarm-btn" data-aid="alarmAsk">${ic('alert', 22)} ${l(isLead ? 'alarmRaiseLead' : 'alarmRaise')}</button>
+      <p class="small muted">${l(isLead ? 'alarmRaiseLeadHint' : 'alarmRaiseHint')}</p>${call ? `<div class="h-actions">${call}</div>` : ''}`;
+  const p = fix ?? myPos();
+  const acc = fix?.acc != null ? ` (±${Math.round(fix.acc)} m)` : '';
+  return `<div class="aid-alarm ask"><p class="aid-alarm-q">${l('alarmConfirmQ')}</p>
+    ${p ? `<p class="small">${l('alarmConfirmText')} <strong>${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</strong>${acc}</p>` : `<p class="small aid-geo-bad">${l('alarmNoFix')}</p>`}
+    <label class="h-field"><span>${l('alarmNote')}</span><input name="alarmNote" maxlength="${ALARM_NOTE_MAX}" autocomplete="off" placeholder="${esc(l('alarmNotePh'))}" value="${esc(draft.get('alarm.alarmNote') ?? '')}" data-hunt-field="alarm" /></label>
+    <div class="h-actions"><button type="button" class="btn danger" data-aid="alarmSend"${p && !alarmBusy ? '' : ' disabled'}>${l(isLead ? 'alarmSendAll' : 'alarmSend')}</button>
+      <button type="button" class="btn ghost" data-aid="alarmNo">${l('cancel')}</button>${call}</div>${err}</div>`;
+}
+
+/** Clicks on the emergency screen's hunt part. `fix` is the screen's own GPS position. */
+export function handleAidHuntClick(el: HTMLElement, fix: GeoFix | null): boolean {
+  const id = watched;
+  switch (el.dataset.aid) {
+    case 'alarmAsk':
+      alarmAsk = true;
+      alarmError = '';
+      break;
+    case 'alarmNo':
+      alarmAsk = false;
+      alarmError = '';
+      draft.delete('alarm.alarmNote');
+      break;
+    case 'alarmSend': {
+      const pos = myPos();
+      const p = fix ? { lat: fix.lat, lng: fix.lng, acc: fix.acc } : pos ? { lat: pos.lat, lng: pos.lng, acc: null } : null;
+      if (!id || !p || !hunt || conn.s !== 'ready' || alarmBusy) return true;
+      const input = document.querySelector<HTMLInputElement>('[name="alarmNote"]');
+      const note = cleanAlarmNote(input?.value ?? draft.get('alarm.alarmNote') ?? '');
+      alarmBusy = true;
+      alarmError = '';
+      vibrate(200);
+      conn.be.raiseAlarm(id, p, note, leads(hunt, conn.be.uid)).then(
+        () => {
+          alarmBusy = false;
+          alarmAsk = false;
+          draft.delete('alarm.alarmNote');
+          rerender();
+        },
+        (e) => {
+          alarmBusy = false;
+          alarmError = errText(e);
+          rerender();
+        },
+      );
+      break;
+    }
+    case 'alarmCancel':
+      if (id && conn.s === 'ready')
+        conn.be.cancelAlarm(id).catch((e) => {
+          alarmError = errText(e);
+          rerender();
+        });
+      alarmAsk = false;
+      break;
+    default:
+      return false;
+  }
+  rerender();
   return true;
 }

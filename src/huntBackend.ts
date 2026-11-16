@@ -6,6 +6,7 @@ import type { Shot, ShotInput, ShotSpot } from './pokot';
 import type { Stand } from './stands';
 import type { Invite } from './invite';
 import type { CarcassMark, Message, MsgTo, Pt, Route, Transport } from './huntCrew';
+import type { Alarm, Alert, Kit } from './huntAlarm';
 import type { Drive, DriveInput, Sighting, SightingInput, Hunt, HuntInput, HuntStatus, Participant, Position, Role, TrackPoint } from './hunt';
 
 export type Unsubscribe = () => void;
@@ -138,6 +139,30 @@ export interface HuntBackend {
   watchCarcasses(id: string, cb: (m: Map<string, CarcassMark>) => void, onDenied: () => void): Unsubscribe;
   moveCarcass(id: string, shotId: string, at: Pt): Promise<void>;
   pickCarcass(id: string, shotId: string, picked: boolean): Promise<void>;
+
+  // ---- accident alarm and first-aid kits (see huntAlarm.ts)
+  /** Leader devices and deputies: every alarm of the hunt, newest first. */
+  watchAlarms(id: string, cb: (as: Alarm[]) => void, onDenied: () => void): Unsubscribe;
+  /** My own alarm (null when there is none). */
+  watchMyAlarm(id: string, cb: (a: Alarm | null) => void, onDenied: () => void): Unsubscribe;
+  /**
+   * Raise an alarm at `fix`. A leader device or deputy (`lead`) approves it in the same write, so
+   * it reaches everyone at once; anyone else's waits for a leader device or a deputy.
+   */
+  raiseAlarm(id: string, fix: { lat: number; lng: number; acc: number | null }, note: string, lead: boolean): Promise<void>;
+  /** Withdraw my alarm (an approved one stays with the others until the leader closes it). */
+  cancelAlarm(id: string): Promise<void>;
+  /** Leader devices and deputies: send the alarm on to everyone. */
+  approveAlarm(id: string, a: Alarm): Promise<void>;
+  rejectAlarm(id: string, uid: string): Promise<void>;
+  /** Approved alarms, seen by every confirmed participant. */
+  watchAlerts(id: string, cb: (as: Alert[]) => void, onDenied: () => void): Unsubscribe;
+  /** Leader devices and deputies: the accident is dealt with. */
+  closeAlert(id: string, uid: string): Promise<void>;
+  /** Who carries a first-aid kit or a tourniquet. */
+  watchKits(id: string, cb: (k: Map<string, Kit>) => void, onDenied: () => void): Unsubscribe;
+  /** Mine; null removes it. */
+  setKit(id: string, kit: Kit | null): Promise<void>;
 }
 
 /** Errors the UI explains in words. */

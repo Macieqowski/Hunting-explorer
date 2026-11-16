@@ -532,6 +532,99 @@
         }
       }
     },
+    "alarms": {
+      "$h": {
+        ".read": "auth != null && (root.child('hunts/' + $h + '/leaderUid').val() === auth.uid || root.child('hunts/' + $h + '/leaders/' + auth.uid).isString())",
+        ".write": "auth != null && !newData.exists() && (root.child('hunts/' + $h + '/leaderUid').val() === auth.uid || root.child('hunts/' + $h + '/leaders/' + auth.uid).isString())",
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && ((root.child('hunts/' + $h + '/leaderUid').val() === auth.uid || root.child('hunts/' + $h + '/leaders/' + auth.uid).isString()) || (auth.uid === $uid && (!newData.exists() || (root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed' && root.child('hunts/' + $h + '/status').val().matches(/^(open|closed|live)$/)))))",
+          ".validate": "newData.hasChildren(['uid', 'lat', 'lng', 'ts'])",
+          "uid": {
+            ".validate": "newData.val() === $uid"
+          },
+          "lat": {
+            ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
+          },
+          "lng": {
+            ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180"
+          },
+          "acc": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000"
+          },
+          "note": {
+            ".validate": "newData.isString() && newData.val().length <= 120"
+          },
+          "ts": {
+            ".validate": "newData.val() === now || (data.exists() && newData.val() === data.val())"
+          },
+          "approvedBy": {
+            ".validate": "newData.isString() && (newData.val() === auth.uid || (data.exists() && newData.val() === data.val())) && (root.child('hunts/' + $h + '/leaderUid').val() === auth.uid || root.child('hunts/' + $h + '/leaders/' + auth.uid).isString()) && newData.parent().child('approvedAt').isNumber() && !newData.parent().child('rejectedAt').exists()"
+          },
+          "approvedAt": {
+            ".validate": "newData.isNumber() && (newData.val() === now || (data.exists() && newData.val() === data.val())) && newData.parent().child('approvedBy').isString()"
+          },
+          "rejectedBy": {
+            ".validate": "newData.isString() && (newData.val() === auth.uid || (data.exists() && newData.val() === data.val())) && (root.child('hunts/' + $h + '/leaderUid').val() === auth.uid || root.child('hunts/' + $h + '/leaders/' + auth.uid).isString()) && newData.parent().child('rejectedAt').isNumber()"
+          },
+          "rejectedAt": {
+            ".validate": "newData.isNumber() && (newData.val() === now || (data.exists() && newData.val() === data.val())) && newData.parent().child('rejectedBy').isString()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "alerts": {
+      "$h": {
+        ".read": "auth != null && (root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed' || (root.child('hunts/' + $h + '/leaderUid').val() === auth.uid || root.child('hunts/' + $h + '/leaders/' + auth.uid).isString()))",
+        ".write": "auth != null && (root.child('hunts/' + $h + '/leaderUid').val() === auth.uid || root.child('hunts/' + $h + '/leaders/' + auth.uid).isString())",
+        "$uid": {
+          ".validate": "newData.hasChildren(['uid', 'lat', 'lng', 'ts', 'by', 'at'])",
+          "uid": {
+            ".validate": "newData.val() === $uid && root.child('participants/' + $h + '/' + $uid).exists()"
+          },
+          "lat": {
+            ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
+          },
+          "lng": {
+            ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180"
+          },
+          "acc": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000"
+          },
+          "note": {
+            ".validate": "newData.isString() && newData.val().length <= 120"
+          },
+          "ts": {
+            ".validate": "newData.isNumber() && newData.val() <= now"
+          },
+          "by": {
+            ".validate": "newData.isString() && (newData.val() === auth.uid || (data.exists() && newData.val() === data.val()))"
+          },
+          "at": {
+            ".validate": "newData.isNumber() && (newData.val() === now || (data.exists() && newData.val() === data.val()))"
+          },
+          "closedAt": {
+            ".validate": "newData.isNumber() && (newData.val() === now || (data.exists() && newData.val() === data.val()))"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "kits": {
+      "$h": {
+        ".read": "auth != null && (root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed' || (root.child('hunts/' + $h + '/leaderUid').val() === auth.uid || root.child('hunts/' + $h + '/leaders/' + auth.uid).isString()))",
+        ".write": "auth != null && !newData.exists() && (root.child('hunts/' + $h + '/leaderUid').val() === auth.uid || root.child('hunts/' + $h + '/leaders/' + auth.uid).isString())",
+        "$uid": {
+          ".write": "auth != null && ((auth.uid === $uid && newData.parent().parent().parent().child('participants/' + $h + '/' + $uid).exists()) || (auth.uid === $uid && !newData.exists()) || (!newData.exists() && (root.child('hunts/' + $h + '/leaderUid').val() === auth.uid || root.child('hunts/' + $h + '/leaders/' + auth.uid).isString())))",
+          ".validate": "newData.isString() && newData.val().matches(/^(a|t|at)$/)"
+        }
+      }
+    },
     "userHunts": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",

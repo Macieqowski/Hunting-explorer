@@ -20,6 +20,8 @@
   --on-warn: #ffffff;
   --ok: #17703f;
   --danger: #c62828;
+  --on-danger: #ffffff;
+  --danger-soft: #fdecea;
   --guide: #0f766e;
   --bar: #3f7d4e;
   --open-bg: #eef6f0;
@@ -59,6 +61,8 @@
   --on-warn: #1f1300;
   --ok: #8fe0a0;
   --danger: #ff8a7a;
+  --on-danger: #2a0500;
+  --danger-soft: #3a1714;
   --guide: #5eead4;
   --bar: #6fbf7f;
   --open-bg: #15291c;

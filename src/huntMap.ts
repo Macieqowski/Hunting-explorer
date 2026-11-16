@@ -71,6 +71,15 @@ export interface MeetView {
   label: string;
 }
 
+/** An accident alarm: where the injured person is (red, above everything else). */
+export interface AlarmView {
+  lat: number;
+  lng: number;
+  label: string;
+  /** Approved and sent to everyone (solid) or still waiting for the leader (dashed ring). */
+  approved: boolean;
+}
+
 /** A hunter on a stand in the drive in focus: their name next to the seat. */
 export interface SeatView {
   lat: number;
@@ -120,6 +129,7 @@ export interface HuntMap {
   setWindTime(t: number | null): void;
   setRoutes(rs: RouteView[], edit?: RouteEdit | null): void;
   setMeets(ms: MeetView[]): void;
+  setAlarms(as: AlarmView[]): void;
   setSeats(ss: SeatView[]): void;
   /** While set, a tap on the map goes here (picking a point); drawing a drive and editing seats come first. */
   setTapHandler(fn: ((lat: number, lng: number) => void) | null): void;
@@ -165,6 +175,7 @@ export function createHuntMap(text: HuntMapText): HuntMap {
   const shotLayer = L.layerGroup().addTo(map);
   const routeLayer = L.layerGroup().addTo(map);
   const meetLayer = L.layerGroup().addTo(map);
+  const alarmLayer = L.layerGroup().addTo(map);
   const seatLayer = L.layerGroup().addTo(map);
   const guideLayer = L.layerGroup().addTo(map);
   const markerLayer = L.featureGroup().addTo(map);
@@ -616,6 +627,22 @@ export function createHuntMap(text: HuntMapText): HuntMap {
         })
           .bindPopup(`<strong>${esc(m.label)}</strong>`)
           .addTo(meetLayer);
+    },
+
+    setAlarms(as) {
+      alarmLayer.clearLayers();
+      for (const a of as)
+        L.marker([a.lat, a.lng], {
+          icon: L.divIcon({
+            className: 'hm-icon',
+            html: `<div class="hm-alarm${a.approved ? '' : ' pending'}"><span class="hm-alarm-dot" aria-hidden="true">+</span><span class="hm-label">${esc(a.label)}</span></div>`,
+            iconSize: [0, 0],
+          }),
+          title: a.label,
+          zIndexOffset: 2000,
+        })
+          .bindPopup(`<strong>${esc(a.label)}</strong>`)
+          .addTo(alarmLayer);
     },
 
     setSeats(ss) {
