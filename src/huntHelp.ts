@@ -56,7 +56,7 @@ const SHARE = (beater: boolean): GuideSection => ({
   title: 'Udostępnij swoją lokalizację',
   where: ['Teren', 'Udostępniaj moją lokalizację'],
   text: [
-    `Gdy prowadzący rozpocznie polowanie, w zakładce [[Teren]] pojawi się przycisk [[Udostępniaj moją lokalizację]]. Dzięki niemu prowadzący i inni uczestnicy widzą Cię na mapie${beater ? ', co w naganie jest najważniejsze dla bezpieczeństwa' : ''}. Twoje położenie widzą tylko potwierdzeni uczestnicy i tylko w czasie polowania; po 7 dniach jest usuwane.`,
+    `Gdy prowadzący rozpocznie polowanie, w zakładce [[Teren]] pojawi się przycisk [[Udostępniaj moją lokalizację]]. Dzięki niemu prowadzący i inni uczestnicy widzą Cię na mapie${beater ? ', co w nagance jest najważniejsze dla bezpieczeństwa' : ''}. Twoje położenie widzą tylko potwierdzeni uczestnicy i tylko w czasie polowania; po 7 dniach jest usuwane.`,
   ],
   steps: [
     'Dotknij [[Udostępniaj moją lokalizację]] i zezwól na dostęp do lokalizacji.',
