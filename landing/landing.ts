@@ -1,7 +1,7 @@
 /**
  * The welcome page at the root of the site. The app itself is one level down, in ./app/.
  * Everything a visitor reads is plain HTML (index.html); this script only adds the QR code
- * with the download link and, when one is configured, the contact address.
+ * with the download link.
  */
 import '../src/fonts.css';
 import '../src/tokens.css';
@@ -18,21 +18,6 @@ if (qr && apk) {
     q.make();
     qr.innerHTML = q.createSvgTag({ cellSize: 6, margin: 3, scalable: true });
   });
-}
-
-// Optional: repository variable CONTACT_EMAIL (see .github/workflows/deploy.yml).
-const mail = (import.meta.env.VITE_CONTACT_EMAIL ?? '').trim();
-if (/^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(mail)) {
-  const main = document.getElementById('contact') as HTMLAnchorElement | null;
-  if (main) {
-    main.href = `mailto:${mail}`;
-    main.textContent = `Napisz: ${mail}`;
-  }
-  const foot = document.getElementById('contact-foot') as HTMLAnchorElement | null;
-  if (foot) {
-    foot.href = `mailto:${mail}`;
-    foot.hidden = false;
-  }
 }
 
 // The look follows the system while nothing was chosen in the app.

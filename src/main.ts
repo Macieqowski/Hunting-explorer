@@ -48,6 +48,8 @@ const esc = (s: unknown) =>
 const $ = <T extends HTMLElement = HTMLElement>(sel: string, root: ParentNode = document) => root.querySelector(sel) as T;
 const typeKey = (h: HolderType) => `type_${h}` as Key;
 const cap = (s: string | null) => (s ? s.charAt(0).toLocaleUpperCase('pl') + s.slice(1) : '—');
+/** Shown in "Więcej" and on the About page; the welcome page and its subpages carry it in their footers. */
+const CONTACT_EMAIL = 'kontakt@polowanie.org';
 
 const state = {
   districts: [] as District[],
@@ -724,6 +726,7 @@ function renderMore() {
       <li><a href="#/instrukcja" data-nav="guide">${ic('book', 22)}<span><strong>${t('moreGuide')}</strong><small class="muted">${t('moreGuideHint')}</small></span>${ic('chevron', 20)}</a></li>
       ${isApp() ? '' : row('#/about', 'about', ic('android', 22), t('moreApp'), t('moreAppHint'))}
       ${row('#/about', 'about', ic('info', 22), t('moreAbout'), t('moreAboutHint'))}
+      <li><a href="mailto:${CONTACT_EMAIL}">${ic('mail', 22)}<span><strong>${t('moreContact')}</strong><small class="muted">${CONTACT_EMAIL}</small></span>${ic('chevron', 20)}</a></li>
     </ul>
     ${isApp() && installedVersion ? `<p class="muted small">${getLang() === 'pl' ? 'Wersja' : 'Version'} ${esc(installedVersion)}</p>` : ''}
   </div>`;
@@ -772,6 +775,9 @@ function renderAbout() {
       <li><a href="https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU19951470713" target="_blank" rel="noopener">${pl ? 'Ustawa Prawo łowieckie' : 'Hunting Law Act'}</a></li>
       <li><a href="https://api.sejm.gov.pl/eli/acts/DU/2023/99/text.html" target="_blank" rel="noopener">${pl ? 'Rozporządzenie w sprawie okresów polowań' : 'Hunting seasons regulation'}</a></li>
     </ul>
+    <h2>${pl ? 'Kontakt' : 'Contact'}</h2>
+    <p>${pl ? 'Pytania, uwagi, błędy w danych albo chęć wypróbowania aplikacji na polowaniu koła: napisz na' : 'Questions, feedback, data errors or trying the app on your club’s hunt: write to'}
+      <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.</p>
     <p class="muted small">${pl ? 'Kroje pisma' : 'Fonts'}: Inter, Barlow Semi Condensed, Manrope, JetBrains Mono (<a href="./licenses/fonts-OFL.txt" target="_blank" rel="noopener">SIL Open Font License 1.1</a>). ${pl ? 'Ikony w stylu' : 'Icons in the style of'} Lucide.</p>
     <p class="muted small">${
       pl
