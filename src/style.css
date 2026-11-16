@@ -1191,6 +1191,10 @@ input[type='checkbox'], input[type='radio'] { width: 18px; height: 18px; accent-
 .hg-pick a > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .hg-pick a > .ic:last-child { color: var(--muted); }
 .hg-intro { font-size: 0.98rem; }
+.hg-film h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 1.02rem; text-transform: none; letter-spacing: normal; color: var(--text); }
+.hg-film h3 > .ic { flex: none; color: var(--accent); }
+.hg-film p { margin: 8px 0 0; }
+.film-video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: var(--r-m); background: #10140f; }
 .hg-toc summary { cursor: pointer; }
 .hg-toc ol { list-style: none; margin: 8px 0 0; padding: 0; columns: 2 260px; column-gap: 24px; }
 .hg-toc li { break-inside: avoid; }

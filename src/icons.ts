@@ -42,6 +42,7 @@ const PATHS = {
   list: '<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.500 6h.010M3.500 12h.010M3.500 18h.010" stroke-width="2.600"/>',
   trail: '<circle cx="5" cy="19" r="1.600"/><circle cx="19" cy="5" r="1.600"/><path d="M6.500 18c4-1 2-6 6-6s2-5 5.500-6" stroke-dasharray="2.500 2.500"/>',
   expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+  play: '<circle cx="12" cy="12" r="9"/><path d="M10 8.500v7l5.500-3.500-5.500-3.500Z"/>',
   // theme switch
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.900 4.900l1.400 1.400M17.700 17.700l1.400 1.400M4.900 19.100l1.400-1.400M17.700 6.300l1.400-1.400"/>',
   moon: '<path d="M20 14.500A8 8 0 1 1 9.500 4a6.500 6.500 0 0 0 10.500 10.500Z"/>',
