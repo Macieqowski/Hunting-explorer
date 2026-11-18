@@ -36,7 +36,8 @@ const SIGN_UP = (role: 'Myśliwy' | 'Naganiacz'): GuideSection => ({
     'Dotknij [[Zapisz się]]. Do czasu potwierdzenia przez prowadzącego zobaczysz napis [[czeka na potwierdzenie]], a mapa i pokot będą ukryte.',
   ],
   tips: [
-    'Polowanie trafia na listę [[Twoje polowania]] na tym urządzeniu i w tej przeglądarce. W aplikacji na Androida i w przeglądarce telefonu to dwa osobne konta, więc zapisz się tam, gdzie będziesz korzystać z polowania.',
+    'Polowanie trafia na listę [[Twoje polowania]] na tym urządzeniu i w tej przeglądarce. W aplikacji i w przeglądarce telefonu to dwa osobne konta, więc zapisz się tam, gdzie będziesz korzystać z polowania.',
+    'W aplikacji na iPhonie link i kod QR otwierają się najpierw w Safari: stuknij tam [[Otwórz w aplikacji]]. Możesz też skopiować link i wkleić go w aplikacji w polu [[Masz link od prowadzącego?]].',
     'Jeśli nie możesz przyjechać, wejdź w zakładkę [[Uczestnicy]] i dotknij [[Wypisz się]].',
   ],
 });

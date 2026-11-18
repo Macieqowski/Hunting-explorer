@@ -43,7 +43,19 @@ Po zmianach w kodzie: `git pull`, `npm run ios:sync` i znowu **▶** w Xcode.
 | Jak długo działa | **7 dni**, potem ponownie ▶ z Xcode | rok |
 | Inni testerzy | nie | TestFlight (do 10 000 osób) |
 | App Store | nie | tak |
-| Linki www.polowanie.org otwierają aplikację | nie | tak (po dodaniu apple-app-site-association) |
+| Linki www.polowanie.org otwierają aplikację | nie (patrz niżej) | tak (po dodaniu Associated Domains i apple-app-site-association) |
+
+## Dołączanie do polowania z linku lub kodu QR
+
+Na Androidzie link zaproszenia, link dla członków koła i kod parowania prowadzącego otwierają
+aplikację od razu. Na iPhonie bez płatnego konta otwierają się w Safari, a zapis w Safari to inne
+konto niż w aplikacji. Dlatego:
+
+- **Kod QR lub link w Safari**: na stronie polowania jest przycisk **Otwórz w aplikacji**
+  (adres `polowanie://app/#/polowanie/…`, zarejestrowany w `Info.plist` jako `CFBundleURLTypes`).
+  iPhone zapyta „Otworzyć w Polowanie?”, a aplikacja otworzy to samo polowanie.
+- **W aplikacji**: Polowanie → **Masz link od prowadzącego?** → **Wklej** (albo wklej ręcznie
+  i **Otwórz**). Działa też link wklejony razem z tekstem wiadomości.
 
 ## Pozycja przy zablokowanym ekranie
 

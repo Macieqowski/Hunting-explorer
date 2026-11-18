@@ -46,7 +46,7 @@ import {
   isDeputy,
   otherLeaderDevices,
 } from './hunt';
-import { currentInvite, inviteExpiry, inviteLink, leaderPairLink, pairTokenOf, validToken, type Invite } from './invite';
+import { currentInvite, inviteExpiry, inviteLink, leaderPairLink, pairTokenOf, validToken, huntHashIn, appSchemeLink, type Invite } from './invite';
 import type { District } from './bdl';
 import { fetchDistrictsAtPoint } from './bdl';
 import { fold, districtSlug } from './data';
@@ -97,7 +97,7 @@ import {
 } from './huntCrew';
 import { setGuide, guideCardHtml, guideLine, guideFix, enableCompass, type GuideText, type GuideTarget } from './huntGuide';
 import { Sharer } from './huntShare';
-import { publicBase, canShare, shareLink, copyText, printPage, saveTextFile, isApp } from './platform';
+import { publicBase, canShare, shareLink, copyText, readText, printPage, saveTextFile, isApp, isIosBrowser } from './platform';
 import { alertUser, vibrate, tick, hasBackgroundLocation } from './native';
 import { openPocket, updatePocket } from './huntPocket';
 import { roleIcon, speciesIcon, standIcon } from './huntIcons';
@@ -154,6 +154,21 @@ const L = {
     en: 'This list is remembered on this device and browser.',
   },
   newHunt: { pl: '+ Nowe polowanie', en: '+ New hunt' },
+  linkTitle: { pl: 'Masz link od prowadzącego?', en: 'Got a link from the hunt leader?' },
+  linkHint: {
+    pl: 'Skopiuj link zaproszenia z SMS-a, WhatsAppa albo e-maila i wklej go tutaj. Działa też link dla członków koła i kod parowania prowadzącego.',
+    en: 'Copy the invitation link from the text message, WhatsApp or e-mail and paste it here. The club members’ link and the leader’s pairing code work too.',
+  },
+  linkField: { pl: 'Link do polowania', en: 'Hunt link' },
+  linkPaste: { pl: 'Wklej', en: 'Paste' },
+  linkOpen: { pl: 'Otwórz', en: 'Open' },
+  linkBad: { pl: 'To nie jest link do polowania. Skopiuj cały link od prowadzącego.', en: 'This is not a hunt link. Copy the whole link from the hunt leader.' },
+  linkEmpty: { pl: 'W schowku nie ma linku. Najpierw skopiuj link od prowadzącego.', en: 'There is no link on the clipboard. Copy the link from the hunt leader first.' },
+  inApp: {
+    pl: 'Masz aplikację Polowanie na tym telefonie? Otwórz link w niej. Zapis w Safari nie przenosi się do aplikacji.',
+    en: 'Have the Polowanie app on this phone? Open the link in it. Signing up in Safari does not carry over to the app.',
+  },
+  inAppBtn: { pl: 'Otwórz w aplikacji', en: 'Open in the app' },
   loading: { pl: 'Wczytywanie…', en: 'Loading…' },
   fName: { pl: 'Nazwa polowania', en: 'Hunt name' },
   fNamePh: { pl: 'np. Polowanie zbiorowe na dziki', en: 'e.g. Driven boar hunt' },
@@ -2140,9 +2155,48 @@ function renderList(): string {
       : `<p class="muted">${l('noHunts')}</p>`;
   else if (mine.s === 'error') list = `<div class="notice error">${esc(mine.msg)}</div>`;
   else list = `<p class="muted">${l('loading')}</p>`;
-  return `${head}<button type="button" class="btn" data-hunt="new">${l('newHunt')}</button>
+  return `${head}${renderLinkOpen()}<button type="button" class="btn" data-hunt="new">${l('newHunt')}</button>
     <h3>${l('myHunts')}</h3>${list}<p class="muted small">${l('thisDevice')}</p>
     <h3>${l('guides')}</h3><p class="muted small">${l('guidesHint')}</p>${guidesRow('', GUIDE_ROLES)}`;
+}
+
+/** In the app: open a hunt from a pasted link (the iPhone app does not get www.polowanie.org links). */
+function renderLinkOpen(): string {
+  if (!isApp()) return '';
+  return `<form class="card h-form h-linkopen" data-hunt-form="link" novalidate>
+    <h3>${l('linkTitle')}</h3><p class="small muted">${l('linkHint')}</p>
+    <div class="h-invite"><input type="url" name="link" data-hunt-field="link" value="${esc(draft.get('link.link') ?? '')}" aria-label="${l('linkField')}"
+        placeholder="https://www.polowanie.org/app/#/polowanie/…" autocomplete="off" autocapitalize="off" spellcheck="false" />
+      <button type="button" class="btn ghost" data-hunt="linkPaste">${l('linkPaste')}</button>
+      <button type="submit" class="btn">${l('linkOpen')}</button></div>
+    ${linkError ? `<p class="h-error" role="alert">${esc(linkError)}</p>` : ''}
+  </form>`;
+}
+
+/** Why the pasted link could not be opened ('' = no problem). */
+let linkError = '';
+
+/** Opens the hunt a pasted link points at (its #/polowanie/… part), or says why not. */
+function openHuntLink(text: string): void {
+  const h = huntHashIn(text);
+  if (!h) {
+    draft.set('link.link', text);
+    linkError = l(text.trim() ? 'linkBad' : 'linkEmpty');
+    rerender();
+    return;
+  }
+  clearDraft('link');
+  linkError = '';
+  location.hash = h;
+}
+
+/** On the website on an iPhone: the iPhone app does not get these links by itself, so offer to hand this one over. */
+function openInApp(): string {
+  if (!isIosBrowser()) return '';
+  const h = huntHashIn(location.hash);
+  return h
+    ? `<div class="notice h-inapp"><p class="small">${l('inApp')}</p><a class="btn ghost" href="${esc(appSchemeLink(h))}">${l('inAppBtn')}</a></div>`
+    : '';
 }
 
 function renderHuntForm(kind: 'create' | 'edit'): string {
@@ -2726,7 +2780,7 @@ function renderJoin(h: Hunt): string {
   const radio = (r: 'hunter' | 'beater') =>
     `<label class="h-role"><input type="radio" name="role" value="${r}" data-hunt-field="join"${role === r ? ' checked' : ''} />${roleIcon(r, 22)}<span>${l(`r_${r}`)}</span></label>`;
   const guest = !!myGuestToken();
-  return `<form class="card h-form" data-hunt-form="join" novalidate>
+  return `${openInApp()}<form class="card h-form" data-hunt-form="join" novalidate>
     <h3>${l(guest ? 'guestTitle' : 'joinTitle')}</h3>
     ${guest ? `<p class="small">${l('guestHint')}</p>` : ''}
     <fieldset class="h-roles"><legend>${l('fRole')}</legend>${radio('hunter')}${radio('beater')}</fieldset>
@@ -2861,7 +2915,7 @@ function renderPairAsk(h: Hunt): string {
     pairToken = null;
     return '';
   }
-  return `<div class="card h-form"><h3>${roleIcon('leader', 22)} ${l('pairTitle')}</h3>
+  return `${openInApp()}<div class="card h-form"><h3>${roleIcon('leader', 22)} ${l('pairTitle')}</h3>
     <p><strong>${esc(h.name)}</strong> · ${esc(h.leaderName)}</p><p class="small">${l('pairAsk')}</p>${errorBox()}
     <div class="h-actions"><button type="button" class="btn" data-hunt="pairConfirm"${btnBusy()}>${l('pairOk')}</button>
     <button type="button" class="btn ghost" data-hunt="pairCancel">${l('cancel')}</button></div></div>`;
@@ -4162,6 +4216,9 @@ export function handleHuntClick(el: HTMLElement): boolean {
     case 'list':
       go(null);
       return true;
+    case 'linkPaste':
+      readText().then(openHuntLink, () => openHuntLink(''));
+      return true;
     case 'new':
       creating = true;
       formError = '';
@@ -4671,6 +4728,10 @@ export function handleHuntSubmit(form: HTMLFormElement): boolean {
   const v = (name: string) => (form.elements.namedItem(name) as HTMLInputElement | null)?.value ?? '';
   formError = '';
   badFields = new Set();
+  if (kind === 'link') {
+    openHuntLink(v('link'));
+    return true;
+  }
   if (kind === 'create' || kind === 'edit') {
     const input: HuntInput = {
       name: v('name'),
