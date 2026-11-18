@@ -8,6 +8,8 @@ import {
   isIos,
   isRunning,
   MAX_VIEW_KM2,
+  nativeBackgroundState,
+  saveError,
   prepareDraft,
   removeArea,
   requestPersistence,
@@ -22,7 +24,7 @@ import {
   type StorageInfo,
 } from './offline';
 import { boxKm2, DETAILS, isDetail, type Box, type Detail } from './tiles';
-import { isApp } from './platform';
+import { isApp, isAndroidApp } from './platform';
 import { nativeTileDownload } from './native';
 import { fetchDistrictsAtPoint, fetchDistrictsByIds, fetchOutlinesInBounds, type District, type DistrictWithGeometry } from './bdl';
 import { clubNameMatches, districtMatches, districtsInOrder, plCompare, searchTerms, type Club } from './data';
@@ -121,11 +123,28 @@ const L = {
     pl: 'Możesz wyłączyć ekran – zapis trwa dalej, postęp widać w powiadomieniu.',
     en: 'You can turn the screen off – saving goes on, the notification shows progress.',
   },
+  screenOffIos: {
+    pl: 'Możesz zablokować telefon – zapis trwa dalej, postęp widać na ekranie blokady.',
+    en: 'You can lock the phone – saving goes on, with progress on the lock screen.',
+  },
+  screenOffIosOld: {
+    pl: 'Ekran sam nie zgaśnie. Na tym iOS zapis wstrzyma się po zablokowaniu telefonu i wznowi po otwarciu aplikacji.',
+    en: 'The screen stays on. On this iOS saving pauses when the phone is locked and resumes when the app is opened.',
+  },
+  screenOffIosWait: {
+    pl: 'Ekran sam nie zgaśnie. iPhone jeszcze nie pozwolił na zapis w tle, więc na razie nie blokuj telefonu.',
+    en: 'The screen stays on. The iPhone has not allowed saving in the background yet, so keep the phone unlocked for now.',
+  },
+  screenOffIosNo: {
+    pl: 'Ekran sam nie zgaśnie. Nie blokuj telefonu: iPhone nie pozwolił na zapis w tle',
+    en: 'The screen stays on. Keep the phone unlocked: the iPhone did not allow saving in the background',
+  },
   screenOffWeb: {
     pl: 'Nie wyłączaj ekranu i nie zamykaj tej strony – przeglądarka wstrzymuje wtedy pobieranie.',
     en: 'Keep the screen on and this page open – the browser pauses the download otherwise.',
   },
   paused: { pl: 'Wstrzymane', en: 'Paused' },
+  stoppedBy: { pl: 'Zatrzymał je błąd:', en: 'Stopped by an error:' },
   missing: { pl: 'kafelków nie pobrano', en: 'tiles not downloaded' },
   resume: { pl: 'Wznów', en: 'Resume' },
   savedOn: { pl: 'Zapisano', en: 'Saved' },
@@ -287,7 +306,7 @@ export function renderOffline(): string {
       : st?.persisted === false && savedAreas().length
         ? `<p class="muted small">${l('notPersisted')} <button type="button" class="btn small ghost" data-offline="persist">${l('keep')}</button></p>`
         : '';
-  const ios = isIos() && !isInstalled() ? `<div class="notice small">${l('iosHint')}</div>` : '';
+  const ios = !isApp() && isIos() && !isInstalled() ? `<div class="notice small">${l('iosHint')}</div>` : '';
   const box = host.mapBox();
   const viewOk = online && box && boxKm2(box) <= MAX_VIEW_KM2;
   return `<h2>${l('title')}</h2>
@@ -467,6 +486,17 @@ function renderDraft(): string {
   </div>`;
 }
 
+/** What happens with the screen off while saving: web page, Android app, or what iOS allowed. */
+function screenOffHint(): string {
+  if (!nativeTileDownload()) return l('screenOffWeb');
+  if (isAndroidApp()) return l('screenOffApp');
+  const bg = nativeBackgroundState();
+  if (bg === 'started') return l('screenOffIos');
+  if (bg === 'old-ios') return l('screenOffIosOld');
+  if (bg === '' || bg === 'submitted') return l('screenOffIosWait');
+  return `${l('screenOffIosNo')} (${esc(bg)}).`;
+}
+
 function renderArea(a: SavedArea): string {
   const pct = a.total ? Math.floor((a.done / a.total) * 100) : 0;
   const date = new Date(a.updated).toLocaleDateString(getLang() === 'pl' ? 'pl-PL' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -475,9 +505,11 @@ function renderArea(a: SavedArea): string {
   if (a.status === 'downloading')
     status = `<p class="small">${running && a.total ? `${l('downloading')} ${pct}% (${fmtNum(a.done)} / ${fmtNum(a.total)})` : l('waiting')}</p>
       <div class="progress"><span style="width:${pct}%"></span></div>
-      ${running ? `<p class="muted small">${l(nativeTileDownload() ? 'screenOffApp' : 'screenOffWeb')}</p>` : ''}`;
+      ${running ? `<p class="muted small">${screenOffHint()}</p>` : ''}`;
   else if (a.status === 'paused')
-    status = `<p class="small">${l('paused')} · ${pct}%${a.total > a.done ? ` · ${fmtNum(a.total - a.done)} ${l('missing')}` : ''}</p>
+    status = `<p class="small">${l('paused')} · ${pct}%${a.total > a.done ? ` · ${fmtNum(a.total - a.done)} ${l('missing')}` : ''}</p>${
+      saveError(a.id) ? `<p class="muted small">${l('stoppedBy')} ${esc(saveError(a.id))}</p>` : ''
+    }
       <div class="progress"><span style="width:${pct}%"></span></div>`;
   else status = `<p class="muted small">${l('savedOn')} ${date} · ${mb(a.bytes)} · zoom ${a.detail}</p>`;
   const del =

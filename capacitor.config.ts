@@ -1,6 +1,6 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-// Android app (and later iOS) built from the same Vite output as www.polowanie.org/app/.
+// Android and iPhone apps built from the same Vite output as www.polowanie.org/app/.
 // `npm run android:apk` builds dist/app/, copies it into android/ and makes a release APK
 // (see docs/android.md; the android workflow does the same on GitHub).
 const config: CapacitorConfig = {

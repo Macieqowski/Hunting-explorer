@@ -2,7 +2,7 @@
 // Data layout and who may write what are defined in database.rules.json.
 
 import { initializeApp, type FirebaseApp } from 'firebase/app';
-import { getAuth, signInAnonymously, connectAuthEmulator, type User } from 'firebase/auth';
+import { getAuth, initializeAuth, indexedDBLocalPersistence, browserLocalPersistence, signInAnonymously, connectAuthEmulator, type User } from 'firebase/auth';
 import { getDatabase, ref, child, push, get, set, update, onValue, serverTimestamp, connectDatabaseEmulator } from 'firebase/database';
 import { isLeader, parseHunt, parseParticipants, parsePositions, parseTracks, parseDrives, parseSightings, encodeArea, roundCoord, shouldPurge, cleanText, cleanNotes, LIMITS, DRIVE_LIMITS, type Hunt, type HuntInput } from './hunt';
 import { parseShots, parseShotSpots, NOTE_MAX, type ShotInput } from './pokot';
@@ -11,6 +11,7 @@ import { newInviteToken, inviteExpiry, parseInvites, PAIR_MS } from './invite';
 import { HuntError, type FirebaseConfig, type HuntBackend } from './huntBackend';
 import { parseAlarm, parseAlarms, parseAlerts, parseKits, alarmRecord, alertRecord } from './huntAlarm';
 import { encodePt, encodeRoute, encodeRoutePlan, encodeAssigned, parseRoutePlans, parseAssignments, parseAllRoutes, parseSeats, parsePhones, parseTransport, parseMessages, parseAcks, parseCarcassMarks, cleanPhone, cleanSeat, cleanMessage, CARCASS_KINDS, CREW_LIMITS } from './huntCrew';
+import { isIosApp } from './platform';
 
 function wrap(e: unknown): HuntError {
   const msg = String((e as Error)?.message ?? e);
@@ -55,7 +56,10 @@ let session: Promise<{ app: FirebaseApp; user: User }> | null = null;
 function signIn(cfg: FirebaseConfig): Promise<{ app: FirebaseApp; user: User }> {
   session ??= (async () => {
     const app = initializeApp(cfg);
-    const auth = getAuth(app);
+    // In the iPhone app getAuth() never gets ready: its sign-in-with-popup helper loads a frame
+    // from authDomain, which the capacitor:// page cannot talk to, so authStateReady() hangs and the
+    // hunt tab says "Connecting" for ever. Anonymous sign-in needs none of that.
+    const auth = isIosApp() ? initializeAuth(app, { persistence: [indexedDBLocalPersistence, browserLocalPersistence] }) : getAuth(app);
     const emu = import.meta.env.VITE_FIREBASE_EMULATOR;
     if (emu) connectAuthEmulator(auth, `http://${emu}:9099`, { disableWarnings: true });
     await auth.authStateReady();

@@ -97,7 +97,7 @@ import {
 import { setGuide, guideCardHtml, guideLine, guideFix, enableCompass, type GuideText, type GuideTarget } from './huntGuide';
 import { Sharer } from './huntShare';
 import { publicBase, canShare, shareLink, copyText, printPage, saveTextFile, isApp } from './platform';
-import { alertUser, vibrate, tick } from './native';
+import { alertUser, vibrate, tick, hasBackgroundLocation } from './native';
 import { openPocket, updatePocket } from './huntPocket';
 import { roleIcon, speciesIcon, standIcon } from './huntIcons';
 import { standsFromFile, sortStands, parseLatLng, fmtLatLng, nextStandName, STAND_LIMITS, type Stand, type StandKind } from './stands';
@@ -2219,7 +2219,7 @@ function renderLive(h: Hunt, me: Participant): string {
             ? `<small class="muted">${esc(tr('gpsSats').replace('{v}', String(sharer.sats.visible)).replace('{u}', String(sharer.sats.used)))}. ${esc(tr('gpsColdHint'))}</small><br>`
             : ''
         }
-        <small class="muted">${l(isApp() ? 'shareInBackground' : 'shareKeepOpen')}</small></div>
+        <small class="muted">${l(hasBackgroundLocation() ? 'shareInBackground' : 'shareKeepOpen')}</small></div>
         <div class="h-share-btns"><button type="button" class="btn" data-hunt="pocket" title="${esc(l('pocketHint'))}">${l('fmPocket')}</button>
         <button type="button" class="btn danger" data-hunt="shareStop">${l('shareStop')}</button></div></div>`;
     else {

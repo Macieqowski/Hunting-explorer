@@ -2,8 +2,8 @@
 // sightings, drives, beater guidance. Hunt sharing with the screen off uses the app's location
 // service instead (native.ts), and falls back to watchLocation() here.
 //
-// In the app this is the Gps plugin (GpsPlugin.java): Android's LocationManager, without Google Play
-// services. The WebView's navigator.geolocation gave up after the page's timeout (15-20 s), and on a
+// In the app this is the Gps plugin (GpsPlugin.java: Android's LocationManager, without Google Play
+// services; GpsPlugin.swift on iPhone). The WebView's navigator.geolocation gave up after the page's timeout (15-20 s), and on a
 // phone without Google services (no network location, no assisted GPS) a cold GPS start takes 40-90 s,
 // so no position ever came. Here nothing has a time limit: listening goes on until a position is good
 // enough or the person cancels, and is never restarted, because each restart loses the satellite search.
