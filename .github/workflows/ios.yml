@@ -27,6 +27,10 @@ jobs:
         run: npm run ios:sync
       - name: Xcode version
         run: xcodebuild -version
+      - name: Check Puwg92.swift (offline photo reprojection) against the Android test values
+        run: |
+          xcrun swiftc -O ios/App/App/Puwg92.swift ios/Tests/main.swift -o "$RUNNER_TEMP/puwg"
+          "$RUNNER_TEMP/puwg"
       - name: Build for the simulator
         run: |
           # A scheme build (not -target): only it links the plugins' binary Swift packages.

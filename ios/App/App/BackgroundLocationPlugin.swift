@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import CoreLocation
+import UserNotifications
 import Capacitor
 
 /// Location sharing that keeps working with the screen locked (iPhone counterpart of
@@ -121,6 +122,12 @@ public class BackgroundLocationPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationMa
         // Another hunt, or the page starts again: the old one stops (clearing my position is up to the page).
         old?.stop(clear: false)
 
+        // Hunt alerts reach a phone in the pocket as notifications: ask now, while the app is on screen.
+        UNUserNotificationCenter.current().getNotificationSettings { s in
+            if s.authorizationStatus == .notDetermined {
+                UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+            }
+        }
         let m = locationManager()
         m.allowsBackgroundLocationUpdates = true
         m.showsBackgroundLocationIndicator = true

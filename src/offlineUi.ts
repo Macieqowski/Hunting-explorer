@@ -22,7 +22,7 @@ import {
   type StorageInfo,
 } from './offline';
 import { boxKm2, DETAILS, isDetail, type Box, type Detail } from './tiles';
-import { isApp } from './platform';
+import { isApp, isAndroidApp } from './platform';
 import { nativeTileDownload } from './native';
 import { fetchDistrictsAtPoint, fetchDistrictsByIds, fetchOutlinesInBounds, type District, type DistrictWithGeometry } from './bdl';
 import { clubNameMatches, districtMatches, districtsInOrder, plCompare, searchTerms, type Club } from './data';
@@ -120,6 +120,10 @@ const L = {
   screenOffApp: {
     pl: 'Możesz wyłączyć ekran – zapis trwa dalej, postęp widać w powiadomieniu.',
     en: 'You can turn the screen off – saving goes on, the notification shows progress.',
+  },
+  screenOffIos: {
+    pl: 'Ekran sam nie zgaśnie. Możesz zablokować telefon – na iOS 26 zapis trwa dalej, postęp widać na ekranie blokady; na starszym iOS wznowi się po otwarciu aplikacji.',
+    en: 'The screen stays on. You can lock the phone – on iOS 26 saving goes on, with progress on the lock screen; on older iOS it resumes when the app is opened.',
   },
   screenOffWeb: {
     pl: 'Nie wyłączaj ekranu i nie zamykaj tej strony – przeglądarka wstrzymuje wtedy pobieranie.',
@@ -475,7 +479,7 @@ function renderArea(a: SavedArea): string {
   if (a.status === 'downloading')
     status = `<p class="small">${running && a.total ? `${l('downloading')} ${pct}% (${fmtNum(a.done)} / ${fmtNum(a.total)})` : l('waiting')}</p>
       <div class="progress"><span style="width:${pct}%"></span></div>
-      ${running ? `<p class="muted small">${l(nativeTileDownload() ? 'screenOffApp' : 'screenOffWeb')}</p>` : ''}`;
+      ${running ? `<p class="muted small">${l(nativeTileDownload() ? (isAndroidApp() ? 'screenOffApp' : 'screenOffIos') : 'screenOffWeb')}</p>` : ''}`;
   else if (a.status === 'paused')
     status = `<p class="small">${l('paused')} · ${pct}%${a.total > a.done ? ` · ${fmtNum(a.total - a.done)} ${l('missing')}` : ''}</p>
       <div class="progress"><span style="width:${pct}%"></span></div>`;

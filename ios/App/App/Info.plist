@@ -68,6 +68,10 @@
 	<string>Pozycja pokazuje, gdzie jesteś na mapie, i podczas polowania zbiorowego trafia do prowadzącego.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Podczas polowania zbiorowego Twoja pozycja trafia do prowadzącego także przy zablokowanym ekranie.</string>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER).tiles.*</string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
