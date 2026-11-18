@@ -620,7 +620,13 @@ private final class BackgroundKeeper {
                 guard let self = self else { return }
                 // Without a continued processing task iOS stops the app now: pause the download
                 // (offline.ts resumes it when the app is open again).
-                if self.continued == nil { TileDownloader.shared.cancelAll() }
+                if self.continued == nil {
+                    TileDownloader.shared.cancelAll()
+                    let c = UNMutableNotificationContent()
+                    c.title = "Zapis map wstrzymany"
+                    c.body = "iPhone zatrzymał zapis po zablokowaniu ekranu. Otwórz aplikację, aby go dokończyć."
+                    UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "tiles-paused", content: c, trigger: nil))
+                }
                 UIApplication.shared.endBackgroundTask(self.task)
                 self.task = .invalid
             }
@@ -666,7 +672,10 @@ private final class ContinuedTask {
             t.expirationHandler = { TileDownloader.shared.cancelAll() }
             if let p = me.pending { me.update(title: p.0, done: p.1, total: p.2) }
         }
-        guard ok else { return nil }
+        guard ok else {
+            NSLog("polowanie-tiles: could not register the continued processing task \(id)")
+            return nil
+        }
         let req = BGContinuedProcessingTaskRequest(identifier: id, title: title, subtitle: "")
         do {
             try BGTaskScheduler.shared.submit(req)
