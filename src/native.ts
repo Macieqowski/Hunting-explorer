@@ -99,6 +99,8 @@ export interface TileDownloadStatus {
   /** [unit index, tile index, bytes] of each tile written since `since`. */
   results?: [number, number, number][];
   next?: number;
+  /** iPhone only: whether iOS lets the saving go on in the background (TileDownloadPlugin.swift). */
+  bg?: string;
 }
 interface TileDownloadPlugin {
   start(o: {

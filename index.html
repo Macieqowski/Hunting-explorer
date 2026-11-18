@@ -27,6 +27,13 @@
         } catch (e) {}
         document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
         if (dark) document.querySelector('meta[name="theme-color"]').setAttribute('content', '#101412');
+        // iPhone app: the page fills the whole screen and keeps clear of the status bar itself
+        // (html.ios-app rules in src/style.css); without viewport-fit=cover iOS reports no safe area.
+        var cap = window.Capacitor;
+        if (cap && cap.getPlatform && cap.getPlatform() === 'ios') {
+          document.documentElement.classList.add('ios-app');
+          document.querySelector('meta[name="viewport"]').setAttribute('content', 'width=device-width, initial-scale=1.0, viewport-fit=cover');
+        }
       })();
     </script>
     <meta name="mobile-web-app-capable" content="yes" />

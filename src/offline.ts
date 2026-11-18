@@ -247,6 +247,10 @@ let running: Promise<void> = Promise.resolve();
 
 export const isRunning = (id: string) => jobs.has(id);
 
+/** iPhone app: what iOS said about saving in the background ('' until the first status). */
+let bgState = '';
+export const nativeBackgroundState = () => bgState;
+
 export async function saveDraft(d: Draft, detail: Detail): Promise<SavedArea> {
   void requestPersistence();
   const a: SavedArea = {
@@ -458,6 +462,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function downloadInApp(nt: NonNullable<ReturnType<typeof nativeTileDownload>>, a: SavedArea, units: Unit[], refresh: boolean, job: Job, held: Set<string>) {
   const id = a.id;
   const base = { done: a.done, bytes: refresh ? 0 : a.bytes };
+  bgState = '';
   const pause = async () => {
     const cur = areas.find((x) => x.id === id);
     if (cur && !job.cancelled) await setArea({ ...cur, status: 'paused' });
@@ -491,6 +496,10 @@ async function downloadInApp(nt: NonNullable<ReturnType<typeof nativeTileDownloa
     }
     const s = await nt.status({ id, since }).catch(() => ({ state: 'none' as const }));
     if (s.state === 'none') return pause();
+    if (s.bg !== undefined && s.bg !== bgState) {
+      bgState = s.bg;
+      console.info(`[polowanie] tiles background: ${bgState}`);
+    }
     const entries = (s.results ?? []).map(([ui, ti, size]) => {
       const u = units[ui];
       const { url, check } = u.tiles[ti];

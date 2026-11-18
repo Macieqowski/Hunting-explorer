@@ -1462,3 +1462,22 @@ input[type='checkbox'], input[type='radio'] { width: 18px; height: 18px; accent-
 .hm-alarm.pending .hm-label { color: #7f1d1d; background: rgb(255 255 255 / 0.92); }
 @keyframes hm-alarm-pulse { 0% { box-shadow: 0 0 0 0 rgb(198 40 40 / 0.7); } 70% { box-shadow: 0 0 0 16px rgb(198 40 40 / 0); } 100% { box-shadow: 0 0 0 0 rgb(198 40 40 / 0); } }
 @media (prefers-reduced-motion: reduce) { .hm-alarm-dot { animation: none; } }
+
+/* iPhone app: the page runs under the status bar and the home indicator (viewport-fit=cover, set
+   by index.html only there), so the top bar and the full-screen sheets keep clear of them.
+   Android and the website do not get the class: nothing changes there. */
+@media screen {
+  html.ios-app #app { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+  html.ios-app .topbar { padding-top: calc(10px + env(safe-area-inset-top)); }
+  html.ios-app #pp-root { padding-top: calc(12px + env(safe-area-inset-top)); padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+  html.ios-app .hs-sheet { padding-top: calc(12px + env(safe-area-inset-top)); }
+  html.ios-app .hmsg-sheet, html.ios-app .halarm-sheet { padding-top: calc(16px + env(safe-area-inset-top)); padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+  /* Turned sideways, the notch is on the left or right. */
+  html.ios-app #pp-root { padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+  html.ios-app .hs-sheet, html.ios-app .hmsg-sheet, html.ios-app .halarm-sheet { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  html.ios-app .pocket { padding-left: max(24px, env(safe-area-inset-left)); padding-right: max(24px, env(safe-area-inset-right)); }
+  html.ios-app .hf { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+}
+@media screen and (max-width: 760px) {
+  html.ios-app .topbar { padding-top: calc(6px + env(safe-area-inset-top)); }
+}

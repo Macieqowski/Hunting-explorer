@@ -71,8 +71,10 @@ więc kod w `src/` ich nie rozróżnia), zarejestrowane w `ViewController.swift`
 | Gps | brak (niepotrzebny) | iOS ma A-GPS, lokalizacja z WebView łapie pozycję szybko |
 
 **Zapis map offline:** podczas zapisu ekran sam nie gaśnie. Po zablokowaniu telefonu iOS 26 kontynuuje
-zapis jako zadanie w tle z postępem na ekranie blokady (można je tam zatrzymać). Starszy iOS daje
-aplikacji tylko około pół minuty: zapis się wstrzyma i wznowi po otwarciu aplikacji.
+zapis jako zadanie w tle z postępem na ekranie blokady (można je tam zatrzymać). Pod paskiem postępu
+w zakładce Offline aplikacja pisze, czy iPhone się na to zgodził, a jeśli nie, podaje powód. Starszy iOS
+daje aplikacji tylko około pół minuty: zapis się wstrzyma i wznowi po otwarciu aplikacji.
+Powiadomienie „Zapisano” pokazuje się także przy otwartej aplikacji.
 
 **Alarmy przy zablokowanym ekranie:** powiadomienia wysyła strona, a iOS może ją uśpić w tle.
 Trzeba to sprawdzić na telefonie; pewne rozwiązanie to powiadomienia push (płatne konto Apple).
