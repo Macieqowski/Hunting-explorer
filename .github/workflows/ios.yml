@@ -13,9 +13,15 @@ on:
       - '.github/workflows/ios.yml'
   workflow_dispatch:
 
+# A newer push to the same branch replaces a run still going.
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: macos-26
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -40,16 +46,20 @@ jobs:
             CODE_SIGNING_ALLOWED=NO build 2>&1 | grep -E 'error:|warning: .*(BackgroundLocation|PositionPublisher|ViewController)|BUILD' | head -n 80
           test "${PIPESTATUS[0]}" -eq 0
       - name: Start the app in a simulator and check that its plugins are there
+        timeout-minutes: 15
         run: |
           # Compiling is not enough: the plugins only exist if the app's ViewController registers them.
           UDID=$(xcrun simctl list devices available -j | jq -r '[.devices | to_entries[] | select(.key | test("iOS")) | .value[] | select(.name | test("^iPhone"))][0].udid')
           echo "Simulator $UDID"
           xcrun simctl boot "$UDID"
-          xcrun simctl bootstatus "$UDID" -b
-          xcrun simctl install "$UDID" build/Build/Products/Debug-iphonesimulator/App.app
+          # No "bootstatus": on the runners it can wait many minutes for data migration
+          # (locationd). Installing works as soon as the device is up.
+          APP=build/Build/Products/Debug-iphonesimulator/App.app
+          for i in $(seq 1 90); do xcrun simctl install "$UDID" "$APP" 2>/dev/null && break; sleep 5; done
+          xcrun simctl install "$UDID" "$APP"
           LOG="$RUNNER_TEMP/app.log"
           xcrun simctl launch --console-pty "$UDID" org.polowanie.app > "$LOG" 2>&1 &
-          for i in $(seq 1 120); do grep -q '\[polowanie\] plugins' "$LOG" && break; sleep 1; done
+          for i in $(seq 1 240); do grep -q '\[polowanie\] plugins' "$LOG" && break; sleep 1; done
           kill %1 2>/dev/null || true
           grep -E 'polowanie|error|Error' "$LOG" | head -n 40 || true
           line=$(grep '\[polowanie\] plugins' "$LOG" || true)
