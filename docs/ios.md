@@ -54,17 +54,27 @@ używania aplikacji”: udostępnianie włączone przy odblokowanym ekranie trwa
 a w pasku stanu widać niebieski wskaźnik lokalizacji. Nie ma liczby satelitów (iOS jej nie podaje)
 ani powiadomienia z przyciskiem Stop: zatrzymuje się w aplikacji.
 
-## Co na iPhonie jeszcze nie działa
+## Pozostałe wtyczki natywne
 
-Pozostałe wtyczki natywne są na razie tylko na Androida (`android/app/src/main/java/org/polowanie/app/`).
-Na iPhonie aplikacja używa wtedy tego, co daje przeglądarka (WKWebView):
+Wszystkie wtyczki z Androida mają odpowiedniki w Swifcie w `ios/App/App/` (te same nazwy i zdarzenia,
+więc kod w `src/` ich nie rozróżnia), zarejestrowane w `ViewController.swift`:
 
-- **Zapisywanie map offline w tle** (TileDownload): zapis działa, ale tylko z otwartą aplikacją.
-- **Alarmy w kieszeni** (Alerts): brak powiadomień i wibracji przy wiadomościach i alarmach.
-- **Kompas** (Compass): kompas z przeglądarki, bez informacji o kalibracji.
-- **Odpowiedzi głosem na egzaminie ustnym** (Speech): niedostępne.
-- **Drukowanie i PDF pokotu** (Printer): może nie działać.
-- **Aktualizacje**: aplikacja nie sprawdza wydań APK na GitHubie; nową wersję instaluje się z Xcode.
+| Wtyczka | iPhone | Różnice względem Androida |
+|---|---|---|
+| Alerts | Core Haptics + powiadomienia | wibracja w tle tylko jako powiadomienie (dźwięk/wibracja wg ustawień telefonu) |
+| Compass | CLHeading | — |
+| Printer | systemowe okno drukowania (też „Zapisz do Plików” jako PDF) | — |
+| Speech | rozpoznawanie mowy Apple (pl-PL) | prosi o zgodę na mikrofon i rozpoznawanie mowy |
+| Voice | AVSpeechSynthesizer | czyta też w trybie cichym |
+| Bars | styl paska stanu | iPhone nie ma dolnego paska nawigacji |
+| TileDownload | port TileDownloadService + Puwg92 | patrz niżej |
+| Gps | brak (niepotrzebny) | iOS ma A-GPS, lokalizacja z WebView łapie pozycję szybko |
 
-Działa: mapa, egzaminy, pogoda, okresy, atlas, polowanie zbiorowe (także z zablokowanym ekranem), GPS (z Wi-Fi i A-GPS
-iPhone'a łapie pozycję szybko), mapy offline, udostępnianie, schowek.
+**Zapis map offline:** podczas zapisu ekran sam nie gaśnie. Po zablokowaniu telefonu iOS 26 kontynuuje
+zapis jako zadanie w tle z postępem na ekranie blokady (można je tam zatrzymać). Starszy iOS daje
+aplikacji tylko około pół minuty: zapis się wstrzyma i wznowi po otwarciu aplikacji.
+
+**Alarmy przy zablokowanym ekranie:** powiadomienia wysyła strona, a iOS może ją uśpić w tle.
+Trzeba to sprawdzić na telefonie; pewne rozwiązanie to powiadomienia push (płatne konto Apple).
+
+**Aktualizacje:** aplikacja nie sprawdza wydań APK na GitHubie; nową wersję instaluje się z Xcode.
