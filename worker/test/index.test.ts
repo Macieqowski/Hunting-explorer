@@ -99,7 +99,8 @@ describe('grading service', () => {
 
   it('is configured to answer both apps: Android runs at https://localhost, the iPhone at capacitor://localhost', async () => {
     const { readFileSync } = await import('node:fs');
-    const conf = readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8');
+    const { fileURLToPath } = await import('node:url');
+    const conf = readFileSync(fileURLToPath(new URL('../wrangler.jsonc', import.meta.url).href), 'utf8');
     const origins = /"ALLOWED_ORIGINS":\s*"([^"]*)"/.exec(conf)?.[1] ?? '';
     const { d } = deps();
     for (const origin of ['https://www.polowanie.org', 'https://localhost', 'capacitor://localhost']) {
