@@ -614,6 +614,7 @@ private final class BackgroundKeeper {
 
     func begin(title: String) {
         UIApplication.shared.isIdleTimerDisabled = true
+        NSLog("polowanie-tiles: download starts, iOS \(UIDevice.current.systemVersion)")
         if #available(iOS 26.0, *), continued == nil { continued = ContinuedTask.start(title: title) }
         if task == .invalid {
             task = UIApplication.shared.beginBackgroundTask(withName: "tiles") { [weak self] in
@@ -667,11 +668,13 @@ private final class ContinuedTask {
         let id = "\(Bundle.main.bundleIdentifier ?? "org.polowanie.app").tiles.\(UUID().uuidString)"
         let ok = BGTaskScheduler.shared.register(forTaskWithIdentifier: id, using: .main) { t in
             guard let t = t as? BGContinuedProcessingTask else { return t.setTaskCompleted(success: false) }
+            NSLog("polowanie-tiles: continued task started")
             if me.finished { return t.setTaskCompleted(success: true) }
             me.task = t
             t.expirationHandler = { TileDownloader.shared.cancelAll() }
             if let p = me.pending { me.update(title: p.0, done: p.1, total: p.2) }
         }
+        NSLog("polowanie-tiles: register \(id): \(ok)")
         guard ok else {
             NSLog("polowanie-tiles: could not register the continued processing task \(id)")
             return nil
@@ -679,6 +682,7 @@ private final class ContinuedTask {
         let req = BGContinuedProcessingTaskRequest(identifier: id, title: title, subtitle: "")
         do {
             try BGTaskScheduler.shared.submit(req)
+            NSLog("polowanie-tiles: continued task submitted")
         } catch {
             NSLog("polowanie-tiles: continued task not available: \(error)")
             return nil

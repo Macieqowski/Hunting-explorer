@@ -6,6 +6,9 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 /** True inside the Android (later iOS) app, false on the website. */
 export const isApp = (): boolean => Capacitor.isNativePlatform();
 
+/** True only in the iPhone app. */
+export const isIosApp = (): boolean => Capacitor.getPlatform() === 'ios';
+
 /** True only in the Android app (installed from an APK, so it checks GitHub for updates itself). */
 export const isAndroidApp = (): boolean => Capacitor.getPlatform() === 'android';
 

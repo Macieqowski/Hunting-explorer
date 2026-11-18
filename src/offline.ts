@@ -474,8 +474,9 @@ async function downloadInApp(nt: NonNullable<ReturnType<typeof nativeTileDownloa
       sources: nativeSources(units),
       units: units.map(nativeUnit),
     });
-  } catch {
+  } catch (e) {
     // Android does not let a service start while the app is in the background: resume later.
+    console.warn('[polowanie] native tile download did not start', e);
     return pause();
   }
   let since = 0;
