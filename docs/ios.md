@@ -68,7 +68,7 @@ więc kod w `src/` ich nie rozróżnia), zarejestrowane w `ViewController.swift`
 | Voice | AVSpeechSynthesizer | czyta też w trybie cichym |
 | Bars | styl paska stanu | iPhone nie ma dolnego paska nawigacji |
 | TileDownload | port TileDownloadService + Puwg92 | patrz niżej |
-| Gps | brak (niepotrzebny) | iOS ma A-GPS, lokalizacja z WebView łapie pozycję szybko |
+| Gps | CoreLocation | bez liczby satelitów (iOS jej nie podaje); zgoda na lokalizację tylko raz, dla aplikacji, a nie dla „localhost” |
 
 **Zapis map offline:** podczas zapisu ekran sam nie gaśnie. Po zablokowaniu telefonu iOS 26 kontynuuje
 zapis jako zadanie w tle z postępem na ekranie blokady (można je tam zatrzymać). Pod paskiem postępu

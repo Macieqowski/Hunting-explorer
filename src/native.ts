@@ -136,7 +136,7 @@ export const nativeTileDownload = (): TileDownloadPlugin | null =>
 
 // ---------------------------------------------------------------- location with the screen off
 
-/** Whether location keeps coming with the screen off (only in the Android app; the iPhone app has no service yet). */
+/** Whether location keeps coming with the screen off (the app's BackgroundLocation plugin, Android and iPhone). */
 export const hasBackgroundLocation = (): boolean => isApp() && Capacitor.isPluginAvailable('BackgroundLocation');
 
 export interface BackgroundWatch {

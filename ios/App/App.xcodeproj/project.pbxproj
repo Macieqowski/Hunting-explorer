@@ -17,6 +17,7 @@
 		A1B2C3D40000000000000015 /* TileDownloadPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000005 /* TileDownloadPlugin.swift */; };
 		A1B2C3D40000000000000016 /* SmallPlugins.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000006 /* SmallPlugins.swift */; };
 		A1B2C3D40000000000000017 /* SpeechPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000007 /* SpeechPlugin.swift */; };
+		A1B2C3D40000000000000018 /* GpsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000008 /* GpsPlugin.swift */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		504EC30D1FED79650016851F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30B1FED79650016851F /* Main.storyboard */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
@@ -36,6 +37,7 @@
 		A1B2C3D40000000000000005 /* TileDownloadPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TileDownloadPlugin.swift; sourceTree = "<group>"; };
 		A1B2C3D40000000000000006 /* SmallPlugins.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallPlugins.swift; sourceTree = "<group>"; };
 		A1B2C3D40000000000000007 /* SpeechPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechPlugin.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000008 /* GpsPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GpsPlugin.swift; sourceTree = "<group>"; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		504EC30C1FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		504EC30E1FED79650016851F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -82,6 +84,7 @@
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				A1B2C3D40000000000000007 /* SpeechPlugin.swift */,
+				A1B2C3D40000000000000008 /* GpsPlugin.swift */,
 				A1B2C3D40000000000000006 /* SmallPlugins.swift */,
 				A1B2C3D40000000000000005 /* TileDownloadPlugin.swift */,
 				A1B2C3D40000000000000004 /* Puwg92.swift */,
@@ -182,6 +185,7 @@
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				A1B2C3D40000000000000017 /* SpeechPlugin.swift in Sources */,
+				A1B2C3D40000000000000018 /* GpsPlugin.swift in Sources */,
 				A1B2C3D40000000000000016 /* SmallPlugins.swift in Sources */,
 				A1B2C3D40000000000000015 /* TileDownloadPlugin.swift in Sources */,
 				A1B2C3D40000000000000014 /* Puwg92.swift in Sources */,

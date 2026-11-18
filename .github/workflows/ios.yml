@@ -64,7 +64,7 @@ jobs:
           grep -E 'polowanie|error|Error' "$LOG" | head -n 40 || true
           line=$(grep '\[polowanie\] plugins' "$LOG" || true)
           test -n "$line" || { echo "::error::The app did not start (no plugins line in its console)"; exit 1; }
-          for p in BackgroundLocation Alerts Compass Printer Speech Voice Bars TileDownload; do
+          for p in BackgroundLocation Alerts Compass Printer Speech Voice Bars TileDownload Gps; do
             echo "$line" | grep -q "$p" || { echo "::error::Plugin $p is missing in the iPhone app"; exit 1; }
           done
           echo "All plugins there: $line"
