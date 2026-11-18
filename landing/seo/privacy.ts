@@ -14,6 +14,8 @@ export const PRIVACY_PATH = '/prywatnosc/';
 /** The day the text last changed. */
 export const UPDATED = '2026-11-18';
 const CONTACT = 'kontakt@polowanie.org';
+/** The data controller (GDPR art. 4(7)): the person who runs the app and the services behind it. */
+const CONTROLLER = 'Maciej Palicki';
 
 const mail = `<a href="mailto:${CONTACT}">${CONTACT}</a>`;
 const MONTHS = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'];
@@ -41,7 +43,7 @@ export function privacyPage(): Page {
 </ul>
 
 <h2>Kto odpowiada za dane</h2>
-<p>Administratorem danych jest twórca aplikacji Polowanie. Kontakt we wszystkich sprawach dotyczących danych: ${mail}.</p>
+<p>Administratorem danych jest ${CONTROLLER}, twórca aplikacji Polowanie. Kontakt we wszystkich sprawach dotyczących danych: ${mail}.</p>
 <p>Polowanie zbiorowe organizuje koło łowieckie albo prowadzący. To prowadzący decyduje, kto bierze w nim udział, i może usunąć polowanie razem z danymi uczestników.</p>
 
 <h2>Dane, które zostają na Twoim urządzeniu</h2>

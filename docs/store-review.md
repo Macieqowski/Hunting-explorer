@@ -14,6 +14,8 @@ What the repository does so that the Android and iPhone apps pass store review, 
 | Background use is named before the location permission is asked | `shareConsentBackground` in `src/huntUi.ts` | Play's prominent-disclosure rule and App Store guideline 5.1.1. |
 | "Not an official app" statement with the data sources | About page in `src/main.ts` | Play's rule for apps that show government information. |
 | The grading service answers the iPhone app (`capacitor://localhost`) | `worker/wrangler.jsonc` | Without it AI grading fails in the iPhone app, and a reviewer sees a broken feature. |
+| The app is for iPhone only (`TARGETED_DEVICE_FAMILY = 1`, no iPad orientations in `Info.plist`) | `ios/App/App.xcodeproj/project.pbxproj` | Nobody has tried the app on an iPad. A universal app is reviewed on an iPad and needs iPad screenshots. |
+| The privacy policy names the controller | `CONTROLLER` in `landing/seo/privacy.ts` | GDPR article 13: a person has to know who holds their data. |
 | Consent before the microphone and before an answer goes to the AI model | `consentMic`, `consentAi` in `src/oralUi.ts` | App Store guideline 5.1.2(i): name the third-party AI and ask first. |
 
 ## Keep true when the code changes
@@ -22,6 +24,7 @@ What the repository does so that the Android and iPhone apps pass store review, 
 - A new permission or foreground service type in `AndroidManifest.xml`: Play Console needs a new declaration before the build is accepted.
 - Text shown in the iPhone app must not name Android or Google Play. Text for the Play build must not offer an APK.
 - `UIBackgroundModes` in `Info.plist` has `location` (sharing on a group hunt) and `processing` (saving maps). Do not add a mode no feature uses: each one is questioned in review.
+- iPad: an iPhone-only app can become universal in a later version, but a released universal app cannot drop the iPad. Before setting `TARGETED_DEVICE_FAMILY` to `"1,2"`, test every screen on an iPad and prepare iPad screenshots. An iPhone-only app still opens on an iPad in a phone-sized window, and a reviewer may try it there.
 - Version numbers only go up. Android: the workflow's version (code = major×10000 + minor×100 + patch). iOS: `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in Xcode; the build number must rise with every upload.
 
 ## Builds
