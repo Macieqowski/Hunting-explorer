@@ -99,7 +99,7 @@ describe('pages for search engines', () => {
     expect(ORIGIN + p.path).toBe(PRIVACY_URL);
     expect(p.noindex).toBeFalsy();
     expect(sitemap(pages)).toContain(`<loc>${PRIVACY_URL}</loc>`);
-    for (const word of ['kontakt@polowanie.org', 'Jak usunąć swoje dane', 'w tle', 'OpenAI', 'Firebase', 'Open-Meteo']) expect(p.body).toContain(word);
+    for (const word of ['Administratorem danych jest Maciej Palicki', 'kontakt@polowanie.org', 'Jak usunąć swoje dane', 'w tle', 'OpenAI', 'Firebase', 'Open-Meteo']) expect(p.body).toContain(word);
     expect(render(pages[0], shell)).toContain('<a href="/prywatnosc/">Polityka prywatności</a>');
   });
 
