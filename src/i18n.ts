@@ -31,6 +31,8 @@ const dict = {
   moreAboutHint: { pl: 'Skąd pochodzą dane, wersja, przydatne linki', en: 'Data sources, version, useful links' },
   moreContact: { pl: 'Kontakt', en: 'Contact' },
   moreContactHint: { pl: 'Pytania, uwagi, polowanie z aplikacją w Twoim kole', en: 'Questions, feedback, trying the app in your club' },
+  morePrivacy: { pl: 'Polityka prywatności', en: 'Privacy policy' },
+  morePrivacyHint: { pl: 'Jakie dane zbiera aplikacja i jak je usunąć', en: 'What the app collects and how to delete it (in Polish)' },
   moreApp: { pl: 'Aplikacja na Androida', en: 'Android app' },
   moreAppHint: { pl: 'Pobierz i zainstaluj na telefonie', en: 'Download and install on your phone' },
   sheetToggle: { pl: 'Rozwiń lub zwiń listę', en: 'Expand or collapse the list' },

@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GUIDES, fmt, renderGuide, uiLabels } from './huntHelp';
 import { GUIDE_ROLES, hashToView, viewToHash } from './nav';
 
@@ -63,3 +63,25 @@ describe('guide addresses', () => {
     expect(hashToView('#/instrukcja/xyz')).toEqual({ kind: 'guide', role: null });
   });
 });
+
+describe('guides in the iPhone app', () => {
+  afterEach(() => {
+    vi.doUnmock('./platform');
+    vi.resetModules();
+  });
+
+  // The App Store does not accept apps that name other platforms (guideline 2.3.10).
+  it('never name Android, and say what the iPhone shows while a position is shared', async () => {
+    vi.resetModules();
+    vi.doMock('./platform', () => ({ isIosApp: () => true, isApp: () => true, PUBLIC_URL: 'https://www.polowanie.org/app/' }));
+    const ios = await import('./huntHelp');
+    const all = GUIDE_ROLES.flatMap((r) => ios.GUIDES[r].sections.flatMap((s) => [ios.GUIDES[r].intro, ...(s.text ?? []), ...(s.steps ?? []), ...(s.tips ?? [])]));
+    expect(all.filter((t) => /android/i.test(t))).toEqual([]);
+    expect(all.some((t) => t.includes('niebieski znacznik lokalizacji'))).toBe(true);
+  });
+
+  it('keep naming the Android app on the website, where the browser cannot share with the screen off', () => {
+    expect(texts('hunter').some((t) => t.includes('W aplikacji na Androida możesz zgasić ekran'))).toBe(true);
+  });
+});
+

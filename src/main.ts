@@ -40,7 +40,7 @@ import { initOffline, onOfflineChange } from './offline';
 import { initOfflineUi, renderOffline, handleOfflineEvent, handleOfflineInput, pickActive, pickAtPoint, startDraft } from './offlineUi';
 import type { AreaTarget } from './offline';
 import { loadDistrictList, checkDistrictUpdate, type DistrictList, type SnapshotMeta } from './districtData';
-import { isApp, isAndroidApp, publicHref, copyText, initDeepLinks, appVersion, checkForAppUpdate, dismissUpdate, onBackButton, minimizeApp, APK_URL } from './platform';
+import { isApp, updatesItself, publicHref, copyText, initDeepLinks, appVersion, checkForAppUpdate, dismissUpdate, onBackButton, minimizeApp, APK_URL, PRIVACY_URL } from './platform';
 
 // ---------------------------------------------------------------- helpers
 
@@ -734,7 +734,7 @@ function renderAppBox(pl: boolean) {
       <p>${pl ? 'Wersja' : 'Version'} ${esc(installedVersion ?? '…')}${
         state.dataMeta ? `<br><span class="muted small">${pl ? 'Lista kół i obwodów: stan na' : 'Club and district list as of'} ${esc(state.dataMeta.date)}</span>` : ''
       }</p>
-      ${isAndroidApp() ? `<p><button type="button" class="btn ghost" data-action="appUpdate">${pl ? 'Sprawdź aktualizację' : 'Check for updates'}</button></p>` : ''}</section>`;
+      ${updatesItself() ? `<p><button type="button" class="btn ghost" data-action="appUpdate">${pl ? 'Sprawdź aktualizację' : 'Check for updates'}</button></p>` : ''}</section>`;
   return pl
     ? `<section class="app-box"><h2>Aplikacja na Androida</h2>
       <p>Ta sama aplikacja do zainstalowania na telefonie z Androidem 9 lub nowszym. Na razie nie ma jej w Google Play, instaluje się ją z pliku.</p>
@@ -780,6 +780,7 @@ function renderMore() {
       <li><a href="#/instrukcja" data-nav="guide">${ic('book', 22)}<span><strong>${t('moreGuide')}</strong><small class="muted">${t('moreGuideHint')}</small></span>${ic('chevron', 20)}</a></li>
       ${isApp() ? '' : row('#/about', 'about', ic('android', 22), t('moreApp'), t('moreAppHint'))}
       ${row('#/about', 'about', ic('info', 22), t('moreAbout'), t('moreAboutHint'))}
+      <li><a href="${PRIVACY_URL}" target="_blank" rel="noopener">${ic('shield', 22)}<span><strong>${t('morePrivacy')}</strong><small class="muted">${t('morePrivacyHint')}</small></span>${ic('chevron', 20)}</a></li>
       <li><a href="mailto:${CONTACT_EMAIL}">${ic('mail', 22)}<span><strong>${t('moreContact')}</strong><small class="muted">${CONTACT_EMAIL}</small></span>${ic('chevron', 20)}</a></li>
     </ul>
     ${isApp() && installedVersion ? `<p class="muted small">${getLang() === 'pl' ? 'Wersja' : 'Version'} ${esc(installedVersion)}</p>` : ''}
@@ -833,10 +834,16 @@ function renderAbout() {
     <p>${pl ? 'Pytania, uwagi, błędy w danych albo chęć wypróbowania aplikacji na polowaniu koła: napisz na' : 'Questions, feedback, data errors or trying the app on your club’s hunt: write to'}
       <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.</p>
     <p class="muted small">${pl ? 'Kroje pisma' : 'Fonts'}: Inter, Barlow Semi Condensed, Manrope, JetBrains Mono (<a href="./licenses/fonts-OFL.txt" target="_blank" rel="noopener">SIL Open Font License 1.1</a>). ${pl ? 'Ikony w stylu' : 'Icons in the style of'} Lucide.</p>
+    <h2>${pl ? 'Prywatność' : 'Privacy'}</h2>
+    <p>${
+      pl
+        ? `Jakie dane zbiera aplikacja, komu je pokazuje, jak długo je trzyma i jak je usunąć, opisuje <a href="${PRIVACY_URL}" target="_blank" rel="noopener">polityka prywatności</a>.`
+        : `What the app collects, who sees it, how long it is kept and how to delete it is described in the <a href="${PRIVACY_URL}" target="_blank" rel="noopener">privacy policy</a> (in Polish).`
+    }</p>
     <p class="muted small">${
       pl
-        ? 'Aplikacja ma charakter informacyjny. Wiążące są dokumenty źródłowe: uchwały sejmików, umowy dzierżawy i przepisy prawa.'
-        : 'For information only. Source documents (assembly resolutions, lease agreements and the law) are authoritative.'
+        ? 'Aplikacja jest prywatnym projektem. Nie jest aplikacją urzędową i nie reprezentuje żadnego organu państwowego, Lasów Państwowych ani Polskiego Związku Łowieckiego; korzysta z ich publicznie dostępnych danych, a źródła podaje powyżej. Ma charakter informacyjny. Wiążące są dokumenty źródłowe: uchwały sejmików, umowy dzierżawy i przepisy prawa.'
+        : 'This app is a private project. It is not an official app and does not represent any government body, the State Forests or the Polish Hunting Association; it uses their publicly available data, with the sources named above. For information only. Source documents (assembly resolutions, lease agreements and the law) are authoritative.'
     }</p>
   </article>`;
 }

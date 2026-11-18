@@ -9,8 +9,18 @@ export const isApp = (): boolean => Capacitor.isNativePlatform();
 /** True only in the iPhone app. */
 export const isIosApp = (): boolean => Capacitor.getPlatform() === 'ios';
 
-/** True only in the Android app (installed from an APK, so it checks GitHub for updates itself). */
+/** True only in the Android app. */
 export const isAndroidApp = (): boolean => Capacitor.getPlatform() === 'android';
+
+/**
+ * True only in the Android app installed from the APK on GitHub: nothing else updates it, so it
+ * checks for new versions itself. The Google Play build (VITE_DISTRIBUTION=play) must not: Play
+ * forbids an app from updating itself, or pointing at its own APK, by any way other than Play.
+ */
+export const updatesItself = (): boolean => isAndroidApp() && import.meta.env.VITE_DISTRIBUTION !== 'play';
+
+/** The privacy policy on the website: linked from the app and given to Google Play and the App Store. */
+export const PRIVACY_URL = 'https://www.polowanie.org/prywatnosc/';
 
 /** The website on an iPhone or iPad (iPadOS says it is a Mac, but has a touch screen). */
 export const isIosBrowser = (): boolean =>
@@ -157,8 +167,9 @@ const UPDATE_DISMISSED = 'appUpdateDismissed';
  * GitHub for the newest release and calls `show` when there is a newer one the person has not dismissed.
  */
 export async function checkForAppUpdate(show: (version: string, url: string) => void, force = false): Promise<'newer' | 'current' | 'error'> {
-  // The iPhone app is installed from Xcode or TestFlight, never from the APK on GitHub.
-  if (!isAndroidApp()) return 'current';
+  // The iPhone app comes from Xcode, TestFlight or the App Store, and the Google Play build from
+  // Play: neither is ever updated from the APK on GitHub.
+  if (!updatesItself()) return 'current';
   const current = await appVersion();
   if (!current) return 'current';
   try {

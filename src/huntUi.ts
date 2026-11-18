@@ -98,7 +98,7 @@ import {
 } from './huntCrew';
 import { setGuide, guideCardHtml, guideLine, guideFix, enableCompass, type GuideText, type GuideTarget } from './huntGuide';
 import { Sharer } from './huntShare';
-import { publicBase, canShare, shareLink, copyText, readText, printPage, saveTextFile, isApp, isIosBrowser } from './platform';
+import { publicBase, canShare, shareLink, copyText, readText, printPage, saveTextFile, isApp, isIosApp, isIosBrowser } from './platform';
 import { alertUser, vibrate, tick, hasBackgroundLocation } from './native';
 import { openPocket, updatePocket } from './huntPocket';
 import { roleIcon, speciesIcon, standIcon } from './huntIcons';
@@ -357,6 +357,16 @@ const L = {
   shareInBackground: {
     pl: 'Możesz zgasić ekran i schować telefon: aplikacja wysyła położenie w tle, dopóki widać jej powiadomienie.',
     en: 'You can lock the screen and pocket the phone: the app keeps sending your position while its notification is shown.',
+  },
+  shareInBackgroundIos: {
+    pl: 'Możesz zgasić ekran i schować telefon: aplikacja wysyła położenie w tle, a iPhone pokazuje wtedy u góry ekranu niebieski znacznik lokalizacji.',
+    en: 'You can lock the screen and pocket the phone: the app keeps sending your position, and the iPhone shows the blue location indicator at the top of the screen.',
+  },
+  // Shown with the consent text, before the phone asks for the location permission (both stores
+  // want background use named up front, next to what is collected and who sees it).
+  shareConsentBackground: {
+    pl: 'Aplikacja wysyła położenie także w tle: przy zgaszonym ekranie i wtedy, gdy korzystasz z innej aplikacji. Robi to do chwili, gdy zatrzymasz udostępnianie albo prowadzący zakończy polowanie.',
+    en: 'The app keeps sending your position in the background too: with the screen off and while you use another app. It does so until you stop sharing or the leader ends the hunt.',
   },
   shareNotifTitle: { pl: 'Polowanie: udostępniasz położenie', en: 'Polowanie: sharing your location' },
   shareNotifText: { pl: 'Widzą je uczestnicy polowania. Dotknij, aby otworzyć mapę.', en: 'Hunt participants can see it. Tap to open the map.' },
@@ -2308,14 +2318,14 @@ function renderLive(h: Hunt, me: Participant): string {
             ? `<small class="muted">${esc(tr('gpsSats').replace('{v}', String(sharer.sats.visible)).replace('{u}', String(sharer.sats.used)))}. ${esc(tr('gpsColdHint'))}</small><br>`
             : ''
         }
-        <small class="muted">${l(hasBackgroundLocation() ? 'shareInBackground' : 'shareKeepOpen')}</small></div>
+        <small class="muted">${l(hasBackgroundLocation() ? (isIosApp() ? 'shareInBackgroundIos' : 'shareInBackground') : 'shareKeepOpen')}</small></div>
         <div class="h-share-btns"><button type="button" class="btn" data-hunt="pocket" title="${esc(l('pocketHint'))}">${l('fmPocket')}</button>
         <button type="button" class="btn danger" data-hunt="shareStop">${l('shareStop')}</button></div></div>`;
     else {
       const problem =
         st === 'denied' ? l(isApp() ? 'shareDeniedApp' : 'shareDenied') : st === 'unavailable' ? l('shareUnavailable') : st === 'error' ? `${l('shareStopped')} ${sharer?.error ?? ''}` : '';
       share = `<div class="h-share card"><strong>${l('shareTitle')}</strong>
-        <p class="small">${l('shareConsent')}</p><p class="small muted">${l('shareSafety')}</p>
+        <p class="small">${l('shareConsent')}${hasBackgroundLocation() ? ` ${l('shareConsentBackground')}` : ''}</p><p class="small muted">${l('shareSafety')}</p>
         ${problem ? `<p class="h-error">${esc(problem)}</p>` : ''}
         <button type="button" class="btn" data-hunt="shareStart">${l('shareStart')}</button></div>`;
     }

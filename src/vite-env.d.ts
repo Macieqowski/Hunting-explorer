@@ -10,6 +10,8 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_EMULATOR?: string;
   /** Address of the oral-exam grading service (worker/), e.g. https://polowanie-oral.example.workers.dev. Empty = self-rating only. */
   readonly VITE_ORAL_API_URL?: string;
+  /** How the Android build reaches phones: "play" = Google Play (no update check of its own), anything else = the APK on GitHub. */
+  readonly VITE_DISTRIBUTION?: string;
 }
 
 interface ImportMeta {
