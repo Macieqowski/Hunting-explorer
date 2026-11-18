@@ -549,7 +549,20 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
 
     watchRoutePlans: (id, cb, onDenied) => watch(`routePlans/${id}`, parseRoutePlans, cb, onDenied),
 
-    saveRoutePlan: (id, driveId, plan) => guard(set(child(root, `routePlans/${id}/${driveId}`), plan ? encodeRoutePlan(plan) : null)),
+    saveRoutePlan: (id, driveId, plan) =>
+      guard(
+        (async () => {
+          const at = child(root, `routePlans/${id}/${driveId}`);
+          const data = plan ? encodeRoutePlan(plan) : null;
+          try {
+            await set(at, data);
+          } catch (e) {
+            // Rules pasted before the planned count existed refuse `n`: save the rest of the plan.
+            if (!data?.n || !/permission.denied/i.test(String((e as Error)?.message ?? e))) throw e;
+            await set(at, { ...data, n: null });
+          }
+        })(),
+      ),
 
     watchAssignments: (id, cb, onDenied) => watch(`routeAssign/${id}`, parseAssignments, cb, onDenied),
 

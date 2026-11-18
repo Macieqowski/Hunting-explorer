@@ -58,6 +58,7 @@ import {
   assignRoutes,
   presentBeaters,
   planUsable,
+  plannedCount,
   emptyPlan,
   nearestRoute,
   sameAssignment,
@@ -2565,7 +2566,7 @@ function renderStands(isLeader: boolean): string {
 export function handleHuntChange(el: HTMLElement): boolean {
   if (el instanceof HTMLSelectElement && 'planN' in el.dataset) {
     if (routeEdit) {
-      routeEdit.n = Math.min(PLAN_LIMITS.maxBeaters, Math.max(1, Number(el.value) || 1));
+      setPlanCount(routeEdit, Number(el.value));
       routeEdit.slot = null;
       routeEdit.mode = 'route';
       drawCrew();
@@ -3071,10 +3072,8 @@ function drawCrew() {
     const rs = f ? routes.get(f.id) : undefined;
     const plan = f && !rs?.size ? routePlans.get(f.id) : undefined;
     if (plan && planUsable(plan)) {
-      // Leader, routes not handed out yet: show the plan for the beaters here (or the first variant).
-      const here = hunt?.status === 'live' ? presentBeaters(members ?? [], lastSeen(), now(), presence).length : 0;
-      const n = here || [...plan.variants.keys()].sort((a, b) => a - b)[0] || Math.max(beaters().length, 5);
-      const set = routeSet(plan, n);
+      // Leader, routes not handed out yet: show the plan for the beaters here, else for the planned count.
+      const set = routeSet(plan, shownCount(plan));
       hmap.setRoutes(set ? set.routes.map((pts, i) => ({ uid: `s:${i}`, pts, label: `${i + 1}`, strong: false })) : []);
     } else hmap.setRoutes(rs ? [...rs].map(([uid, pts]) => ({ uid, pts, label: label(uid), strong: uid === myUid() })) : []);
   }
@@ -3585,6 +3584,20 @@ function renderRouteEditor(): string {
       <button type="button" class="btn small ghost" data-hunt="routeCancel">${l('cancel')}</button></div></div>`;
 }
 
+/** How many routes a drive's plan shows: the beaters here, else the count the leader planned for. */
+function shownCount(plan: RoutePlan): number {
+  const here = presentBeaters(members ?? [], lastSeen(), now(), presence).length;
+  return here ? Math.min(PLAN_LIMITS.maxBeaters, here) : plannedCount(plan, Math.max(beaters().length, 5));
+}
+
+/** The leader picked a headcount in the plan tab: show it, and save it with the plan. */
+function setPlanCount(e: NonNullable<typeof routeEdit>, v: number) {
+  const n = Math.min(PLAN_LIMITS.maxBeaters, Math.max(1, Math.round(v) || 1));
+  if (n === e.n) return;
+  e.n = n;
+  e.planDirty = true;
+}
+
 /** The routes the plan tab shows for the chosen headcount: the hand-made variant, else from the lines. */
 function planRoutes(e: NonNullable<typeof routeEdit>): Route[] {
   const v = e.plan.variants.get(e.n);
@@ -3935,10 +3948,9 @@ export function handleHuntClick(el: HTMLElement): boolean {
       const bs = beaters();
       const src = routePlans.get(d.id);
       const plan: RoutePlan = src
-        ? { lines: src.lines ? (src.lines.map((p) => ({ ...p })) as RoutePlan['lines']) : null, gaps: src.gaps, variants: new Map([...src.variants].map(([n, rs]) => [n, rs.map((r) => r.map((p) => ({ ...p })))])) }
+        ? { lines: src.lines ? (src.lines.map((p) => ({ ...p })) as RoutePlan['lines']) : null, gaps: src.gaps, variants: new Map([...src.variants].map(([n, rs]) => [n, rs.map((r) => r.map((p) => ({ ...p })))])), n: src.n }
         : emptyPlan();
-      const present = presentBeaters(members ?? [], lastSeen(), now(), presence).length;
-      const n = Math.min(PLAN_LIMITS.maxBeaters, Math.max(1, present || [...plan.variants.keys()].sort((a, b) => a - b)[0] || Math.max(bs.length, 5)));
+      const n = shownCount(plan);
       routeEdit = {
         driveId: d.id,
         tab: copy.size && !planUsable(src) ? 'people' : 'plan',
@@ -3978,7 +3990,7 @@ export function handleHuntClick(el: HTMLElement): boolean {
       break;
     case 'planN':
       if (routeEdit) {
-        routeEdit.n = Math.min(PLAN_LIMITS.maxBeaters, Math.max(1, Number(el.dataset.n) || 1));
+        setPlanCount(routeEdit, Number(el.dataset.n));
         routeEdit.slot = null;
         routeEdit.mode = 'route';
         drawCrew();
@@ -4108,6 +4120,7 @@ export function handleHuntClick(el: HTMLElement): boolean {
       run(async (be) => {
         if (e.planDirty) {
           for (const [n, rs] of e.plan.variants) if (!rs.some((r) => r.length >= 2)) e.plan.variants.delete(n);
+          e.plan.n = e.n;
           await be.saveRoutePlan(id, e.driveId, planUsable(e.plan) ? e.plan : null);
         }
         const keep = new Map([...e.routes].filter(([, r]) => r.length >= 2));

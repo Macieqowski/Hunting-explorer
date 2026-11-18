@@ -450,7 +450,11 @@ export interface RoutePlan {
   gaps: GapMode;
   /** Hand-made routes by headcount; route 0 starts at the first point of the start line. */
   variants: Map<number, Route[]>;
+  /** The headcount the leader last planned for: shown first, until the beaters are here. */
+  n?: number;
 }
+
+const okCount = (n: unknown): n is number => Number.isInteger(n) && (n as number) >= 1 && (n as number) <= PLAN_LIMITS.maxBeaters;
 
 export const emptyPlan = (): RoutePlan => ({ lines: null, gaps: 'middle', variants: new Map() });
 export const planUsable = (p: RoutePlan | null | undefined) => !!p && (!!p.lines || [...p.variants.values()].some((v) => v.length));
@@ -472,6 +476,7 @@ export function parseRoutePlan(v: unknown): RoutePlan | null {
     }
   }
   const plan: RoutePlan = { lines: ln.length === 4 ? (ln as [Pt, Pt, Pt, Pt]) : null, gaps: o.gaps === 'flanks' ? 'flanks' : 'middle', variants };
+  if (okCount(o.n)) plan.n = o.n;
   return planUsable(plan) ? plan : null;
 }
 
@@ -496,8 +501,12 @@ export function encodeRoutePlan(p: RoutePlan): Record<string, unknown> | null {
     });
     if (Object.keys(o).length) v[n] = o;
   }
-  return { lines: p.lines ? encodeRoute(p.lines) : null, gaps: p.gaps, v: Object.keys(v).length ? v : null };
+  return { lines: p.lines ? encodeRoute(p.lines) : null, gaps: p.gaps, v: Object.keys(v).length ? v : null, n: okCount(p.n) ? p.n : null };
 }
+
+/** How many routes to show for a plan before the beaters are here: the planned count, else the first variant, else `fallback`. */
+export const plannedCount = (p: RoutePlan, fallback: number): number =>
+  Math.min(PLAN_LIMITS.maxBeaters, Math.max(1, (okCount(p.n) ? p.n : 0) || [...p.variants.keys()].sort((a, b) => a - b)[0] || fallback));
 
 /** The routes for `n` beaters from the lines alone (null without lines). */
 export const routesFromLines = (p: RoutePlan, n: number): Route[] | null => (p.lines && n > 0 ? spreadRoutes(...p.lines, n) : null);
