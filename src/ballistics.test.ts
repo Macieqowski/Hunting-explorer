@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { trajectory, energy, airDensity, zeroForHeight, verdict, reachWithEnergy, range, correctionMrad, FLOORS, MRAD_PER_MOA, type Shot } from './ballistics';
 import ammo from './ammo.json';
-import type { Load } from './ballisticsUi';
+import { BULLET_TYPES, type Load } from './ballisticsUi';
 
 const loads = ammo.loads as Load[];
 const shotFor = (x: Load, zero = 100): Shot => ({
@@ -82,7 +82,7 @@ describe('ammunition data', () => {
       ids.add(x.id);
       expect(x.c && x.mk && x.n, x.id).toBeTruthy();
       expect(x.m, x.id).toBeGreaterThan(1);
-      expect(x.v[0], x.id).toBeGreaterThan(300);
+      expect(x.v[0], x.id).toBeGreaterThan(200); // subsonic loads start below 340 m/s
       expect(x.g1, x.id).toBeGreaterThan(0.05);
       expect(x.g1, x.id).toBeLessThan(1.2);
       expect(x.u, x.id).toMatch(/^https:\/\//);
@@ -91,7 +91,25 @@ describe('ammunition data', () => {
 
   test('the makers hunters ask for are there', () => {
     const makers = new Set(loads.map((x) => x.mk));
-    for (const m of ['Sellier & Bellot', 'Norma', 'RWS', 'Geco', 'Sako', 'Lapua', 'Hornady', 'Federal', 'Remington', 'Winchester', 'Browning', 'Nosler', 'Fiocchi', 'Blaser', 'Brenneke', 'Sax', 'PPU (Prvi Partizan)']) expect(makers.has(m), m).toBe(true);
+    for (const m of ['Sellier & Bellot', 'Norma', 'RWS', 'Geco', 'Sako', 'Lapua', 'Hornady', 'Federal', 'Remington', 'Winchester', 'Browning', 'Nosler', 'Fiocchi', 'Blaser', 'Brenneke', 'Sax', 'PPU (Prvi Partizan)', 'Swift']) expect(makers.has(m), m).toBe(true);
+  });
+
+  test('bullet types', () => {
+    const count = new Map<string, number>();
+    for (const x of loads) {
+      if (x.t !== undefined) expect(BULLET_TYPES, x.id).toContain(x.t);
+      count.set(x.t ?? 'none', (count.get(x.t ?? 'none') ?? 0) + 1);
+    }
+    // every type is on offer, and the maker leaves it unsaid for only a few loads
+    for (const t of BULLET_TYPES) if (t !== 'lead') expect(count.get(t) ?? 0, t).toBeGreaterThan(0);
+    expect(count.get('none') ?? 0).toBeLessThan(loads.length / 50);
+    // spot checks against the makers' own descriptions
+    const typeOf = (id: string) => loads.find((x) => x.id === id)?.t;
+    expect(loads.filter((x) => x.mk === 'Norma' && x.n === 'Jaktmatch').every((x) => x.t === 'fmj')).toBe(true);
+    expect(loads.filter((x) => x.mk === 'RWS' && x.n === 'HIT').every((x) => x.t === 'mono')).toBe(true);
+    expect(loads.filter((x) => x.mk === 'Lapua' && x.n.startsWith('Scenar')).every((x) => x.t === 'match')).toBe(true);
+    expect(loads.filter((x) => x.mk === 'Swift').map((x) => x.t).sort().filter((t, i, a) => a.indexOf(t) === i)).toEqual(['solid', 'sp', 'tip']);
+    expect(typeOf('sel-308-win-soft-point-11-7g')).toBe('sp');
   });
 
   test('calibres popular in Poland are covered', () => {

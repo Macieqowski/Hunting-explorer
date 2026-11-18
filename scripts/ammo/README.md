@@ -25,28 +25,42 @@ python3 scripts/ammo/sax.py             # Sax
 python3 scripts/ammo/nosler.py          # Nosler
 node scripts/ammo/winchester.cjs            # Winchester (pages rendered in a browser)
 node scripts/ammo/winchester.cjs browning   # Browning
-python3 scripts/ammo/norm.py src/ammo.json
+python3 scripts/ammo/norm.py src/ammo.json scripts/ammo/REJECTED.md
 npm test                                # every load must match its maker's table within 3%
 ```
 
-`norm.py` keeps hunting loads only (no FMJ, solids or target bullets), merges calibre
-spellings, and drops loads whose published tables contradict themselves. For the first makers
-those are listed by hand in `EXCLUDE` (and single misprinted cells in `MISPRINT`); the makers
-read in bulk later are checked by `norm.py` itself, which prints each load it leaves out. If
-`npm test` flags a load after a refresh, check its page and add it to `EXCLUDE`.
-The `checked` date is set to the day you run `norm.py`.
+`norm.py` merges calibre spellings, gives every load a bullet type, and drops loads whose
+published tables contradict themselves. For the hunting loads of the first makers those are
+listed by hand in `EXCLUDE` (and single misprinted cells in `MISPRINT`); everything else is
+checked by `norm.py` itself. Every load left out, with the reason, is written to
+[REJECTED.md](REJECTED.md). If `npm test` flags a load after a refresh, check its page and add
+it to `EXCLUDE`. The `checked` date is set to the day you run `norm.py`.
 
-Units: Hornady, Federal, Remington, Fiocchi, Nosler, Winchester and Browning publish tables in
+Bullet type (`t`), which the calculator lets people choose by: `sp` soft point, `tip` polymer
+tip over a lead core, `mono` expanding copper or brass, `hp` hollow point, `match` target
+bullets, `fmj` full metal jacket, `solid`, `lead`. It comes from the maker's own bullet name or
+description (`btype()` and the per-maker tables in `norm.py`); where a page doesn't say
+(most of Winchester Super-X), the load has no `t`. Full metal jacket, target, solid and
+subsonic loads are included; handgun, rimfire, shotgun and armour-piercing loads are not.
+Load ids must not change once released (people's saved rifles point at them), so ids are
+given to hunting loads first and, for the later makers, in page-address order.
+
+Swift publishes its tables as pictures. They were read by eye into `swift.json`, which is kept
+here with each picture's address: there is no script, so re-read the pictures when Swift
+changes them. `norm.py` checks every row against bullet weight and velocity, and drops the
+cells Swift itself misprinted.
+
+Units: Hornady, Federal, Remington, Fiocchi, Nosler, Swift, Winchester and Browning publish tables in
 yards, fps and ft-lb. `norm.py` converts them: bullet weight and muzzle values directly, the
 100/200/300 m values by interpolating between the two nearest yard rows.
 
-BC: PPU, Sax, Nosler, Winchester and Browning print a velocity table but no ballistic
+BC: PPU, Sax, Nosler, Swift, Winchester and Browning print a velocity table but no ballistic
 coefficient (Brenneke prints one for most loads). For those `norm.py` works out the G1 BC that
 reproduces the maker's table, with the same drag table as `src/ballistics.ts`, and marks the
 load `bf: 1`; the app says so next to the BC. A load whose table no BC reproduces within 2%
 is left out.
 
-Left out, and why: Hornady's "International" pages and Barnes (no velocity on the page),
-Swift (tables are pictures), Berger (several product pages have empty tables), Weatherby
+Makers left out, and why: Hornady's "International" pages and Barnes (no velocity on the page),
+Berger (several product pages have empty tables), Weatherby
 (figures loaded by scripts), Sig Sauer and Fiocchi's European site (they refuse automated
 readers; Fiocchi comes from fiocchiusa.com instead).

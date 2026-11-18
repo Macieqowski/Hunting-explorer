@@ -25,10 +25,12 @@ const B = site === 'browning' ? 'https://browningammo.com' : 'https://winchester
         const head = (document.body.innerText.match(/\n([^\n]+, [\d.]+ Grain[^\n]*)\n/) || [])[1] || null;
         const us = [...document.querySelectorAll('table')].map((t) => [...t.rows].map((r) => [...r.cells].map((c) => c.textContent.trim())));
         const use = (txt.match(/USAGE: ?(.*?) ?BRAND:/) || [])[1] || null;
-        return { head, tables: us.filter((t) => t.length && /yards/i.test(t[0].join(' '))), use };
+        // the page names no bullet type; norm.py reads it from this description ("hollow point", "full metal jacket"…)
+        const text = (document.body.innerText.replace(/\s+/g, ' ').match(/(?:Ask a question|\$) ([^$]*?) YOU MIGHT ALSO LIKE/) || [])[1] || null;
+        return { head, tables: us.filter((t) => t.length && /yards/i.test(t[0].join(' '))), use, text };
       });
       const parts = u.split('/');
-      if (r.tables.length) out.push({ url: B + u, line: parts[parts.length - 2], symbol: parts[parts.length - 1], head: r.head, use: r.use, table: r.tables[0] });
+      if (r.tables.length) out.push({ url: B + u, line: parts[parts.length - 2], symbol: parts[parts.length - 1], head: r.head, use: r.use, text: r.text, table: r.tables[0] });
       else console.error('NOTABLE', u);
     } catch (e) { console.error('FAIL', u, e.message.split('\n')[0]); }
     await p.close();
