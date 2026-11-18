@@ -3,7 +3,7 @@ import { render, slugify, ORIGIN } from './layout';
 import { allPages, readInputs, sitemap, ROBOTS } from './plugin';
 import { huntingYear, notFoundPage } from './pages';
 import { SPECIES } from '../../src/atlas';
-import { CARDS, REVIEW } from '../../src/aid';
+import { CARDS, reviewLine } from '../../src/aid';
 
 const inp = readInputs();
 const pages = allPages(inp);
@@ -70,16 +70,25 @@ describe('pages for search engines', () => {
     expect(ROBOTS).toContain(`Sitemap: ${ORIGIN}/sitemap.xml`);
   });
 
-  it('has first-aid pages, kept out of search engines until a medic has checked them', () => {
+  it('has first-aid pages, kept out of search engines while they are a draft', () => {
     const aid = pages.filter((p) => p.path.startsWith('/pierwsza-pomoc/'));
     expect(aid).toHaveLength(CARDS.length + 1);
     for (const c of CARDS) expect(aid.find((p) => p.path === `/pierwsza-pomoc/${c.slug}/`)?.body).toContain(`href="/app/#/wypadek/${c.slug}"`);
     const hub = aid.find((p) => p.path === '/pierwsza-pomoc/')!;
     expect(hub.body).toContain('tel:112');
-    if (!REVIEW.by) {
+    const review = reviewLine();
+    if (!review) {
       for (const p of aid) expect(p.noindex).toBe(true);
       expect(hub.body).toContain('Wersja robocza');
       expect(sitemap(pages)).not.toContain('/pierwsza-pomoc/');
+    } else {
+      const xml = sitemap(pages);
+      for (const p of aid) {
+        expect(p.noindex).toBeFalsy();
+        expect(p.body).toContain(review);
+        expect(p.body).not.toContain('Wersja robocza');
+        expect(xml).toContain(`<loc>${ORIGIN}${p.path}</loc>`);
+      }
     }
   });
 

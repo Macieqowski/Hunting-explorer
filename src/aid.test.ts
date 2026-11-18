@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CARDS, FIRST, TRIAGE, KIT, QUIZ, SOURCES, REVIEW, REVIEW_NOTES, AID_PAGES, cardBySlug, nextStep, type AidStep } from './aid';
+import { CARDS, FIRST, TRIAGE, KIT, QUIZ, SOURCES, REVIEW, REVIEW_NOTES, reviewLine, AID_PAGES, cardBySlug, nextStep, type AidStep } from './aid';
 import { aidArt, AID_ARTS } from './aidArt';
 
 /** Every step reachable from the first by "Dalej" or an answer, and whether some path loops. */
@@ -95,8 +95,16 @@ describe('first-aid cards', () => {
     expect(nextStep(steps, 99)).toEqual({ end: true });
   });
 
-  it('says it is a draft until a doctor or paramedic has checked it', () => {
-    expect(REVIEW.by).toBeNull();
+  it('is a draft until it has a review date, then says when it was checked and by whom', () => {
+    expect(reviewLine({ by: null, date: null })).toBeNull();
+    expect(reviewLine({ by: 'lek. Anna Nowak', date: null })).toBeNull();
+    expect(reviewLine({ by: null, date: 'listopad 2026' })).toBe('Przegląd medyczny treści: listopad 2026.');
+    expect(reviewLine({ by: 'lek. Anna Nowak', date: 'listopad 2026' })).toBe('Treść sprawdził(a): lek. Anna Nowak, listopad 2026.');
+  });
+
+  it('has been checked by a medical reviewer', () => {
+    expect(REVIEW.date).toBeTruthy();
+    expect(reviewLine()).not.toBeNull();
     for (const n of REVIEW_NOTES) expect(cardBySlug(n.card), n.card).toBeDefined();
   });
 

@@ -12,7 +12,7 @@
 // or the district saved offline. Visiting the section leaves a group hunt running (location
 // sharing, alarms), like the role guides.
 
-import { CARDS, FIRST, TRIAGE, KIT, QUIZ, SOURCES, REVIEW, cardBySlug, nextStep, type AidCard, type AidStep } from './aid';
+import { CARDS, FIRST, TRIAGE, KIT, QUIZ, SOURCES, reviewLine, cardBySlug, nextStep, type AidCard, type AidStep } from './aid';
 import { aidArt } from './aidArt';
 import { watchLocation, GeoError, type GeoFix } from './geo';
 import { fetchDistrictsAtPoint, fetchForestAt } from './bdl';
@@ -248,7 +248,7 @@ const backLink = () => `<a class="btn ghost back" href="#/wypadek" data-aid="go"
 const call112 = (cls = '') => `<a class="aid-112${cls}" href="tel:112">${ic('phone', cls ? 18 : 30)}<span>Zadzwoń <b>112</b></span></a>`;
 
 function reviewNote(): string {
-  return REVIEW.by
+  return reviewLine()
     ? ''
     : `<p class="aid-draft small">Wersja robocza: treść czeka na sprawdzenie przez lekarza lub ratownika medycznego.</p>`;
 }
@@ -488,11 +488,7 @@ function renderAbout(): string {
     <p><b>Instrukcje pomagają udzielić pierwszej pomocy do czasu przyjazdu ratowników. Nie zastępują kursu pierwszej pomocy ani porady lekarza. Zawsze najpierw dzwoń 112 i wykonuj polecenia dyspozytora.</b></p>
     <p>Treść napisaliśmy własnymi słowami na podstawie wytycznych Europejskiej Rady Resuscytacji (ERC) z 2025 roku, obowiązujących na kursach od stycznia 2026, z polskim nazewnictwem z tłumaczenia Polskiej Rady Resuscytacji. Tematy, których ERC 2025 już nie obejmuje (złamania, odmrożenia, pogryzienia), opisujemy według źródeł podanych przy karcie.</p>
     <h3>Przegląd medyczny</h3>
-    <p>${
-      REVIEW.by
-        ? `Treść sprawdził(a): ${esc(REVIEW.by)}${REVIEW.date ? `, ${esc(REVIEW.date)}` : ''}.`
-        : 'Ta wersja czeka na sprawdzenie przez lekarza lub ratownika medycznego.'
-    } Treść przeglądamy co roku i po każdej nowej wersji wytycznych ERC.</p>
+    <p>${esc(reviewLine() ?? 'Ta wersja czeka na sprawdzenie przez lekarza lub ratownika medycznego.')} Treść przeglądamy co roku i po każdej nowej wersji wytycznych ERC.</p>
     <h3>Źródła</h3>
     <ul>${Object.values(SOURCES)
       .map((s) => `<li><a href="${s.url}" target="_blank" rel="noopener">${esc(s.label)}</a></li>`)

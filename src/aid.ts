@@ -856,10 +856,20 @@ export const KIT: { h: string; items: string[] } = {
 };
 
 /**
- * Who checked the content, and when. Until a doctor or paramedic has, the app says "Wersja
- * robocza" on every card (Maciej's decision 1 in the plan is still open).
+ * Who checked the content, and when. While `date` is null the app says "Wersja robocza" on every
+ * card and the website keeps the first-aid pages out of search engines.
+ *
+ * A medical reviewer checked all cards in November 2026 and asked for no changes (Maciej,
+ * 2026-11-18). `by` is for the reviewer's name and title, once they agree to be named.
+ * After any change to the steps of a card, set `date` back to null until it is checked again.
  */
-export const REVIEW: { by: string | null; date: string | null } = { by: null, date: null };
+export const REVIEW: { by: string | null; date: string | null } = { by: null, date: 'listopad 2026' };
+
+/** The sentence shown under the cards' sources; null while the content is a draft. */
+export function reviewLine(r: { by: string | null; date: string | null } = REVIEW): string | null {
+  if (!r.date) return null;
+  return r.by ? `Treść sprawdził(a): ${r.by}, ${r.date}.` : `Przegląd medyczny treści: ${r.date}.`;
+}
 
 /**
  * Steps a medical reviewer should look at with extra care: they do not come straight from ERC 2025

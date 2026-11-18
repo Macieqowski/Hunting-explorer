@@ -2,23 +2,24 @@
  * "Pierwsza pomoc na polowaniu": the app's first-aid cards (src/aid.ts) as plain pages, one for
  * the list and one per card, so the steps can be read and found without the app.
  *
- * Until a doctor or paramedic has checked the content (REVIEW in src/aid.ts), the pages say
- * "Wersja robocza" and ask search engines not to list them, so they stay out of the sitemap.
+ * While the content is a draft (no review date in REVIEW, src/aid.ts), the pages say "Wersja
+ * robocza" and ask search engines not to list them, so they stay out of the sitemap.
  */
-import { CARDS, FIRST, KIT, REVIEW, SOURCES, type AidCard, type AidSource, type AidStep } from '../../src/aid';
+import { CARDS, FIRST, KIT, SOURCES, reviewLine, type AidCard, type AidSource, type AidStep } from '../../src/aid';
 import { aidArt } from '../../src/aidArt';
 import { esc, type Page } from './layout';
 
 export const AID_PATH = '/pierwsza-pomoc/';
 const cardPath = (c: AidCard) => `${AID_PATH}${c.slug}/`;
-const draft = !REVIEW.by;
+const review = reviewLine();
+const draft = !review;
 
 const appLink = (hash: string, label: string) => `<a class="btn btn-primary" href="/app/${hash}">${esc(label)}</a>`;
 
 function reviewNote(): string {
   return draft
     ? `<p class="aid-draft"><strong>Wersja robocza.</strong> Instrukcje czekają na sprawdzenie przez lekarza lub ratownika medycznego. Opierają się na wytycznych Europejskiej Rady Resuscytacji 2025.</p>`
-    : `<p class="src">Treść sprawdził(a): ${esc(REVIEW.by)}${REVIEW.date ? `, ${esc(REVIEW.date)}` : ''}.</p>`;
+    : `<p class="src">${esc(review)}</p>`;
 }
 
 const DISCLAIMER = `<p class="aid-disc">Instrukcje pomagają udzielić pierwszej pomocy do czasu przyjazdu ratowników. Nie zastępują kursu pierwszej pomocy ani porady lekarza. Zawsze najpierw dzwoń <a href="tel:112">112</a> i wykonuj polecenia dyspozytora.</p>`;
