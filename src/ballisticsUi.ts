@@ -40,7 +40,7 @@ export interface Load {
   g7?: number;
   /** Maker's test barrel length, mm. */
   bl?: number;
-  /** Maker's velocity at 0, 100, 200, 300 m (m/s). */
+  /** Maker's velocity at 0, 100, 200, 300 m (m/s); null where the maker gives none (Sako publishes V0 only). */
   v: (number | null)[];
   /** Maker's energy at 0, 100, 200, 300 m (J). */
   e: (number | null)[];
@@ -345,8 +345,11 @@ function renderAmmo(loads: Load[], x: Load | null) {
   const list = loadsFor(loads);
   const loadLabel = (y: Load) => `${y.mk} · ${y.n} · ${fmtNum(y.m, 1)} g · ${y.v[0]} m/s${y.lf ? ` · ${l('pbFree')}` : ''}`;
   const sel = settings.load === 'custom' ? 'custom' : x?.id ?? '';
+  // A popular calibre has close to a hundred loads: group them by maker so the list can be scanned.
+  const byMaker = new Map<string, Load[]>();
+  for (const y of list) byMaker.set(y.mk, [...(byMaker.get(y.mk) ?? []), y]);
   const loadSelect = `<select data-ball-field="load" aria-label="${esc(l('load'))}">
-      ${list.map((y) => opt(y.id, loadLabel(y), sel)).join('')}
+      ${[...byMaker].map(([mk, ys]) => `<optgroup label="${esc(mk)}">${ys.map((y) => opt(y.id, loadLabel(y), sel)).join('')}</optgroup>`).join('')}
       ${opt('custom', l('custom'), sel)}
     </select>`;
   let detail = '';

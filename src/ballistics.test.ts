@@ -89,6 +89,11 @@ describe('ammunition data', () => {
     }
   });
 
+  test('the makers hunters ask for are there', () => {
+    const makers = new Set(loads.map((x) => x.mk));
+    for (const m of ['Sellier & Bellot', 'Norma', 'RWS', 'Geco', 'Sako', 'Lapua', 'Hornady', 'Federal']) expect(makers.has(m), m).toBe(true);
+  });
+
   test('calibres popular in Poland are covered', () => {
     const cals = new Set(loads.map((x) => x.c));
     for (const c of ['.243 Win.', '6,5x55 SE', '6,5 Creedmoor', '.270 Win.', '7x64', '7x65 R', '.308 Win.', '.30-06 Springfield', '.300 Win. Mag.', '8x57 JS', '8x57 JRS', '9,3x62', '9,3x74 R', '.222 Rem.', '.223 Rem.'])
