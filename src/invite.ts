@@ -69,3 +69,20 @@ export const pairTokenOf = (arg: string | undefined): string | null => {
   const t = arg?.startsWith(PAIR_PREFIX) ? arg.slice(PAIR_PREFIX.length) : null;
   return validToken(t) ? t : null;
 };
+
+// ---- opening a link in the app by hand (the iPhone app gets no https links without a paid Apple account)
+
+/**
+ * The hunt part of a pasted invitation, club or pairing link (`#/polowanie/<hunt>[/<token>]`), or
+ * null. The link may sit inside a longer message, as in a text that came by SMS or WhatsApp.
+ */
+export function huntHashIn(text: string): string | null {
+  const m = /#\/polowanie\/([A-Za-z0-9_%-]+)(?:\/((?:lead\.)?[A-Za-z0-9_-]+))?/.exec(text);
+  return m ? `#/polowanie/${m[1]}${m[2] ? `/${m[2]}` : ''}` : null;
+}
+
+/** The iPhone app's own address scheme (CFBundleURLTypes in ios/App/App/Info.plist). */
+export const APP_SCHEME = 'polowanie://app/';
+
+/** An address that opens `hash` in the iPhone app, from Safari. */
+export const appSchemeLink = (hash: string) => `${APP_SCHEME}${hash}`;

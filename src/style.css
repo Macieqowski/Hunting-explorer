@@ -1481,3 +1481,8 @@ input[type='checkbox'], input[type='radio'] { width: 18px; height: 18px; accent-
 @media screen and (max-width: 760px) {
   html.ios-app .topbar { padding-top: calc(6px + env(safe-area-inset-top)); }
 }
+
+/* A hunt link opened by hand: pasted in the app, or handed from Safari to the iPhone app. */
+.h-linkopen .h-invite input { font-size: 1rem; } /* under 16 px the iPhone zooms in on focus */
+.h-inapp { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 12px; }
+.h-inapp p { margin: 0; flex: 1 1 220px; }

@@ -12,6 +12,10 @@ export const isIosApp = (): boolean => Capacitor.getPlatform() === 'ios';
 /** True only in the Android app (installed from an APK, so it checks GitHub for updates itself). */
 export const isAndroidApp = (): boolean => Capacitor.getPlatform() === 'android';
 
+/** The website on an iPhone or iPad (iPadOS says it is a Mac, but has a touch screen). */
+export const isIosBrowser = (): boolean =>
+  !isApp() && (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+
 /**
  * Public address of the app. Links and QR codes made in the app must point here, not at the app's
  * local origin. (Older links without app/ keep working: the welcome page at the root passes them on.)
@@ -65,6 +69,16 @@ export async function copyText(text: string): Promise<void> {
   else throw new Error('Clipboard unavailable');
 }
 
+/** Reads text from the clipboard ('' when it holds none). On the iPhone the system may ask first. */
+export async function readText(): Promise<string> {
+  if (isApp()) {
+    const { Clipboard } = await import('@capacitor/clipboard');
+    const r = await Clipboard.read();
+    return typeof r.value === 'string' ? r.value : '';
+  }
+  return navigator.clipboard ? navigator.clipboard.readText() : '';
+}
+
 // Android WebView ignores window.print(); the app has a tiny native plugin (MainActivity.java)
 // that hands the page to Android's print service, which also offers "Save as PDF".
 const Printer = registerPlugin<{ print(opts: { name: string }): Promise<void> }>('Printer');
@@ -76,7 +90,8 @@ export function printPage(name = document.title): void {
 }
 
 /**
- * In the app, links to www.polowanie.org (invitations, pairing codes) open the app itself.
+ * In the app, links to www.polowanie.org (invitations, pairing codes) open the app itself on
+ * Android; on the iPhone the website hands them over as polowanie://app/#/… (invite.ts).
  * Their #/… part is handed to the router as if it had been typed in the address bar.
  */
 export async function initDeepLinks(go: (hash: string) => void): Promise<void> {

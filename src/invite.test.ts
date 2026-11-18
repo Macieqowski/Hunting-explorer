@@ -69,3 +69,35 @@ describe('leader pairing links', () => {
   });
   it('codes last less than the 15 minutes the rules allow', () => expect(PAIR_MS).toBeLessThan(15 * 60e3));
 });
+
+import { huntHashIn, appSchemeLink } from './invite';
+
+describe('huntHashIn', () => {
+  const tok = 'AbC-_123456789012345678';
+  it('finds the hunt in invitation, club and pairing links', () => {
+    expect(huntHashIn(`https://www.polowanie.org/app/#/polowanie/-NxYz_12/${tok}`)).toBe(`#/polowanie/-NxYz_12/${tok}`);
+    expect(huntHashIn('https://www.polowanie.org/app/#/polowanie/-NxYz_12')).toBe('#/polowanie/-NxYz_12');
+    expect(huntHashIn(`https://www.polowanie.org/app/#/polowanie/h1/lead.${tok}`)).toBe(`#/polowanie/h1/lead.${tok}`);
+  });
+  it('takes the link out of a longer message and leaves the punctuation after it', () => {
+    expect(huntHashIn(`Zapraszam na polowanie: https://www.polowanie.org/app/#/polowanie/h1/${tok}. Do zobaczenia!`)).toBe(`#/polowanie/h1/${tok}`);
+    expect(huntHashIn(`(https://www.polowanie.org/app/#/polowanie/h1/${tok})`)).toBe(`#/polowanie/h1/${tok}`);
+  });
+  it('reads the app scheme link and older links without app/', () => {
+    expect(huntHashIn(appSchemeLink(`#/polowanie/h1/${tok}`))).toBe(`#/polowanie/h1/${tok}`);
+    expect(huntHashIn(`https://www.polowanie.org/#/polowanie/h1/${tok}`)).toBe(`#/polowanie/h1/${tok}`);
+  });
+  it('refuses text with no hunt link', () => {
+    expect(huntHashIn('')).toBeNull();
+    expect(huntHashIn('https://www.polowanie.org/app/#/mapa')).toBeNull();
+    expect(huntHashIn('polowanie w sobotę')).toBeNull();
+  });
+});
+
+describe('appSchemeLink', () => {
+  it('keeps the hunt part where the app reads it (URL hash)', () => {
+    const u = new URL(appSchemeLink('#/polowanie/h1/abc'));
+    expect(u.protocol).toBe('polowanie:');
+    expect(u.hash).toBe('#/polowanie/h1/abc');
+  });
+});
