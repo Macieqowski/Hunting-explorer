@@ -25,8 +25,9 @@
     "ACCESS_MODE": "passphrase",
     // The app's Realtime Database. Overridden at deploy time from the repository variable FIREBASE_DATABASE_URL.
     "FIREBASE_DATABASE_URL": "",
-    // Pages allowed to call the service from a browser (the app on Android runs at https://localhost).
-    "ALLOWED_ORIGINS": "https://www.polowanie.org,https://polowanie.org,https://macieqowski.github.io,https://localhost,http://localhost:5173",
+    // Pages allowed to call the service from a browser. The app runs at https://localhost on
+    // Android and at capacitor://localhost on the iPhone.
+    "ALLOWED_ORIGINS": "https://www.polowanie.org,https://polowanie.org,https://macieqowski.github.io,https://localhost,capacitor://localhost,http://localhost:5173",
     // Graded answers per day (Europe/Warsaw): per signed-in user, per network address, and in total.
     "LIMIT_USER": "100",
     "LIMIT_IP": "300",

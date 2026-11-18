@@ -131,6 +131,7 @@ ${p.body}
       <a href="/app/">Otwórz aplikację</a>
       ${NAV.map((n) => `<a href="${n.path}">${esc(n.name)}</a>`).join('\n      ')}
       <a href="/#pobierz">Pobierz na Androida</a>
+      <a href="/prywatnosc/">Polityka prywatności</a>
       <a href="mailto:kontakt@polowanie.org">Kontakt: kontakt@polowanie.org</a>
     </nav>
   </div>

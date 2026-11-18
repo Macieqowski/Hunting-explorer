@@ -97,6 +97,18 @@ describe('grading service', () => {
     expect(evil.headers.get('access-control-allow-origin')).toBeNull();
   });
 
+  it('is configured to answer both apps: Android runs at https://localhost, the iPhone at capacitor://localhost', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { fileURLToPath } = await import('node:url');
+    const conf = readFileSync(fileURLToPath(new URL('../wrangler.jsonc', import.meta.url).href), 'utf8');
+    const origins = /"ALLOWED_ORIGINS":\s*"([^"]*)"/.exec(conf)?.[1] ?? '';
+    const { d } = deps();
+    for (const origin of ['https://www.polowanie.org', 'https://localhost', 'capacitor://localhost']) {
+      const pre = await handle(new Request('https://oral.example/grade', { method: 'OPTIONS', headers: { origin } }), { ...env, ALLOWED_ORIGINS: origins }, d);
+      expect(pre.headers.get('access-control-allow-origin'), origin).toBe(origin);
+    }
+  });
+
   it('needs a valid sign-in token', async () => {
     const { d, counts } = deps();
     expect((await handle(post({ nr: 1, answer: ANSWER }, { authorization: '' }), env, d)).status).toBe(401);

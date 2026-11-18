@@ -15,6 +15,7 @@ import type { District } from '../../src/bdl';
 import type { Bank, Question, Answer } from '../../src/exam';
 import { esc, slugify, ORIGIN, type Page } from './layout';
 import { aidPages } from './aid';
+import { privacyPage } from './privacy';
 
 export interface Inputs {
   districts: District[];
@@ -614,6 +615,7 @@ export function contentPages(inp: Inputs): Page[] {
     ...SPECIES.map((sp) => speciesPage(sp, inp)),
     ...inp.exams.map(examPage),
     ...aidPages(),
+    privacyPage(),
   ];
 }
 

@@ -1,3 +1,4 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { newerVersion, isApp, publicBase, PUBLIC_URL } from './platform';
 
 describe('newerVersion', () => {
@@ -25,3 +26,36 @@ describe('outside the app', () => {
     expect(PUBLIC_URL).toBe('https://www.polowanie.org/app/');
   });
 });
+
+describe('updates', () => {
+  const load = async (platform: string, distribution?: string) => {
+    vi.resetModules();
+    vi.doMock('@capacitor/core', () => ({ Capacitor: { getPlatform: () => platform, isNativePlatform: () => platform !== 'web' }, registerPlugin: () => ({}) }));
+    if (distribution) vi.stubEnv('VITE_DISTRIBUTION', distribution);
+    return import('./platform');
+  };
+  afterEach(() => {
+    vi.doUnmock('@capacitor/core');
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it('only the Android app installed from the APK looks for updates itself', async () => {
+    expect((await load('android')).updatesItself()).toBe(true);
+    expect((await load('android', 'apk')).updatesItself()).toBe(true);
+    expect((await load('ios')).updatesItself()).toBe(false);
+    expect((await load('web')).updatesItself()).toBe(false);
+  });
+
+  it('the Google Play build never asks GitHub for a newer APK', async () => {
+    const p = await load('android', 'play');
+    expect(p.updatesItself()).toBe(false);
+    const fetched = vi.fn();
+    vi.stubGlobal('fetch', fetched);
+    const show = vi.fn();
+    expect(await p.checkForAppUpdate(show, true)).toBe('current');
+    expect(fetched).not.toHaveBeenCalled();
+    expect(show).not.toHaveBeenCalled();
+  });
+});
+

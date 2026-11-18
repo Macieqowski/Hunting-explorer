@@ -4,6 +4,9 @@ name: Android app
 # - Pull requests that touch the app: build + start it in an emulator and check the page loads.
 # - "Run workflow" with a version (e.g. 0.2.0), or a pushed tag android-v0.2.0: signed APK
 #   published as a GitHub release; the website's download link and the app's update check use it.
+# - "Run workflow" with a version and "play": a signed app bundle (.aab) for Google Play as a
+#   workflow artifact, with no GitHub release. That build has no update check of its own, which
+#   Play does not allow (docs/store-review.md). Nothing is uploaded to Play from here.
 #
 # Signing needs these repository secrets (Settings → Secrets and variables → Actions → Secrets):
 #   ANDROID_KEYSTORE_BASE64   the .p12 keystore, base64-encoded
@@ -38,6 +41,11 @@ on:
         description: 'Wersja aplikacji, np. 0.2.0 (puste = tylko testowe APK, bez wydania)'
         required: false
         default: ''
+      store:
+        description: 'github = APK w wydaniu GitHub (jak dotąd); play = plik .aab dla Google Play, bez wydania'
+        type: choice
+        options: [github, play]
+        default: github
 
 permissions:
   contents: write
@@ -52,6 +60,7 @@ jobs:
     outputs:
       version: ${{ steps.ver.outputs.version }}
       release: ${{ steps.ver.outputs.release }}
+      play: ${{ steps.ver.outputs.play }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -68,8 +77,12 @@ jobs:
         id: ver
         env:
           INPUT_VERSION: ${{ github.event.inputs.version }}
+          INPUT_STORE: ${{ github.event.inputs.store }}
         run: |
           v="$INPUT_VERSION"
+          play=false
+          if [ "$INPUT_STORE" = play ]; then play=true; fi
+          if [ "$play" = true ] && [ -z "$v" ]; then echo "::error::Plik dla Google Play wymaga wersji, np. 1.2.0"; exit 1; fi
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then v="${GITHUB_REF_NAME#android-v}"; fi
           release=true
           if [ -z "$v" ]; then v="0.0.${GITHUB_RUN_NUMBER}-test"; release=false; fi
@@ -80,7 +93,8 @@ jobs:
           echo "version=$v" >> "$GITHUB_OUTPUT"
           echo "code=$code" >> "$GITHUB_OUTPUT"
           echo "release=$release" >> "$GITHUB_OUTPUT"
-          echo "Wersja $v (kod $code), wydanie: $release"
+          echo "play=$play" >> "$GITHUB_OUTPUT"
+          echo "Wersja $v (kod $code), wydanie: $release, Google Play: $play"
 
       - run: npm ci
       - name: Club and district list from BDL
@@ -96,6 +110,8 @@ jobs:
         run: npm run build
         env:
           VITE_ORAL_API_URL: ${{ steps.oral.outputs.url }}
+          # "play" turns off the app's own update check (src/platform.ts, updatesItself).
+          VITE_DISTRIBUTION: ${{ steps.ver.outputs.play == 'true' && 'play' || 'apk' }}
           VITE_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
           VITE_FIREBASE_DATABASE_URL: ${{ vars.FIREBASE_DATABASE_URL }}
@@ -125,16 +141,25 @@ jobs:
         run: |
           task=assembleRelease; dir=release; file=app-release.apk
           if [ -z "$ANDROID_KEYSTORE_PATH" ]; then task=assembleDebug; dir=debug; file=app-debug.apk; fi
-          ./gradlew "$task" -PappVersionName="${{ steps.ver.outputs.version }}" -PappVersionCode="${{ steps.ver.outputs.code }}"
+          # For Google Play also the app bundle; the APK of the same build is for trying it on a phone.
+          if [ "${{ steps.ver.outputs.play }}" = true ]; then task="$task bundleRelease"; fi
+          ./gradlew $task -PappVersionName="${{ steps.ver.outputs.version }}" -PappVersionCode="${{ steps.ver.outputs.code }}"
           mkdir -p ../out && cp "app/build/outputs/apk/$dir/$file" ../out/polowanie.apk
+          if [ "${{ steps.ver.outputs.play }}" = true ]; then cp app/build/outputs/bundle/release/app-release.aab ../out/polowanie-play.aab; fi
 
       - uses: actions/upload-artifact@v4
         with:
           name: polowanie-apk
           path: out/polowanie.apk
 
+      - uses: actions/upload-artifact@v4
+        if: steps.ver.outputs.play == 'true'
+        with:
+          name: polowanie-play-aab
+          path: out/polowanie-play.aab
+
       - name: Publish release
-        if: steps.ver.outputs.release == 'true'
+        if: steps.ver.outputs.release == 'true' && steps.ver.outputs.play != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           V: ${{ steps.ver.outputs.version }}

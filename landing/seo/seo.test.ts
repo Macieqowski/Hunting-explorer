@@ -83,6 +83,17 @@ describe('pages for search engines', () => {
     }
   });
 
+  // Google Play and the App Store are given this address; the app links to it too.
+  it('has the privacy policy at the address the app and the stores use, linked from every page', async () => {
+    const { PRIVACY_URL } = await import('../../src/platform');
+    const p = pages.find((x) => x.path === '/prywatnosc/')!;
+    expect(ORIGIN + p.path).toBe(PRIVACY_URL);
+    expect(p.noindex).toBeFalsy();
+    expect(sitemap(pages)).toContain(`<loc>${PRIVACY_URL}</loc>`);
+    for (const word of ['kontakt@polowanie.org', 'Jak usunąć swoje dane', 'w tle', 'OpenAI', 'Firebase', 'Open-Meteo']) expect(p.body).toContain(word);
+    expect(render(pages[0], shell)).toContain('<a href="/prywatnosc/">Polityka prywatności</a>');
+  });
+
   it('names the hunting year, which starts on 1 April', () => {
     expect(huntingYear('2026-11-13')).toBe('2026/2027');
     expect(huntingYear('2027-03-31')).toBe('2026/2027');

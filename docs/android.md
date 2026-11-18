@@ -10,7 +10,7 @@ All of it lives in `src/platform.ts`:
 - Such links open the app when it is installed (`android/app/src/main/AndroidManifest.xml` + `landing/public/.well-known/assetlinks.json`, served from the root of the site). Older links without `app/` open the app as well.
 - Share, copy, GPX and exam-progress export use the Android share sheet; the pokot print uses Android's print service (`PrinterPlugin.java`), which can also save a PDF.
 - No service worker: the files are inside the APK.
-- Once in 12 hours the app asks GitHub for the newest release and shows a bar when there is a newer APK.
+- Once in 12 hours the app asks GitHub for the newest release and shows a bar when there is a newer APK. The Google Play build does not (`updatesItself()`; see [store-review.md](store-review.md)).
 - On a phone whose WebView is older than Chrome 87 it shows `public/webview-update.html`.
 - The phone's back button closes what is on top (a report sheet, the field-mode list, field mode), then goes one screen back; on the first screen it puts the app aside instead of closing it, so location sharing goes on. The pocket screen and a leader's message ignore it.
 - The big field-mode buttons give a short tick under the finger.
@@ -48,7 +48,9 @@ The certificate's SHA-256 fingerprint is in `landing/public/.well-known/assetlin
 
 **Actions → Android app → Run workflow**, enter a version such as `0.2.0`. The workflow builds the signed APK and creates the release `android-v0.2.0` with `polowanie.apk`. Version code = major×10000 + minor×100 + patch, so versions must only go up.
 
-Run it with an empty version to get a test APK as a workflow artifact, without a release. Pull requests that touch the app build it and start it in an emulator.
+Run it with an empty version to get a test APK as a workflow artifact, without a release.
+
+For Google Play choose **play** in the same form: the workflow builds the signed app bundle (`polowanie-play-aab` artifact) and no GitHub release. See [store-review.md](store-review.md). Pull requests that touch the app build it and start it in an emulator.
 
 ## Building locally
 

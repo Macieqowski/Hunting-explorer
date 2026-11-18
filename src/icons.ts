@@ -36,6 +36,8 @@ const PATHS = {
   chevron: '<path d="m9 6 6 6-6 6"/>',
   back: '<path d="m15 6-6 6 6 6"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.500h.010" stroke-width="2.600"/>',
+  /** Privacy policy: a shield. */
+  shield: '<path d="M12 3 5 6v5.500c0 4.300 2.900 7.700 7 9.500 4.100-1.800 7-5.200 7-9.500V6l-7-3Z"/><path d="m9 12 2.200 2.200L15 10.500"/>',
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18Z"/>',
   layers: '<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/>',
   android: '<rect x="6" y="3" width="12" height="18" rx="2.500"/><path d="M10.500 18h3"/>',

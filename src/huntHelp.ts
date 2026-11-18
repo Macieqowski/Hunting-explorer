@@ -8,6 +8,7 @@
 import { getLang } from './i18n';
 import { roleIcon } from './huntIcons';
 import { ic } from './icons';
+import { isIosApp } from './platform';
 import { GUIDE_ROLES, GUIDE_SLUG, type GuideRole } from './nav';
 import { ROLE_FILMS, THREE_PHONES, filmPlayer, type Film } from './films';
 
@@ -53,6 +54,14 @@ const BEFORE = (beater: boolean): GuideSection => ({
   ],
 });
 
+/**
+ * The iPhone app says "the app" where the website and the Android app say "the Android app": what
+ * the guides promise there (sharing with the screen off) holds on the iPhone too, and the App
+ * Store does not accept apps that name other platforms (guideline 2.3.10).
+ */
+const IOS = isIosApp();
+const IN_APP = IOS ? 'W aplikacji' : 'W aplikacji na Androida';
+
 const SHARE = (beater: boolean): GuideSection => ({
   id: 'lokalizacja',
   title: 'Udostępnij swoją lokalizację',
@@ -62,7 +71,9 @@ const SHARE = (beater: boolean): GuideSection => ({
   ],
   steps: [
     'Dotknij [[Udostępniaj moją lokalizację]] i zezwól na dostęp do lokalizacji.',
-    'W aplikacji na Androida możesz zgasić ekran i schować telefon: położenie jest wysyłane w tle, dopóki widać powiadomienie aplikacji.',
+    IOS
+      ? 'Możesz zgasić ekran i schować telefon: położenie jest wysyłane w tle, a iPhone pokazuje wtedy u góry ekranu niebieski znacznik lokalizacji.'
+      : `${IN_APP} możesz zgasić ekran i schować telefon: położenie jest wysyłane w tle, dopóki widać powiadomienie aplikacji.`,
     'W przeglądarce ekran musi zostać włączony. Dotknij [[Kieszeń]] (tryb kieszeni): ekran robi się czarny, nie reaguje na przypadkowe dotknięcia, a telefon dalej wysyła położenie. Aby wrócić, przesuń palcem po ekranie.',
     'Udostępnianie wyłączysz przyciskiem [[Zatrzymaj]].',
   ],
@@ -117,7 +128,8 @@ const ACCIDENT: GuideSection = {
   title: 'Wypadek: 112, alarm i pierwsza pomoc',
   where: ['Wypadek'],
   text: [
-    'Czerwony przycisk [[Wypadek]] jest na górze ekranu, w zakładce [[Teren]] i w trybie terenowym. Otwiera ekran z przyciskiem 112, Twoją pozycją do przeczytania dyspozytorowi i instrukcjami pierwszej pomocy krok po kroku. W aplikacji na Androida ten ekran otworzysz też, przytrzymując ikonę aplikacji.',
+    'Czerwony przycisk [[Wypadek]] jest na górze ekranu, w zakładce [[Teren]] i w trybie terenowym. Otwiera ekran z przyciskiem 112, Twoją pozycją do przeczytania dyspozytorowi i instrukcjami pierwszej pomocy krok po kroku.' +
+      (IOS ? '' : ' W aplikacji na Androida ten ekran otworzysz też, przytrzymując ikonę aplikacji.'),
     'W czasie polowania na tym ekranie jest też alarm do prowadzącego. Najpierw trafia tylko do prowadzącego i zastępców; dopiero gdy któryś go zatwierdzi, dostają go wszyscy uczestnicy.',
   ],
   steps: [
@@ -159,7 +171,9 @@ const LEADER: Guide = {
       id: 'start',
       title: 'Zanim zaczniesz',
       text: [
-        'Polowanie możesz przygotować na komputerze, a prowadzić z telefonu (zob. „Prowadzenie z telefonu i zastępcy”). Najlepiej prowadzić z aplikacji na Androida: wysyła położenie także przy zgaszonym ekranie.',
+        'Polowanie możesz przygotować na komputerze, a prowadzić z telefonu (zob. „Prowadzenie z telefonu i zastępcy”). Najlepiej prowadzić z aplikacji' +
+          (IOS ? '' : ' na Androida') +
+          ': wysyła położenie także przy zgaszonym ekranie.',
         'Do utworzenia polowania potrzebne jest hasło koła. Aplikacja zapamiętuje Twoje polowania na tym urządzeniu i w tej przeglądarce.',
       ],
     },

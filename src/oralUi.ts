@@ -8,6 +8,7 @@ import { readProgress, saveProgress, pushHistory, readHistory } from './examStor
 import { shuffle } from './exam';
 import { getLang, tt, fmtNum } from './i18n';
 import { ic } from './icons';
+import { isIosApp } from './platform';
 import { speechSupport, startSpeech, appendSpeech, SpeechFailure, type SpeechError, type SpeechSession } from './speech';
 import { gradeConfigured, gradeAnswer, unlockGrading, GradeError, UnlockError, type AiGrade, type GradeFail, type UnlockFail } from './oralGrade';
 
@@ -110,6 +111,11 @@ const L = {
   consentMic: {
     pl: 'Mowę na tekst zamienia usługa rozpoznawania mowy Twojej przeglądarki albo telefonu (zwykle Google), więc dźwięk trafia na jej serwery. Aplikacja niczego nie nagrywa i nie przechowuje dźwięku.',
     en: 'Speech is turned into text by the speech service of your browser or phone (usually Google), so the audio goes to its servers. The app records nothing and stores no audio.',
+  },
+  // The iPhone app uses Apple's speech recognition, never Google's.
+  consentMicIos: {
+    pl: 'Mowę na tekst zamienia usługa rozpoznawania mowy iPhone’a (Apple), więc dźwięk może trafić na jej serwery. Aplikacja niczego nie nagrywa i nie przechowuje dźwięku.',
+    en: 'Speech is turned into text by the iPhone’s speech recognition (Apple), so the audio may go to its servers. The app records nothing and stores no audio.',
   },
   consentAiTitle: { pl: 'Zanim wyślesz odpowiedź do oceny', en: 'Before you send an answer for grading' },
   consentAi: {
@@ -596,7 +602,7 @@ function consentBox() {
   const mk = ask.kind === 'mic';
   return `<div class="notice oral-consent" role="alertdialog" aria-labelledby="oral-consent-t">
     <p id="oral-consent-t"><strong>${l(mk ? 'consentMicTitle' : 'consentAiTitle')}</strong></p>
-    <p class="small">${l(mk ? 'consentMic' : 'consentAi')}</p>
+    <p class="small">${l(mk ? (isIosApp() ? 'consentMicIos' : 'consentMic') : 'consentAi')}</p>
     <div class="actions"><button type="button" class="btn" data-oral="consent">${l('consentOk')}</button>
     <button type="button" class="btn ghost" data-oral="consentNo">${l('consentNo')}</button></div></div>`;
 }
