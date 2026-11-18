@@ -40,7 +40,7 @@ import { initOffline, onOfflineChange } from './offline';
 import { initOfflineUi, renderOffline, handleOfflineEvent, handleOfflineInput, pickActive, pickAtPoint, startDraft } from './offlineUi';
 import type { AreaTarget } from './offline';
 import { loadDistrictList, checkDistrictUpdate, type DistrictList, type SnapshotMeta } from './districtData';
-import { isApp, publicHref, copyText, initDeepLinks, appVersion, checkForAppUpdate, dismissUpdate, onBackButton, minimizeApp, APK_URL } from './platform';
+import { isApp, isAndroidApp, publicHref, copyText, initDeepLinks, appVersion, checkForAppUpdate, dismissUpdate, onBackButton, minimizeApp, APK_URL } from './platform';
 
 // ---------------------------------------------------------------- helpers
 
@@ -734,7 +734,7 @@ function renderAppBox(pl: boolean) {
       <p>${pl ? 'Wersja' : 'Version'} ${esc(installedVersion ?? '…')}${
         state.dataMeta ? `<br><span class="muted small">${pl ? 'Lista kół i obwodów: stan na' : 'Club and district list as of'} ${esc(state.dataMeta.date)}</span>` : ''
       }</p>
-      <p><button type="button" class="btn ghost" data-action="appUpdate">${pl ? 'Sprawdź aktualizację' : 'Check for updates'}</button></p></section>`;
+      ${isAndroidApp() ? `<p><button type="button" class="btn ghost" data-action="appUpdate">${pl ? 'Sprawdź aktualizację' : 'Check for updates'}</button></p>` : ''}</section>`;
   return pl
     ? `<section class="app-box"><h2>Aplikacja na Androida</h2>
       <p>Ta sama aplikacja do zainstalowania na telefonie z Androidem 9 lub nowszym. Na razie nie ma jej w Google Play, instaluje się ją z pliku.</p>

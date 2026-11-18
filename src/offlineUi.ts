@@ -287,7 +287,7 @@ export function renderOffline(): string {
       : st?.persisted === false && savedAreas().length
         ? `<p class="muted small">${l('notPersisted')} <button type="button" class="btn small ghost" data-offline="persist">${l('keep')}</button></p>`
         : '';
-  const ios = isIos() && !isInstalled() ? `<div class="notice small">${l('iosHint')}</div>` : '';
+  const ios = !isApp() && isIos() && !isInstalled() ? `<div class="notice small">${l('iosHint')}</div>` : '';
   const box = host.mapBox();
   const viewOk = online && box && boxKm2(box) <= MAX_VIEW_KM2;
   return `<h2>${l('title')}</h2>

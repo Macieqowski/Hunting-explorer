@@ -6,6 +6,9 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 /** True inside the Android (later iOS) app, false on the website. */
 export const isApp = (): boolean => Capacitor.isNativePlatform();
 
+/** True only in the Android app (installed from an APK, so it checks GitHub for updates itself). */
+export const isAndroidApp = (): boolean => Capacitor.getPlatform() === 'android';
+
 /**
  * Public address of the app. Links and QR codes made in the app must point here, not at the app's
  * local origin. (Older links without app/ keep working: the welcome page at the root passes them on.)
@@ -136,6 +139,8 @@ const UPDATE_DISMISSED = 'appUpdateDismissed';
  * GitHub for the newest release and calls `show` when there is a newer one the person has not dismissed.
  */
 export async function checkForAppUpdate(show: (version: string, url: string) => void, force = false): Promise<'newer' | 'current' | 'error'> {
+  // The iPhone app is installed from Xcode or TestFlight, never from the APK on GitHub.
+  if (!isAndroidApp()) return 'current';
   const current = await appVersion();
   if (!current) return 'current';
   try {

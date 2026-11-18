@@ -134,8 +134,8 @@ export const nativeTileDownload = (): TileDownloadPlugin | null =>
 
 // ---------------------------------------------------------------- location with the screen off
 
-/** Whether location keeps coming with the screen off (only in the app). */
-export const hasBackgroundLocation = (): boolean => isApp();
+/** Whether location keeps coming with the screen off (only in the Android app; the iPhone app has no service yet). */
+export const hasBackgroundLocation = (): boolean => isApp() && Capacitor.isPluginAvailable('BackgroundLocation');
 
 export interface BackgroundWatch {
   /** The service sends my positions to the database itself (a `publish` option was given and taken). */
@@ -241,7 +241,7 @@ if (isApp()) {
  * orientation events).
  */
 export async function listenNativeCompass(cb: (h: NativeHeading) => void): Promise<(() => void) | null> {
-  if (!isApp()) return null;
+  if (!isApp() || !Capacitor.isPluginAvailable('Compass')) return null;
   const handle = await Compass.addListener('heading', cb);
   try {
     await Compass.start();
