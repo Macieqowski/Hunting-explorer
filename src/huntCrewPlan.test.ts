@@ -9,6 +9,8 @@ import {
   encodeRoutePlan,
   emptyPlan,
   plannedCount,
+  followPlan,
+  routesFromLines,
   decodeAssigned,
   encodeAssigned,
   parseAssignments,
@@ -63,6 +65,9 @@ describe('routeSet', () => {
     const s = routeSet(p, 4)!;
     expect(s.source).toBe('variant');
     expect(s.slots).toHaveLength(4);
+    // The base names the variant, so the same routes come back from it.
+    expect(s.base).toBe(4);
+    expect(routeSet({ ...p, lines }, s.base)!.routes).toBe(s.routes);
   });
   it('nothing to plan from', () => {
     expect(routeSet(emptyPlan(), 4)).toBeNull();
@@ -187,5 +192,46 @@ describe('nearestRoute', () => {
     expect(nearestRoute([straight(0), straight(200), straight(400)], at(90, 210))).toBe(1);
     expect(nearestRoute([[], straight(200)], null)).toBe(1);
     expect(nearestRoute([], O)).toBeNull();
+  });
+});
+
+describe('followPlan', () => {
+  const fromLines = routesFromLines({ lines, gaps: 'middle', variants: new Map() }, 3)!;
+  const linesPlan: RoutePlan = { lines, gaps: 'middle', variants: new Map() };
+  const edited = (slot: number): RoutePlan => {
+    const v = fromLines.map((r) => r.map((p) => ({ ...p })));
+    v[slot].splice(1, 0, at(45, 300));
+    return { lines, gaps: 'middle', variants: new Map([[3, v]]) };
+  };
+  const assigned = new Map([
+    ['a', { base: 3, slot: 0, pin: false }],
+    ['b', { base: 3, slot: 1, pin: false }],
+    ['c', { base: 3, slot: 2, pin: true }],
+  ]);
+  const given = () => new Map([...assigned].map(([u, a]) => [u, fromLines[a.slot]] as [string, Route]));
+
+  it('a route edited in the plan reaches the beater walking it', () => {
+    const out = followPlan(given(), assigned, linesPlan, edited(1))!;
+    expect(out.get('b')).toHaveLength(3);
+    expect(out.get('a')).toHaveLength(2);
+    expect(out.get('c')).toHaveLength(2);
+  });
+  it('nothing to do when the plan did not change their routes', () => {
+    expect(followPlan(given(), assigned, linesPlan, linesPlan)).toBeNull();
+    expect(followPlan(given(), undefined, linesPlan, edited(1))).toBeNull();
+    expect(followPlan(given(), assigned, linesPlan, null)).toBeNull();
+  });
+  it('a route changed by hand stays unless the plan changed that route', () => {
+    const rs = given();
+    rs.set('a', [at(0, 10), at(0, 500)]);
+    const out = followPlan(rs, assigned, linesPlan, edited(1))!;
+    expect(out.get('a')).toEqual(rs.get('a'));
+    // In the same save, the hand edit wins even over a plan change.
+    expect(followPlan(rs, assigned, linesPlan, edited(0), new Set(['a']))).toBeNull();
+  });
+  it('a variant saved earlier reaches beaters still on the routes from the lines', () => {
+    const out = followPlan(given(), assigned, edited(2), edited(2))!;
+    expect(out.get('c')).toHaveLength(3);
+    expect(out.size).toBe(3);
   });
 });
