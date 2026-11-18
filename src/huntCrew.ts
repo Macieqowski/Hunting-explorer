@@ -516,7 +516,7 @@ export interface RouteSet {
   routes: Route[];
   /** Where they come from: the hand-made variant for exactly n, the lines, or the nearest variant. */
   source: 'variant' | 'lines' | 'nearest';
-  /** The headcount of the variant used (= routes.length). */
+  /** The headcount of the routes used (the variant's or n): `routeSet(plan, base)` gives these routes again. */
   base: number;
   /** One route index per beater: repeated = two beaters on it, missing = left empty. */
   slots: number[];
@@ -533,7 +533,7 @@ export function routeSet(p: RoutePlan | null | undefined, n: number): RouteSet |
   const exact = p.variants.get(n);
   if (exact && all(exact).length) {
     const slots = all(exact);
-    return { routes: exact, source: 'variant', base: exact.length, slots: fillSlots(exact, slots, n, p.gaps) };
+    return { routes: exact, source: 'variant', base: n, slots: fillSlots(exact, slots, n, p.gaps) };
   }
   const fromLines = routesFromLines(p, n);
   if (fromLines) return { routes: fromLines, source: 'lines', base: n, slots: fromLines.map((_, i) => i) };
@@ -541,7 +541,7 @@ export function routeSet(p: RoutePlan | null | undefined, n: number): RouteSet |
   if (!ks.length) return null;
   const k = [...ks].reverse().find((x) => x <= n) ?? ks[0];
   const rs = p.variants.get(k)!;
-  return { routes: rs, source: 'nearest', base: rs.length, slots: fillSlots(rs, all(rs), n, p.gaps) };
+  return { routes: rs, source: 'nearest', base: k, slots: fillSlots(rs, all(rs), n, p.gaps) };
 }
 
 /** `n` slots out of the drawn routes: pairs on the longest routes, or gaps in the middle / on the flanks. */
@@ -761,4 +761,37 @@ export function sameAssignment(a: Map<string, Assigned> | undefined, b: Map<stri
     if (!x || x.slot !== s || x.base !== base) return false;
   }
   return true;
+}
+
+/**
+ * The leader saved the plan: the routes of beaters who already got theirs from it, redrawn.
+ * A beater follows when the plan changed their route (old plan vs new plan for their
+ * assignment), or when their route is still the one spread from the lines while the plan now
+ * has another (a variant saved before routes followed the plan). Routes in `skip` (edited by
+ * hand in the same save) stay. Returns all the drive's routes, or null when none changed.
+ */
+export function followPlan(
+  routes: Map<string, Route>,
+  assigned: Map<string, Assigned> | undefined,
+  before: RoutePlan | null | undefined,
+  after: RoutePlan | null | undefined,
+  skip: Set<string> = new Set(),
+): Map<string, Route> | null {
+  if (!assigned?.size || !planUsable(after)) return null;
+  const key = (r: Route | undefined) => (r && r.length >= 2 ? encodeRoute(r) : '');
+  const out = new Map(routes);
+  let changed = false;
+  for (const [uid, a] of assigned) {
+    if (skip.has(uid)) continue;
+    const next = routeSet(after, a.base)?.routes[a.slot];
+    const want = key(next);
+    const cur = key(routes.get(uid));
+    if (!want || want === cur) continue;
+    const planChanged = key(routeSet(before, a.base)?.routes[a.slot]) !== want;
+    const fromLines = !!cur && (key(routesFromLines(after!, a.base)?.[a.slot]) === cur || (!!before && key(routesFromLines(before, a.base)?.[a.slot]) === cur));
+    if (!planChanged && !fromLines) continue;
+    out.set(uid, next!.map((p) => ({ ...p })));
+    changed = true;
+  }
+  return changed ? out : null;
 }

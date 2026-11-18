@@ -323,6 +323,7 @@ const LEADER: Guide = {
         'Żeby dać komuś konkretną trasę, wybierz jej numer obok jego nazwiska. Ta osoba zostaje na tej trasie przy każdym przeliczeniu. [[Odepnij wszystkich]] wraca do przydziału automatycznego.',
         'Dotknij [[Przydziel teraz]], żeby naganiacze od razu zobaczyli swoje trasy. Jeśli tego nie zrobisz, przydział zapisze się sam przy [[Rozpocznij miot]].',
         'Jeśli po zapisie ktoś doszedł albo odszedł, zobaczysz [[Przelicz trasy]]. Naganiacz, któremu zmieni się trasa, dostanie powiadomienie z wibracją.',
+        'Możesz poprawić trasę w planie także po przydziale, nawet w trakcie miotu. Po [[Zapisz trasy]] naganiacz idący tą trasą od razu dostaje poprawioną wersję i powiadomienie z wibracją.',
       ],
       tips: [
         'W trakcie miotu nic nie zmienia się samo. Gdy ktoś dojdzie, karta podpowie [[Dołącz do trasy]] z numerem najbliższej trasy. Gdy ktoś przestanie wysyłać położenie na 10 minut albo się wypisze, zobaczysz ostrzeżenie o luce na jego trasie.',

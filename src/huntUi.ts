@@ -59,6 +59,7 @@ import {
   presentBeaters,
   planUsable,
   plannedCount,
+  followPlan,
   emptyPlan,
   nearestRoute,
   sameAssignment,
@@ -605,6 +606,7 @@ const L = {
   planGapsFlanks: { pl: 'skrajne trasy (flanki)', en: 'the outer routes (flanks)' },
   planMax: { pl: 'Najwyżej 8 wariantów ręcznych na miot.', en: 'At most 8 hand-made variants per drive.' },
   planSaved: { pl: 'Zapisano plan miotu.', en: 'Drive plan saved.' },
+  planFollowed: { pl: 'Zapisano plan miotu. Naganiacze z przydzieloną trasą dostali poprawione trasy.', en: 'Drive plan saved. Beaters with an assigned route got the corrected routes.' },
   planBadge: { pl: 'plan', en: 'plan' },
   asTitle: { pl: 'Przydział tras', en: 'Route assignment' },
   asPresent: { pl: 'Obecnych naganiaczy', en: 'Beaters here' },
@@ -3530,7 +3532,7 @@ function assignPreview(driveId: string): { set: RouteSet | null; present: Partic
 async function saveAssign(be: HuntBackend, id: string, driveId: string): Promise<boolean> {
   const pv = assignPreview(driveId);
   if (!pv?.set || !pv.map.size) return false;
-  const base = pv.set.routes.length;
+  const base = pv.set.base;
   const assigned = new Map<string, Assigned>();
   const rs = new Map<string, Route>();
   for (const [uid, slot] of pv.map) {
@@ -3575,7 +3577,7 @@ function renderAssign(h: Hunt): string {
       if (saved.has(p.uid) || !set) continue;
       const k = nearestRoute(set.routes, posOf(p.uid));
       if (k == null) continue;
-      rows.push(`<li>${roleIcon('beater', 16)} <strong>${esc(p.name)}</strong> ${l('asLate')} <button type="button" class="btn small" data-hunt="assignJoin" data-uid="${esc(p.uid)}" data-slot="${k}" data-base="${set.routes.length}">${l('asJoin')} ${k + 1}</button></li>`);
+      rows.push(`<li>${roleIcon('beater', 16)} <strong>${esc(p.name)}</strong> ${l('asLate')} <button type="button" class="btn small" data-hunt="assignJoin" data-uid="${esc(p.uid)}" data-slot="${k}" data-base="${set.base}">${l('asJoin')} ${k + 1}</button></li>`);
     }
     for (const [uid, a] of saved) {
       const p = all.find((x) => x.uid === uid);
@@ -3589,7 +3591,6 @@ function renderAssign(h: Hunt): string {
     return rows.length ? `<div class="card hr-assign"><strong>${l('asTitle')} · ${esc(d.name)}</strong><ul class="hr-alist">${rows.join('')}</ul></div>` : '';
   }
   const set = pv.set;
-  const k = set?.routes.length ?? 0;
   const rows = all
     .map((p) => {
       const here = pv.present.some((x) => x.uid === p.uid);
@@ -3608,7 +3609,7 @@ function renderAssign(h: Hunt): string {
         ${here && slot != null ? `<strong class="hr-slot">${slot + 1}</strong>` : ''}${opts}</li>`;
     })
     .join('');
-  const same = set ? sameAssignment(saved, pv.map, k) : false;
+  const same = set ? sameAssignment(saved, pv.map, set.base) : false;
   const status = !set
     ? `<p class="small muted">${l('asNoRoutes')}</p>`
     : saved?.size
@@ -4171,6 +4172,7 @@ export function handleHuntClick(el: HTMLElement): boolean {
       const e = routeEdit;
       if (!e || !id) break;
       const d = drives.find((x) => x.id === e.driveId);
+      const planBefore = routePlans.get(e.driveId);
       run(async (be) => {
         if (e.planDirty) {
           for (const [n, rs] of e.plan.variants) if (!rs.some((r) => r.length >= 2)) e.plan.variants.delete(n);
@@ -4178,12 +4180,18 @@ export function handleHuntClick(el: HTMLElement): boolean {
           await be.saveRoutePlan(id, e.driveId, planUsable(e.plan) ? e.plan : null);
         }
         const keep = new Map([...e.routes].filter(([, r]) => r.length >= 2));
-        if (e.dirty || !e.planDirty) await be.saveRoutes(id, e.driveId, keep);
+        // Beaters who already got a route of this plan get the corrected one (not the ones edited by hand here).
+        const live = routes.get(e.driveId) ?? new Map<string, Route>();
+        const rk = (r: Route | undefined) => (r && r.length >= 2 ? r.map((p) => `${p.lat},${p.lng}`).join(';') : '');
+        const byHand = new Set(e.dirty ? [...new Set([...keep.keys(), ...live.keys()])].filter((u) => rk(keep.get(u)) !== rk(live.get(u))) : []);
+        const followed = followPlan(e.dirty ? keep : live, assignments.get(e.driveId), planBefore, planUsable(e.plan) ? e.plan : null, byHand);
+        if (followed) await be.saveRoutes(id, e.driveId, followed);
+        else if (e.dirty || !e.planDirty) await be.saveRoutes(id, e.driveId, keep);
         const before = d?.meet ? `${d.meet.lat},${d.meet.lng}` : '';
         const after = e.meet ? `${e.meet.lat},${e.meet.lng}` : '';
         if (before !== after) await be.setDriveMeet(id, e.driveId, e.meet);
         if (routeEdit === e) routeEdit = null;
-        showToast(l(e.planDirty && !e.dirty ? 'planSaved' : 'routeSaved'));
+        showToast(l(followed ? 'planFollowed' : e.planDirty && !e.dirty ? 'planSaved' : 'routeSaved'));
         drawCrew();
         syncGuide();
       });
