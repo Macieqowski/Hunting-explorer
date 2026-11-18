@@ -5,7 +5,7 @@
 import type { Shot, ShotInput, ShotSpot } from './pokot';
 import type { Stand } from './stands';
 import type { Invite } from './invite';
-import type { CarcassMark, Message, MsgTo, Pt, Route, Transport } from './huntCrew';
+import type { Assigned, CarcassMark, Message, MsgTo, Pt, Route, RoutePlan, Transport } from './huntCrew';
 import type { Alarm, Alert, Kit } from './huntAlarm';
 import type { Drive, DriveInput, Sighting, SightingInput, Hunt, HuntInput, HuntStatus, Participant, Position, Role, TrackPoint } from './hunt';
 
@@ -22,9 +22,9 @@ export interface HuntBackend {
   /** Only participants can read the list; for anyone else onDenied fires. */
   watchParticipants(id: string, cb: (ps: Participant[]) => void, onDenied: () => void): Unsubscribe;
   /** `phone` (optional) is stored with the sign-up, readable by confirmed participants only. */
-  join(id: string, name: string, role: Exclude<Role, 'leader'>, passphrase: string, phone?: string | null): Promise<void>;
+  join(id: string, name: string, role: Exclude<Role, 'leader'>, passphrase: string, phone?: string | null, dog?: boolean): Promise<void>;
   /** Sign up with an invitation token instead of the club passphrase (still unconfirmed). */
-  joinByInvite(id: string, name: string, role: Exclude<Role, 'leader'>, token: string, phone?: string | null): Promise<void>;
+  joinByInvite(id: string, name: string, role: Exclude<Role, 'leader'>, token: string, phone?: string | null, dog?: boolean): Promise<void>;
   /** Leader only: the hunt's invitation links. */
   watchInvites(id: string, cb: (list: Invite[]) => void, onDenied: () => void): Unsubscribe;
   /** Leader only: replace all invitation links with a new one valid until `exp`; returns its token. */
@@ -120,6 +120,20 @@ export interface HuntBackend {
   watchRoutes(id: string, cb: (r: Map<string, Map<string, Route>>) => void, onDenied: () => void): Unsubscribe;
   /** Leader: replace all routes of one drive. */
   saveRoutes(id: string, driveId: string, routes: Map<string, Route>): Promise<void>;
+  /** Leaders only: route plans (lines and hand-made variants) by drive. */
+  watchRoutePlans(id: string, cb: (p: Map<string, RoutePlan>) => void, onDenied: () => void): Unsubscribe;
+  /** Leader: replace one drive's plan (null removes it). */
+  saveRoutePlan(id: string, driveId: string, plan: RoutePlan | null): Promise<void>;
+  /** Who got which planned route: driveId → uid → assignment. */
+  watchAssignments(id: string, cb: (a: Map<string, Map<string, Assigned>>) => void, onDenied: () => void): Unsubscribe;
+  /** Leader: save an assignment and the routes it gives, replacing the drive's routes. */
+  saveAssignment(id: string, driveId: string, assigned: Map<string, Assigned>, routes: Map<string, Route>): Promise<void>;
+  /** Leader: add one beater to a route of a running drive (a late arrival). */
+  addToRoute(id: string, driveId: string, uid: string, a: Assigned, route: Route): Promise<void>;
+  /** A beater's "walks with a dog" (mine, or anyone's for the leader). */
+  setDog(id: string, uid: string, dog: boolean): Promise<void>;
+  /** Beater: "I'm here" on (now) or off. */
+  setHere(id: string, here: boolean): Promise<void>;
   /** Hunters' stands per drive: driveId → uid → stand name/number. */
   watchSeats(id: string, cb: (s: Map<string, Map<string, string>>) => void, onDenied: () => void): Unsubscribe;
   /** My stand (or, for the leader, anyone's); null clears it. */

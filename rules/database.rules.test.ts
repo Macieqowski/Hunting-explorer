@@ -737,14 +737,52 @@ describe('crew planning', () => {
     await assertFails(get(ref(db('p'), 'carcasses/h1')));
     await assertSucceeds(update(ref(db('t'), 'carcasses/h1/s1'), { pickedBy: null, pickedAt: null }));
   });
+  it('route plans are drawn by the leader and seen only by leaders', async () => {
+    await setup();
+    const LINES = '52.1,21.1;52.1,21.12;52.12,21.1;52.12,21.12';
+    const plan = { lines: LINES, gaps: 'middle', v: { 3: { 0: ROUTE, 2: ROUTE } } };
+    await assertFails(set(ref(db('b'), 'routePlans/h1/d1'), plan));
+    await assertSucceeds(set(ref(db('lead'), 'routePlans/h1/d1'), plan));
+    await assertFails(set(ref(db('lead'), 'routePlans/h1/d1/lines'), ROUTE));
+    await assertFails(set(ref(db('lead'), 'routePlans/h1/d1/gaps'), 'left'));
+    await assertFails(set(ref(db('lead'), 'routePlans/h1/d1/v/21/0'), ROUTE));
+    await assertFails(set(ref(db('lead'), 'routePlans/h1/d1/v/3/0'), 'x'));
+    await assertFails(set(ref(db('lead'), 'routePlans/h1/d1/other'), 'x'));
+    await assertFails(get(ref(db('b'), 'routePlans/h1')));
+    await assertSucceeds(get(ref(db('lead'), 'routePlans/h1')));
+  });
+  it('route assignments are written by the leader together with the routes', async () => {
+    await setup();
+    await assertFails(set(ref(db('b'), 'routeAssign/h1/d1/b'), '3:0'));
+    await assertFails(set(ref(db('lead'), 'routeAssign/h1/d1/b'), '3:x'));
+    await assertSucceeds(update(ref(db('lead')), { 'routes/h1/d1': { b: ROUTE, t: ROUTE }, 'routeAssign/h1/d1': { b: '3:0', t: '3:2!' } }));
+    await assertSucceeds(get(ref(db('b'), 'routeAssign/h1')));
+    await assertFails(get(ref(db('p'), 'routeAssign/h1')));
+  });
+  it('beaters mark a dog and "I am here" on their own row; the leader can change the dog', async () => {
+    await setup();
+    await assertSucceeds(update(ref(db('b'), 'participants/h1/b'), { dog: true, here: serverTimestamp() }));
+    await assertFails(update(ref(db('b'), 'participants/h1/b'), { here: 5 }));
+    await assertFails(update(ref(db('b'), 'participants/h1/b'), { dog: 'yes' }));
+    await assertFails(update(ref(db('h'), 'participants/h1/b'), { dog: false }));
+    await assertSucceeds(update(ref(db('lead'), 'participants/h1/b'), { dog: false }));
+    await assertSucceeds(update(ref(db('b'), 'participants/h1/b'), { here: null }));
+    await assertSucceeds(
+      update(ref(db('n')), {
+        'joins/h1/n': PASS,
+        'participants/h1/n': { name: 'Nowy', role: 'beater', status: 'registered', joinedAt: serverTimestamp(), dog: true },
+        'userHunts/n/h1': true,
+      }),
+    );
+  });
   it('are purged and deleted by the leader', async () => {
     await setup();
     await set(ref(db('lead'), 'messages/h1/m1'), { text: 'x', to: 'all', ts: serverTimestamp() });
     await set(ref(db('lead'), 'routes/h1/d1'), { b: ROUTE });
     await assertFails(update(ref(db('h')), { 'messages/h1': null }));
     await assertSucceeds(update(ref(db('lead')), { 'phones/h1': null, 'messages/h1': null, 'msgAcks/h1': null, 'carcasses/h1': null }));
-    await assertSucceeds(update(ref(db('lead')), { 'drives/h1/d1': null, 'routes/h1/d1': null, 'seats/h1/d1': null }));
-    await assertSucceeds(update(ref(db('lead')), { 'hunts/h1': null, 'participants/h1': null, 'routes/h1': null, 'seats/h1': null, 'transport/h1': null }));
+    await assertSucceeds(update(ref(db('lead')), { 'drives/h1/d1': null, 'routes/h1/d1': null, 'seats/h1/d1': null, 'routePlans/h1/d1': null, 'routeAssign/h1/d1': null }));
+    await assertSucceeds(update(ref(db('lead')), { 'hunts/h1': null, 'participants/h1': null, 'routes/h1': null, 'routePlans/h1': null, 'routeAssign/h1': null, 'seats/h1': null, 'transport/h1': null }));
   });
 });
 

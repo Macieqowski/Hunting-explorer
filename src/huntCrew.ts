@@ -426,3 +426,330 @@ export const PRESETS = {
   pl: ['Naganka rusza.', 'STOP! Wstrzymać nagankę.', 'Koniec miotu. Rozładować broń.', 'Zbiórka w punkcie zbiórki.', 'Wróć na swoją trasę.', 'Zachować ciszę na stanowiskach.'],
   en: ['Beaters, move off.', 'STOP! Beaters, halt.', 'End of the drive. Unload your guns.', 'Gather at the meeting point.', 'Get back on your route.', 'Keep quiet on your stands.'],
 } as const;
+
+// ---------------------------------------------------------------- route plans for an unknown headcount
+//
+// The leader plans a drive before knowing how many beaters come: a start line and an end
+// line (the app spreads any number of routes between them) and/or hand-made variants for
+// chosen headcounts. Before the drive the leader's app counts the beaters who are there,
+// picks the routes and gives each beater one. The result goes to routes/ (per beater), so
+// the beaters' guidance is the same as with routes drawn per person.
+
+export const PLAN_LIMITS = { maxBeaters: 20, variants: 8 } as const;
+/** A beater counts as present with a location this fresh (or after tapping "I'm here"). */
+export const PRESENT_MS = 5 * 60e3;
+/** During a drive: no location for this long = a gap on the beater's route. */
+export const GAP_MS = 10 * 60e3;
+
+/** When there are fewer beaters than routes, which routes stay empty. */
+export type GapMode = 'middle' | 'flanks';
+
+export interface RoutePlan {
+  /** Start line (2 points) then end line (2 points), or null. */
+  lines: [Pt, Pt, Pt, Pt] | null;
+  gaps: GapMode;
+  /** Hand-made routes by headcount; route 0 starts at the first point of the start line. */
+  variants: Map<number, Route[]>;
+}
+
+export const emptyPlan = (): RoutePlan => ({ lines: null, gaps: 'middle', variants: new Map() });
+export const planUsable = (p: RoutePlan | null | undefined) => !!p && (!!p.lines || [...p.variants.values()].some((v) => v.length));
+
+export function parseRoutePlan(v: unknown): RoutePlan | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  const ln = decodeRoute(o.lines);
+  const variants = new Map<number, Route[]>();
+  if (o.v && typeof o.v === 'object') {
+    for (const [k, raw] of Object.entries(o.v as Record<string, unknown>)) {
+      const n = Number(k);
+      if (!Number.isInteger(n) || n < 1 || n > PLAN_LIMITS.maxBeaters || !raw || typeof raw !== 'object') continue;
+      // Arrays come back as arrays or as objects with numeric keys (gaps).
+      const rs: Route[] = [];
+      for (let i = 0; i < n; i++) rs.push(decodeRoute((raw as Record<string, unknown>)[i]));
+      while (rs.length && rs[rs.length - 1].length < 2) rs.pop();
+      if (rs.some((r) => r.length >= 2)) variants.set(n, rs);
+    }
+  }
+  const plan: RoutePlan = { lines: ln.length === 4 ? (ln as [Pt, Pt, Pt, Pt]) : null, gaps: o.gaps === 'flanks' ? 'flanks' : 'middle', variants };
+  return planUsable(plan) ? plan : null;
+}
+
+export function parseRoutePlans(v: unknown): Map<string, RoutePlan> {
+  const out = new Map<string, RoutePlan>();
+  if (!v || typeof v !== 'object') return out;
+  for (const [d, raw] of Object.entries(v as Record<string, unknown>)) {
+    const p = parseRoutePlan(raw);
+    if (p) out.set(d, p);
+  }
+  return out;
+}
+
+/** What goes to the database (null = no plan). */
+export function encodeRoutePlan(p: RoutePlan): Record<string, unknown> | null {
+  if (!planUsable(p)) return null;
+  const v: Record<string, Record<string, string>> = {};
+  for (const [n, rs] of [...p.variants].slice(0, PLAN_LIMITS.variants)) {
+    const o: Record<string, string> = {};
+    rs.slice(0, n).forEach((r, i) => {
+      if (r.length >= 2) o[i] = encodeRoute(r);
+    });
+    if (Object.keys(o).length) v[n] = o;
+  }
+  return { lines: p.lines ? encodeRoute(p.lines) : null, gaps: p.gaps, v: Object.keys(v).length ? v : null };
+}
+
+/** The routes for `n` beaters from the lines alone (null without lines). */
+export const routesFromLines = (p: RoutePlan, n: number): Route[] | null => (p.lines && n > 0 ? spreadRoutes(...p.lines, n) : null);
+
+export interface RouteSet {
+  /** The routes walked; index = route number - 1. Empty routes are not walked. */
+  routes: Route[];
+  /** Where they come from: the hand-made variant for exactly n, the lines, or the nearest variant. */
+  source: 'variant' | 'lines' | 'nearest';
+  /** The headcount of the variant used (= routes.length). */
+  base: number;
+  /** One route index per beater: repeated = two beaters on it, missing = left empty. */
+  slots: number[];
+}
+
+/**
+ * Which routes `n` beaters walk. A hand-made variant for exactly n wins, then routes spread
+ * from the lines, then the nearest variant: the biggest one not above n (extra beaters pair
+ * up on its longest routes), else the smallest one (some routes stay empty, chosen by gaps).
+ */
+export function routeSet(p: RoutePlan | null | undefined, n: number): RouteSet | null {
+  if (!p || n <= 0) return null;
+  const all = (rs: Route[]) => rs.map((_, i) => i).filter((i) => rs[i].length >= 2);
+  const exact = p.variants.get(n);
+  if (exact && all(exact).length) {
+    const slots = all(exact);
+    return { routes: exact, source: 'variant', base: exact.length, slots: fillSlots(exact, slots, n, p.gaps) };
+  }
+  const fromLines = routesFromLines(p, n);
+  if (fromLines) return { routes: fromLines, source: 'lines', base: n, slots: fromLines.map((_, i) => i) };
+  const ks = [...p.variants.keys()].filter((k) => all(p.variants.get(k)!).length).sort((a, b) => a - b);
+  if (!ks.length) return null;
+  const k = [...ks].reverse().find((x) => x <= n) ?? ks[0];
+  const rs = p.variants.get(k)!;
+  return { routes: rs, source: 'nearest', base: rs.length, slots: fillSlots(rs, all(rs), n, p.gaps) };
+}
+
+/** `n` slots out of the drawn routes: pairs on the longest routes, or gaps in the middle / on the flanks. */
+function fillSlots(rs: Route[], drawn: number[], n: number, gaps: GapMode): number[] {
+  if (n === drawn.length) return drawn;
+  if (n > drawn.length) {
+    const longest = [...drawn].sort((a, b) => routeLength(rs[b]) - routeLength(rs[a]) || a - b);
+    const out = [...drawn];
+    for (let i = 0; out.length < n; i++) out.push(longest[i % longest.length]);
+    return out.sort((a, b) => a - b);
+  }
+  return keepSlots(drawn, n, gaps);
+}
+
+/**
+ * Keep `n` of the routes (by index, left to right). 'middle': both flanks stay covered and
+ * the empty routes are spread over the middle; 'flanks': the outermost routes stay empty.
+ */
+export function keepSlots(drawn: number[], n: number, gaps: GapMode): number[] {
+  const k = drawn.length;
+  if (n >= k) return [...drawn];
+  if (n <= 0) return [];
+  if (gaps === 'flanks' || n === 1) {
+    const from = Math.floor((k - n) / 2);
+    return drawn.slice(from, from + n);
+  }
+  const idx = new Set<number>();
+  for (let i = 0; i < n; i++) idx.add(Math.round((i * (k - 1)) / (n - 1)));
+  return drawn.filter((_, i) => idx.has(i));
+}
+
+export interface AssignBeater {
+  uid: string;
+  name: string;
+  pos: Pt | null;
+  dog: boolean;
+}
+
+/**
+ * Give each beater one slot of `slots` (route indexes, one per beater). Pinned beaters keep
+ * their route; beaters with dogs get the routes closest to the middle; the rest are matched
+ * so the total walk to the starts is smallest. Beaters without a location are put in name
+ * order, left to right, on the routes left for them.
+ */
+export function assignRoutes(beaters: AssignBeater[], set: RouteSet, pins: Map<string, number> = new Map()): Map<string, number> {
+  const out = new Map<string, number>();
+  const free = [...set.slots];
+  const take = (s: number) => {
+    const i = free.indexOf(s);
+    if (i >= 0) free.splice(i, 1);
+  };
+  const rest: AssignBeater[] = [];
+  for (const b of beaters) {
+    const s = pins.get(b.uid);
+    if (s != null && s >= 0 && s < set.routes.length && set.routes[s].length >= 2) {
+      out.set(b.uid, s);
+      take(s);
+    } else rest.push(b);
+  }
+  // More beaters than slots (pins on a route twice): the extras pair up on the longest routes.
+  const drawn = set.routes.map((_, i) => i).filter((i) => set.routes[i].length >= 2);
+  const longest = [...drawn].sort((a, b) => routeLength(set.routes[b]) - routeLength(set.routes[a]) || a - b);
+  for (let i = 0; free.length < rest.length && longest.length; i++) free.push(longest[i % longest.length]);
+  free.sort((a, b) => a - b);
+  if (free.length > rest.length) free.splice(0, free.length, ...keepSlots(free, rest.length, 'middle'));
+  const c = (set.routes.length - 1) / 2;
+  const central = [...free].map((s, i) => ({ s, i })).sort((a, b) => Math.abs(a.s - c) - Math.abs(b.s - c) || a.i - b.i);
+  const dogs = rest.filter((b) => b.dog);
+  const others = rest.filter((b) => !b.dog);
+  const dogSlots = central.slice(0, dogs.length).map((x) => x.s);
+  const otherSlots = [...free];
+  for (const s of dogSlots) otherSlots.splice(otherSlots.indexOf(s), 1);
+  const match = (bs: AssignBeater[], ss: number[]) => {
+    if (!bs.length) return;
+    const starts = ss.map((s) => set.routes[s][0]);
+    const cost = bs.map((b) => starts.map((st) => (b.pos ? distanceM(b.pos, st) : 0)));
+    const pick = hungarian(cost);
+    const noPos: { b: AssignBeater; s: number }[] = [];
+    bs.forEach((b, i) => {
+      if (b.pos) out.set(b.uid, ss[pick[i]]);
+      else noPos.push({ b, s: ss[pick[i]] });
+    });
+    const sortedSlots = noPos.map((x) => x.s).sort((a, b) => a - b);
+    noPos
+      .map((x) => x.b)
+      .sort((a, b) => a.name.localeCompare(b.name, 'pl'))
+      .forEach((b, i) => out.set(b.uid, sortedSlots[i]));
+  };
+  match(dogs, dogSlots);
+  match(others, otherSlots);
+  return out;
+}
+
+/** Minimum-cost assignment for a square matrix: row i gets column result[i]. */
+export function hungarian(cost: number[][]): number[] {
+  const n = cost.length;
+  if (!n) return [];
+  const INF = Number.POSITIVE_INFINITY;
+  const u = new Array(n + 1).fill(0);
+  const v = new Array(n + 1).fill(0);
+  const p = new Array(n + 1).fill(0);
+  const way = new Array(n + 1).fill(0);
+  for (let i = 1; i <= n; i++) {
+    p[0] = i;
+    let j0 = 0;
+    const minv = new Array(n + 1).fill(INF);
+    const used = new Array(n + 1).fill(false);
+    do {
+      used[j0] = true;
+      const i0 = p[j0];
+      let delta = INF;
+      let j1 = 0;
+      for (let j = 1; j <= n; j++) {
+        if (used[j]) continue;
+        const cur = cost[i0 - 1][j - 1] - u[i0] - v[j];
+        if (cur < minv[j]) {
+          minv[j] = cur;
+          way[j] = j0;
+        }
+        if (minv[j] < delta) {
+          delta = minv[j];
+          j1 = j;
+        }
+      }
+      for (let j = 0; j <= n; j++) {
+        if (used[j]) {
+          u[p[j]] += delta;
+          v[j] -= delta;
+        } else minv[j] -= delta;
+      }
+      j0 = j1;
+    } while (p[j0] !== 0);
+    do {
+      const j1 = way[j0];
+      p[j0] = p[j1];
+      j0 = j1;
+    } while (j0);
+  }
+  const res = new Array(n).fill(0);
+  for (let j = 1; j <= n; j++) if (p[j]) res[p[j] - 1] = j - 1;
+  return res;
+}
+
+/** A saved assignment: which route of how many, and whether the leader pinned it. */
+export interface Assigned {
+  base: number;
+  slot: number;
+  pin: boolean;
+}
+
+export const encodeAssigned = (a: Assigned) => `${a.base}:${a.slot}${a.pin ? '!' : ''}`;
+export function decodeAssigned(s: unknown): Assigned | null {
+  const m = typeof s === 'string' ? /^(\d{1,2}):(\d{1,2})(!?)$/.exec(s) : null;
+  if (!m) return null;
+  const base = +m[1];
+  const slot = +m[2];
+  return base >= 1 && base <= PLAN_LIMITS.maxBeaters && slot < base ? { base, slot, pin: m[3] === '!' } : null;
+}
+
+/** driveId → uid → assignment. */
+export function parseAssignments(v: unknown): Map<string, Map<string, Assigned>> {
+  const out = new Map<string, Map<string, Assigned>>();
+  if (!v || typeof v !== 'object') return out;
+  for (const [d, raw] of Object.entries(v as Record<string, unknown>)) {
+    if (!raw || typeof raw !== 'object') continue;
+    const m = new Map<string, Assigned>();
+    for (const [uid, s] of Object.entries(raw as Record<string, unknown>)) {
+      const a = decodeAssigned(s);
+      if (a) m.set(uid, a);
+    }
+    if (m.size) out.set(d, m);
+  }
+  return out;
+}
+
+export interface PresenceInput {
+  uid: string;
+  role: Role;
+  status: string;
+  here?: number | null;
+}
+
+/**
+ * Beaters who count for the next drive: confirmed, and with a fresh location or "I'm here"
+ * tapped. The leader's ticks win both ways.
+ */
+export function presentBeaters<P extends PresenceInput>(ps: P[], lastSeen: Map<string, number>, now: number, override: Map<string, boolean> = new Map()): P[] {
+  return ps.filter((p) => {
+    if (p.role !== 'beater' || p.status !== 'confirmed') return false;
+    const o = override.get(p.uid);
+    if (o != null) return o;
+    const ts = lastSeen.get(p.uid);
+    return !!p.here || (ts != null && now - ts <= PRESENT_MS);
+  });
+}
+
+/** The nearest route start for a beater who came late (index), or null. */
+export function nearestRoute(routes: Route[], me: Pt | null): number | null {
+  let best: number | null = null;
+  let bd = Infinity;
+  routes.forEach((r, i) => {
+    if (r.length < 2) return;
+    const d = me ? Math.min(distanceM(me, r[0]), ...r.slice(1).map((p) => distanceM(me, p))) : i;
+    if (d < bd) {
+      bd = d;
+      best = i;
+    }
+  });
+  return best;
+}
+
+/** Same people on the same routes (ignores pins). */
+export function sameAssignment(a: Map<string, Assigned> | undefined, b: Map<string, number>, base: number): boolean {
+  if (!a || a.size !== b.size) return false;
+  for (const [uid, s] of b) {
+    const x = a.get(uid);
+    if (!x || x.slot !== s || x.base !== base) return false;
+  }
+  return true;
+}
