@@ -1,13 +1,13 @@
 import { describe, expect, test } from 'vitest';
 import { trajectory, energy, airDensity, zeroForHeight, verdict, reachWithEnergy, range, correctionMrad, FLOORS, MRAD_PER_MOA, type Shot } from './ballistics';
 import ammo from './ammo.json';
-import { BULLET_TYPES, type Load } from './ballisticsUi';
+import { BULLET_TYPES, makerIssues, type Load } from './ballisticsUi';
 
 const loads = ammo.loads as Load[];
 const shotFor = (x: Load, zero = 100): Shot => ({
   v0: x.v[0]!,
   mass: x.m,
-  bc: x.g7 ?? x.g1,
+  bc: x.g7 ?? x.g1!,
   model: x.g7 ? 'G7' : 'G1',
   zero,
   sightHeight: 5,
@@ -83,8 +83,8 @@ describe('ammunition data', () => {
       expect(x.c && x.mk && x.n, x.id).toBeTruthy();
       expect(x.m, x.id).toBeGreaterThan(1);
       expect(x.v[0], x.id).toBeGreaterThan(200); // subsonic loads start below 340 m/s
-      expect(x.g1, x.id).toBeGreaterThan(0.05);
-      expect(x.g1, x.id).toBeLessThan(1.2);
+      expect(x.g7 ?? x.g1, x.id).toBeGreaterThan(0.05);
+      expect(x.g7 ?? x.g1, x.id).toBeLessThan(1.2);
       expect(x.u, x.id).toMatch(/^https:\/\//);
     }
   });
@@ -119,20 +119,51 @@ describe('ammunition data', () => {
   });
 
   // The solver must reproduce each maker's own published table: this checks both the
-  // calculator and the data we copied from the maker's page.
+  // calculator and the data we copied from the maker's page. Where the maker's own numbers
+  // disagree, the load lists the cells (x) and the calculator shows a note instead.
   test.each(loads.map((x) => [x.id, x] as const))('%s matches the maker table', (_, x) => {
     const p = trajectory(shotFor(x), [0, 100, 200, 300]);
+    const noted = new Set(x.x ?? []);
     for (const i of [1, 2, 3]) {
       const v = x.v[i];
-      if (v) expect(Math.abs(p[i].v - v) / v, `v at ${i * 100} m`).toBeLessThan(0.03);
+      if (v && !noted.has(`v${i}`)) expect(Math.abs(p[i].v - v) / v, `v at ${i * 100} m`).toBeLessThan(0.03);
     }
-    if (x.e[0]) expect(Math.abs(energy(x.m, x.v[0]!) - x.e[0]) / x.e[0], 'E0').toBeLessThan(0.03);
+    for (const i of [0, 1, 2, 3]) {
+      const [v, e] = [x.v[i], x.e[i]];
+      if (v && e && !noted.has(`e${i}`)) expect(Math.abs(energy(x.m, v) - e) / e, `E at ${i * 100} m`).toBeLessThan(0.03);
+    }
+  });
+
+  test('loads whose maker data disagree carry a note with the numbers', () => {
+    const noted = loads.filter((x) => x.x?.length);
+    expect(noted.length).toBeGreaterThan(30);
+    expect(noted.length).toBeLessThan(loads.length / 20);
+    for (const x of noted) {
+      const issues = makerIssues(x);
+      expect(issues.length, x.id).toBe(x.x!.length);
+      for (const i of issues) expect(Math.abs(i.calc - i.printed) / i.printed, `${x.id} ${i.kind}${i.d}`).toBeGreaterThan(0.025);
+    }
+    // a misprint in the Fiocchi Caccia catalogue: 830 m/s at 200 m, after 715 m/s at 100 m
+    const sest = loads.find((x) => x.mk === 'Fiocchi' && x.c === '.30-06 Springfield' && x.n === 'Excellence SEST' && x.m > 11.5)!;
+    expect(sest.x).toContain('v2');
+    expect(makerIssues(loads.find((x) => x.id === 'sel-308-win-soft-point-11-7g')!)).toEqual([]);
+  });
+
+  test('drag model follows the maker tables', () => {
+    const share = (mk: string) => loads.filter((x) => x.mk === mk && x.g7).length / loads.filter((x) => x.mk === mk).length;
+    expect(share('Sellier & Bellot')).toBeGreaterThan(0.9);
+    expect(share('Lapua')).toBeGreaterThan(0.5);
+    expect(share('Norma')).toBeLessThan(0.05);
+    // the Fiocchi catalogues: every European load names its page
+    const eu = loads.filter((x) => x.s);
+    expect(eu.length).toBeGreaterThan(60);
+    for (const x of eu) expect(x.mk, x.id).toBe('Fiocchi');
   });
 
   test('legal verdict from calculated E100 agrees with the maker E100', () => {
     let disagree = 0;
     for (const x of loads) {
-      if (!x.e[1]) continue;
+      if (!x.e[1] || x.x?.length) continue;
       const mine = trajectory(shotFor(x), [100])[0].e;
       for (const f of FLOORS) if ((mine >= f.e100) !== (x.e[1] >= f.e100) && Math.abs(x.e[1] - f.e100) / f.e100 > 0.02) disagree++;
     }

@@ -20,7 +20,8 @@ def btype(s):
     if re.search(r'tip|v-max|\bsst\b|\beld|\bftx\b|\bntx\b|accubond|scirocco|terminal ascent|polymer|sub-x|critical defense',s): return 'tip'
     if re.search(r'hollow point|\bj?hp\b|berger|varmageddon',s): return 'hp'
     return 'sp'
-# Loads left out, with the reason: written to scripts/ammo/REJECTED.md
+# Loads left out (the page gives too little to calculate with), with the reason: written to
+# scripts/ammo/ISSUES.md together with the loads that went in with a note (field x).
 REJ=[]
 def key(c):
     c=c.lower().replace(',', '.').replace('×','x').replace('spring.','springfield')
@@ -46,9 +47,11 @@ def num(x):
     m=re.search(r'[\d]+(?:[.,]\d+)?',str(x)); return float(m.group(0).replace(',','.')) if m else None
 def add(**d):
     # h: a hunting load (False for full metal jacket, target, solid and subsonic loads, added later)
+    # late: added after the first build of this maker; such loads take ids after the others
     d.setdefault('h',True)
-    if not d['m'] or not d['g1'] or not d['v'][0]:
-        REJ.append((d['mk'],names.get(d['k'],d['k']),d['n'],d['m'],'the page gives no '+('bullet weight' if not d['m'] else 'ballistic coefficient' if not d['g1'] else 'muzzle velocity'),d['u'])); return
+    if not d['m'] or not d['v'][0] or not (d['g1'] or d.get('g7') or any(d['v'][1:])):
+        REJ.append((d['mk'],names.get(d['k'],d['k']),d['n'],d['m'],'the page gives no '+('bullet weight' if not d['m'] else 'muzzle velocity' if not d['v'][0] else 'ballistic coefficient and no velocity table to work one out'),d['u'])); return
+    if not d['g1'] and not d.get('g7'): d['late']=1  # BC worked out from the table further down
     out.append(d)
 # Sellier & Bellot
 SB_LABEL={'SP':'Soft Point','SPCE':'SPCE','PTS':'PTS (Polymer Tip)','HPC':'HPC','SBT':'SBT','XRG':'eXergy (XRG)','TXRG':'eXergy Blue (TXRG)','EDGE':'eXergy Edge','V-MAX™':'Hornady V-MAX','HPBT':'HPBT'}
@@ -173,7 +176,7 @@ for x in load('lapua.json'):
     pad=lambda a: [a[i] if i<len(a) and x['dist'][i]==i*100 else None for i in range(4)]
     ln=x['bullet'] or 'FMJ'
     add(mk='Lapua',k=k,n=ln.replace(' TrueRange Expanding',''),b=x['type'] or ln,h=h,t='hp' if ln=='Open Tip' else btype(ln+' '+(x['type'] or '')),lf=1 if x['bullet'] in ('Naturalis','TRX TrueRange Expanding') else 0,
-        m=num(x['mass']),g1=num(x['g1']),g7=None,bl=num(x['barrel']),v=pad(x['v']),e=pad(x['e']),u=x['url'])
+        m=num(x['mass']),g1=num(x['g1']),g7=num(x['g7']),bl=num(x['barrel']),v=pad(x['v']),e=pad(x['e']),u=x['url'],vt=list(zip(x['dist'],x['v'])))
 # Hornady
 H_KEEP={'Superformance','Precision Hunter','Dangerous Game Series','Outfitter','Custom','Custom International','American Whitetail','American Whitetail TIPPED',
  'Superformance Varmint','Varmint Express','LEVERevolution','Custom Lite'}
@@ -198,27 +201,29 @@ for x in load('hornady.json'):
 # (same drag table and standard atmosphere as src/ballistics.ts). Such loads are marked bf=1.
 _src=open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','..','src','ballistics.ts')).read()
 G1T=[float(x) for x in re.search(r'G1: \[([^\]]+)\]',_src).group(1).split(',')]
-def _cd(m):
-    if m<=G1T[0]: return G1T[1]
-    if m>=G1T[-2]: return G1T[-1]
-    lo,hi=0,len(G1T)//2-1
+G7T=[float(x) for x in re.search(r'G7: \[([^\]]+)\]',_src).group(1).split(',')]
+def _cd(m,t=G1T):
+    if m<=t[0]: return t[1]
+    if m>=t[-2]: return t[-1]
+    lo,hi=0,len(t)//2-1
     while hi-lo>1:
         mid=(lo+hi)//2
-        if G1T[mid*2]>m: hi=mid
+        if t[mid*2]>m: hi=mid
         else: lo=mid
-    return G1T[lo*2+1]+(G1T[hi*2+1]-G1T[lo*2+1])*(m-G1T[lo*2])/(G1T[hi*2]-G1T[lo*2])
-def _fly(v0,bc,dists):
+    return t[lo*2+1]+(t[hi*2+1]-t[lo*2+1])*(m-t[lo*2])/(t[hi*2]-t[lo*2])
+def _fly(v0,bc,dists,model='G1'):
+    t=G7T if model=='G7' else G1T
     k=1.225*3.141592653589793/(8*bc*703.0696); c=331.3*(1+15/273.15)**0.5
     out=[]; v=v0; x=0.0
     for d in dists:
         while x<d-1e-9:
-            st=min(1.0,d-x); a=-k*_cd(v/c)*v; vm=v+a*st/2; v+=-k*_cd(vm/c)*vm*st; x+=st
+            st=min(1.0,d-x); a=-k*_cd(v/c,t)*v; vm=v+a*st/2; v+=-k*_cd(vm/c,t)*vm*st; x+=st
         out.append(v)
     return out
 def fit_g1(pts):
     """pts: [(distance m, velocity m/s)], the first at 0 m. Returns (bc, worst relative error)."""
-    pts=[(d,v) for d,v in pts if v]; v0=pts[0][1]; rest=[p for p in pts[1:] if p[0]<=460]
-    if len(rest)<2: return None,None
+    pts=[(d,v) for d,v in pts if v]; v0=pts[0][1]; rest=[p for p in pts[1:] if p[0]<=460] or [p for p in pts[1:] if p[0]<=600][:1]
+    if not rest: return None,None
     def err(bc):
         f=_fly(v0,bc,[d for d,_ in rest]); return sum(((a-v)/v)**2 for a,(_,v) in zip(f,rest))
     lo,hi=0.05,1.3
@@ -229,15 +234,19 @@ def fit_g1(pts):
     bc=round((lo+hi)/2,3); f=_fly(v0,bc,[d for d,_ in rest])
     return bc,max(abs(a-v)/v for a,(_,v) in zip(f,rest))
 def bc_or_fit(maker,url,given,pts):
-    """The printed BC, or one fitted to the maker's table (then the load is marked bf=1)."""
+    """The printed BC, or one fitted to the maker's table (then the load is marked bf=1).
+    A table that no BC reproduces within 2% still gets its best fit (or the printed BC):
+    the load goes in and the calculator shows where the maker's numbers disagree (field x)."""
+    rest=[(d,v) for d,v in pts[1:] if v and d<=460]
     if given:
         # a printed BC is used when it reproduces the table; a few pages print the BC of another bullet
-        rest=[(d,v) for d,v in pts[1:] if v and d<=460]
         if not rest or max(abs(a-v)/v for a,(_,v) in zip(_fly(pts[0][1],given,[d for d,_ in rest]),rest))<=0.03: return given,0
     bc,worst=fit_g1(pts)
-    if bc is None or worst>0.02: NOFIT[url]='no BC reproduces the velocity table'+(' (too few rows)' if bc is None else ' (best fit %g is still %.1f%% off)'%(bc,100*worst)); return None,0
+    if bc is None: NOFIT[url]='the page gives a muzzle velocity only, too few rows to work out a BC'; return given,0
+    if worst>0.02: LATE.add(url)  # left out before this table was shown with a note
+    if worst>0.02 and given: return given,0
     return bc,1
-NOFIT={}
+NOFIT={}; LATE=set()
 YD=0.9144
 # Federal, Remington, Fiocchi (US site): same shop software, same fields
 def shop(maker,file,skip,lines,lead_free):
@@ -347,45 +356,62 @@ for x in load('sax.json'):
     add(mk='Sax',k=k,h=sx[:3] in ('KJG','KDG','MJG'),t='match' if sx.startswith('MSG') else 'solid' if 'Solid' in sx else 'mono',n=sx,b=sx,lf=1,m=float(mm.group(3)+'.'+mm.group(4)),g1=bc,bf=bf,g7=None,bl=None,v=at(x['v']),e=at(x['e']),u=x['url'])
 # Swift: the tables are pictures, read by eye into swift.json (kept in the repository, with the
 # picture's address). No BC is printed. Some pictures carry a misprinted cell (an energy that
-# doesn't match weight and velocity, the same velocity twice): that cell is dropped, the load kept.
+# doesn't match weight and velocity, the same velocity twice): the BC is fitted without that cell,
+# the cell itself is kept as printed and the calculator notes the disagreement.
 for x in json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'swift.json'))):
     mm=re.match(r'(.+?) Ammunition (.+?) \| (\d+) ?g',x['title'])
     k=canon2(mm.group(2).title().replace(' Rem Ultra Mag',' RUM').replace('Sprg','Springfield').replace('H&H','H&H Mag').replace('7Mm','7mm').replace('X','x').replace('Ne','NE'))
     if not k: continue
-    gr=float(mm.group(3)); fps=list(x['fps']); ftlb=[e if abs(gr*v*v/450240-e)/e<=0.03 else None for v,e in zip(fps,x['ftlb'])]
+    gr=float(mm.group(3)); fps=list(x['fps'])
     pts=lambda: [(d*YD,v*FPS if v else None) for d,v in zip(x['yd'],fps)]
     bc,worst=fit_g1(pts())
-    if bc and worst>0.02:  # one misprinted velocity: leave out the cell that fits worst and fit again
+    if bc and worst>0.02:  # one misprinted velocity: fit again without the cell that fits worst
         f=_fly(fps[0]*FPS,bc,[d*YD for d in x['yd'][1:]]); i=max(range(1,len(fps)),key=lambda i: abs(f[i-1]-fps[i]*FPS)/(fps[i]*FPS) if x['yd'][i]<=500 else 0)
-        fps[i]=None; ftlb[i]=None; bc,worst=fit_g1(pts())
-    if not bc or worst>0.02: REJ.append(('Swift',names[k],mm.group(1),round(gr*GR,2),'no BC reproduces the velocity table (worst point %.1f%% off)'%(100*(worst or 0)),x['url'])); continue
+        fps[i]=None; bc,worst=fit_g1(pts())
+    if not bc: REJ.append(('Swift',names[k],mm.group(1),round(gr*GR,2),'too few rows to work out a BC',x['url'])); continue
+    if worst>0.02: LATE.add(x['url'])
     name=mm.group(1).replace(' Heavy Rifle','').replace(' Lever Action','')
     add(mk='Swift',k=k,h='Solid' not in name,t='solid' if 'Solid' in name else 'tip' if 'Scirocco' in name else 'sp',n=name,b=name,lf=0,m=round(gr*GR,2),g1=bc,bf=1,g7=None,bl=None,
-        v=at_metres(x['yd'],fps,FPS),e=at_metres(x['yd'],ftlb,FTLB),u=x['url'])
+        v=at_metres(x['yd'],x['fps'],FPS),e=at_metres(x['yd'],x['ftlb'],FTLB),u=x['url'])
+# Fiocchi, European lines: fiocchi.com/en/ turns automated readers away, so these come from the
+# 2025 catalogues (Caccia = hunting, Sport = target), copied by hand into fiocchi_eu.json with the
+# page each row is on. Tables in metres; the catalogue prints G1 or G7 or both.
+FIO_EU_T={'SEST':'mono','EPN':'tip','SE - Freccia Nera':'mono','HPBT - Sierra GameKing':'hp','FMJHP':'hp','SP':'sp','RNSP':'sp','HPBT - Sierra MatchKing':'match',
+ 'FMJBT':'fmj','FMJ':'fmj','FMC':'fmj','Solid':'solid','RNCP - Subsonic':'lead'}
+FIO_EU_N={'SE - Freccia Nera':'Freccia Nera','HPBT - Sierra GameKing':'GameKing','HPBT - Sierra MatchKing':'MatchKing','RNCP - Subsonic':'Subsonic'}
+for x in json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'fiocchi_eu.json'))):
+    k=canon2(x['cal'])
+    if not k: continue
+    cat=x['catalogue'].replace('Fiocchi ','')
+    nm=x['line']+' '+FIO_EU_N.get(x['bullet'],x['bullet'])
+    if not x['v'][0]: REJ.append(('Fiocchi',names[k],nm,round(x['gr']*GR,2),'the %s catalogue (page %d) gives no ballistic data'%(cat,x['page']),'https://fiocchi.com/en/')); continue
+    at=lambda a: [a[x['m'].index(d)] if d in x['m'] else None for d in (0,100,200,300)]
+    add(mk='Fiocchi',k=k,n=nm,b=x['bullet']+' · '+x['code'],h=cat.startswith('Caccia'),t=FIO_EU_T[x['bullet']],lf=x['lf'],m=round(x['gr']*GR,2),g1=x['g1'],g7=x['g7'],bl=None,
+        v=at(x['v']),e=at(x['e']),u='https://fiocchi.com/en/',s=[cat,x['page']],late=1)
+# A load whose maker gives a table but no BC: the G1 BC that reproduces the table (bf=1).
+for d in out:
+    if not d['g1'] and not d.get('g7'):
+        d['g1'],w=fit_g1([(i*100,v) for i,v in enumerate(d['v'])]); d['bf']=1
 # The makers above are read in bulk, so their pages are checked here rather than by hand: a load
-# listed twice is kept once, and a load whose own numbers contradict each other (muzzle energy
-# against weight and velocity, or the table against the BC, by more than 3%) is left out.
-# The same goes for the non-hunting loads of every maker.
+# listed twice is kept once. Until Nov 2026 a load whose own numbers contradict each other (muzzle
+# energy against weight and velocity, or the table against the BC, by more than 3%) was left out;
+# such loads now go in with a note (field x, below), but they keep the ids they got when added.
 AUTO={'Sax','Remington','Fiocchi','Blaser','Brenneke','PPU (Prvi Partizan)','Nosler','Winchester','Browning'}
 def contradiction(d):
-    """Why a load's own numbers don't add up, or None."""
+    """The first build's test for leaving a load out (kept only to place such loads' ids last)."""
     if d['e'][0]:
         calc=0.5*d['m']/1000*d['v'][0]**2
-        if abs(calc-d['e'][0])/d['e'][0]>0.03: return 'muzzle energy printed as %d J, but %s g at %d m/s is %d J'%(d['e'][0],('%g'%d['m']),d['v'][0],calc)
-    if d.get('g7') and d['mk']=='Sellier & Bellot': return None  # their tables follow G7, checked by the app's own test
+        if abs(calc-d['e'][0])/d['e'][0]>0.03: return True
+    if d.get('g7') and d['mk']=='Sellier & Bellot': return False
     ds=[i*100 for i in (1,2,3) if d['v'][i]]
-    if ds:
-        dev=[(abs(a-d['v'][x//100])/d['v'][x//100],x,a) for a,x in zip(_fly(d['v'][0],d['g1'],ds),ds)]; w=max(dev)
-        if w[0]>0.028: return 'velocity table and BC %s disagree: %d m/s printed at %d m, BC gives %d m/s'%(('%g'%d['g1']),d['v'][w[1]//100],w[1],w[2])
-    return None
+    return bool(ds) and max(abs(a-d['v'][x//100])/d['v'][x//100] for a,x in zip(_fly(d['v'][0],d['g1'],ds),ds))>0.028
 _seen=set(); _keep=[]
 for d in out:
-    if d['mk'] in AUTO or not d['h']:
+    if (d['mk'] in AUTO or not d['h']) and not d.get('late'):
         sig=(d['mk'],d['k'],d['n'],d['m'],d['g1'],tuple(d['v']))
         if sig in _seen: continue
         _seen.add(sig)
-        bad=contradiction(d)
-        if bad: REJ.append((d['mk'],names[d['k']],d['n'],d['m'],bad,d['u'])); continue
+        if contradiction(d): d['late']=1
     _keep.append(d)
 out=_keep
 def tidy(n):
@@ -397,47 +423,88 @@ for d in out:
 cals={}
 for d in out:
     d['c']=names[d.pop('k')]
-# ids
-# and the four makers of the first release in the order they always had; the rest by page address,
-# so that two loads with the same name keep their ids whatever order the pages were read in.
-FIRST={'Sellier & Bellot','Norma','RWS','Geco'}
-seen=set()
-for d in sorted(out,key=lambda d: (not d['h'],d['mk'] not in FIRST,'' if d['mk'] in FIRST else d['u'])):
-    base=re.sub(r'[^a-z0-9]+','-',(d['mk'][:3]+' '+d['c']+' '+d['n']+' '+f"{d['m']:g}g").lower()).strip('-'); i=base;n=2
-    while i in seen: i=f'{base}-{n}'; n+=1
-    seen.add(i); d['id']=i
-    for f in ('g7','bl','bf','t'):
-        if not d.get(f): d.pop(f,None)
-    d['v']=[None if v is None else int(v) for v in d['v']]; d['e']=[None if v is None else int(v) for v in d['e']]
-    if d.get('bl'): d['bl']=int(d['bl'])
-# Published tables that a standard drag model can't reproduce within 3% (typos or other data errors on the maker's page).
-EXCLUDE={'https://www.norma-ammunition.com/products/hunting/norma-tipstrike/norma-tipstrike-270-wsm-140gr---20169532',
+# Pages whose table no drag model reproduces within 3% (typos or other data errors): left out
+# until Nov 2026, now in with a note. Listed so that they keep taking ids after the others.
+LATE|={'https://www.norma-ammunition.com/products/hunting/norma-tipstrike/norma-tipstrike-270-wsm-140gr---20169532',
  'https://www.norma-ammunition.com/products/hunting/norma-tipstrike/norma-tipstrike-270-winchester-140gr---20169292',
  'https://www.norma-ammunition.com/products/hunting/norma-tipstrike/norma-tipstrike-280-remington-160gr---20171222',
  'https://www.norma-ammunition.com/products/hunting/norma-tipstrike/norma-tipstrike-6-5-creedmoor-140gr---20166512',
  'https://www.norma-ammunition.com/products/hunting/norma-whitetail/norma-whitetail-7x57-150gr---20171592',
  'https://www.norma-ammunition.com/products/hunting/norma-oryx/norma-oryx-9-3-x-62-285gr---20193132'}
-EXCLUDE|={'https://www.hornady.com/ammunition/rifle/'+x for x in ('22-250-rem-35-gr-ntx-superformance','222-rem-35-gr-ntx-superformance',
+LATE|={'https://www.hornady.com/ammunition/rifle/'+x for x in ('22-250-rem-35-gr-ntx-superformance','222-rem-35-gr-ntx-superformance',
  '270-win-130-gr-interlock-sp-american-whitetail','7mm-rem-mag-139-gr-interlock-sp-american-whitetail','7mm-prc-154-gr-sst-american-whitetail-tipped',
  '5.56-nato-55-gr.-cx-superformance','30-06-springfield-220-gr-rn-custom-international')}
-EXCLUDE|={'https://www.lapua.com/product/'+x for x in ('30-06-spring-10-7-g-165-grains-n317107trx/','308-win-9-7-g-150-gr-trx-hunting-ammo-n317108/')}
+LATE|={'https://www.lapua.com/product/'+x for x in ('30-06-spring-10-7-g-165-grains-n317107trx/','308-win-9-7-g-150-gr-trx-hunting-ammo-n317108/')}
 for d in out:
-    if d['u'] in EXCLUDE: REJ.append((d['mk'],d['c'],d['n'],d['m'],contradiction(d) or 'velocity table and BC disagree by more than 3% in the app\'s solver',d['u']))
-out=[d for d in out if d['u'] not in EXCLUDE]
-# A single misprinted cell on an otherwise consistent page: drop the cell, keep the load.
-MISPRINT={'https://www.hornady.com/ammunition/rifle/30-06-springfield-180-gr-interlock-sp-american-whitetail':[('e',0)],   # 2714 ft-lb at the muzzle; 180 gr at 2700 fps is 2913
- 'https://www.hornady.com/ammunition/rifle/338-win-mag-230-gr-eld-x-precision-hunter':[('v',2),('v',3)]}                    # 2831 fps at 300 yd, faster than at 200 yd
+    if d['u'] in LATE: d['late']=1
+# Drag model: a maker that prints both G1 and G7 computes its tables with one of them. Which one is
+# decided per maker, by which BC reproduces more of its tables (the whole table where the page gives
+# more than the 0-300 m kept here, vt): G7 for Sellier & Bellot and Lapua, G1 for Norma. A load
+# whose table only the other BC reproduces within 3% uses that one.
+def table(d): return [(x,v) for x,v in (d.get('vt') or [(i*100,v) for i,v in enumerate(d['v'])]) if v and x<=600]
+def worst_v(d,model,bc):
+    t=table(d)
+    if len(t)<2 or t[0][0]!=0: return 0
+    return max(abs(a-v)/v for a,(_,v) in zip(_fly(t[0][1],bc,[x for x,_ in t[1:]],model),t[1:]))
+both=[d for d in out if d.get('g7') and d['g1'] and len(table(d))>1]
+PREF={mk:'G7' if 2*sum(worst_v(d,'G7',d['g7'])<=worst_v(d,'G1',d['g1']) for d in both if d['mk']==mk)>=sum(d['mk']==mk for d in both) else 'G1' for mk in set(d['mk'] for d in both)}
+print('drag model per maker',PREF,file=sys.stderr)
 for d in out:
-    for f,i in MISPRINT.get(d['u'],()): d[f][i]=None
+    if d.get('g7') and d['g1']:
+        m=PREF.get(d['mk'],'G7'); w1,w7=worst_v(d,'G1',d['g1']),worst_v(d,'G7',d['g7'])
+        if m=='G7' and w7>0.03 and w1<w7: m='G1'
+        if m=='G1' and w1>0.03 and w7<w1: m='G7'
+        if m=='G1': d['g7']=None
+    if not d.get('g7'): d['g7']=None
+# Where the maker's own numbers disagree, by more than 3%: field x lists them and the calculator
+# shows each one. e0..e3: energy at 0..300 m against weight and velocity; v1..v3: velocity at
+# 100..300 m against the BC (printed, or the best fit when bf=1).
+def issues(d):
+    x=[]
+    for i in range(4):
+        v,e=d['v'][i],d['e'][i]
+        if v and e and abs(0.5*d['m']/1000*v*v-e)/e>0.03: x.append('e%d'%i)
+    model,bc=('G7',d['g7']) if d.get('g7') else ('G1',d['g1'])
+    ds=[i*100 for i in (1,2,3) if d['v'][i]]
+    for a,dist in zip(_fly(d['v'][0],bc,ds,model),ds):
+        if abs(a-d['v'][dist//100])/d['v'][dist//100]>0.03: x.append('v%d'%(dist//100))
+    return x
 for d in out:
-    if d['mk']!='Sellier & Bellot': d.pop('g7',None)
+    if d['g1'] and d['g1']>2: d['g1']=round(d['g1']/1000,3)  # "471" for 0.471
+    d['x']=issues(d)
+# ids
+# and the four makers of the first release in the order they always had; the rest by page address,
+# so that two loads with the same name keep their ids whatever order the pages were read in.
+FIRST={'Sellier & Bellot','Norma','RWS','Geco'}
+seen=set()
+for d in sorted(out,key=lambda d: (bool(d.get('late')),not d['h'],d['mk'] not in FIRST,'' if d['mk'] in FIRST else d['u'])):
+    base=re.sub(r'[^a-z0-9]+','-',(d['mk'][:3]+' '+d['c']+' '+d['n']+' '+f"{d['m']:g}g").lower()).strip('-'); i=base;n=2
+    while i in seen: i=f'{base}-{n}'; n+=1
+    seen.add(i); d['id']=i
+    for f in ('g1','g7','bl','bf','t','x','s','late'):
+        if not d.get(f): d.pop(f,None)
+    d['v']=[None if v is None else int(v) for v in d['v']]; d['e']=[None if v is None else int(v) for v in d['e']]
+    if d.get('bl'): d['bl']=int(d['bl'])
 out.sort(key=lambda d:(d['c'],d['mk'],d['n'].lower(),d['m']))
-order=['id','c','mk','n','b','t','lf','m','g1','g7','bf','bl','v','e','u']
+order=['id','c','mk','n','b','t','lf','m','g1','g7','bf','bl','v','e','x','u','s']
 out=[{k:d[k] for k in order if k in d} for d in out]
 json.dump({'checked':__import__('datetime').date.today().isoformat(),'loads':out},open(sys.argv[1],'w'),ensure_ascii=False,separators=(',',':'))
 print(len(out),len(set(d['c'] for d in out)),file=sys.stderr)
+def why(d,code):
+    i=int(code[1]); v=d['v'][i]
+    if code[0]=='e': return 'energy at %d m printed as %d J, but %g g at %d m/s is %d J'%(i*100,d['e'][i],d['m'],v,0.5*d['m']/1000*v*v)
+    model,bc=('G7',d['g7']) if d.get('g7') else ('G1',d['g1'])
+    return 'velocity at %d m printed as %d m/s, but BC %s %g%s gives %d m/s'%(i*100,v,model,bc,' (best fit to the table)' if d.get('bf') else '',_fly(d['v'][0],bc,[i*100],model)[0])
 if len(sys.argv)>2:
     REJ=sorted(set(REJ)); f=open(sys.argv[2],'w')
-    f.write('# Loads left out\n\nWritten by `norm.py`. These loads are on the makers\' pages but are not in `src/ammo.json`, because the\npage\'s own numbers contradict each other or are incomplete. %d loads.\n\n| Maker | Calibre | Load | Bullet | Why |\n|---|---|---|---|---|\n'%len(REJ))
-    for mk,c,n,m,why,u in REJ: f.write('| %s | %s | [%s](%s) | %s g | %s |\n'%(mk,c,n,u,('%g'%m) if m else '?',why))
+    noted=[d for d in out if d.get('x')]
+    f.write('# Loads with a note, and loads left out\n\nWritten by `norm.py`.\n\n'
+      '## In the calculator with a note (%d loads)\n\nThe maker\'s own numbers disagree with each other by more than 3%%: energy against weight and velocity,\n'
+      'or the velocity table against the BC. The calculator shows these loads with a note naming each disagreement.\n\n'
+      '| Maker | Calibre | Load | Bullet | What disagrees |\n|---|---|---|---|---|\n'%len(noted))
+    for d in sorted(noted,key=lambda d:(d['mk'],d['c'],d['n'],d['m'])):
+        f.write('| %s | %s | [%s](%s)%s | %g g | %s |\n'%(d['mk'],d['c'],d['n'],d['u'],' (%s catalogue, p. %d)'%tuple(d['s']) if d.get('s') else '',d['m'],'; '.join(why(d,c) for c in d['x'])))
+    f.write('\n## Left out (%d loads)\n\nThese loads are on the makers\' pages or in their catalogues, but there is too little to calculate with.\n\n'
+      '| Maker | Calibre | Load | Bullet | Why |\n|---|---|---|---|---|\n'%len(REJ))
+    for mk,c,n,m,w,u in REJ: f.write('| %s | %s | [%s](%s) | %s g | %s |\n'%(mk,c,n,u,('%g'%m) if m else '?',w))
 print(sorted(set(d['c'] for d in out)),file=sys.stderr)

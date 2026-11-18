@@ -5,6 +5,7 @@
 import { getLang, tt, fmtNum } from './i18n';
 import {
   trajectory,
+  energy,
   range,
   correctionMrad,
   reachWithEnergy,
@@ -36,9 +37,9 @@ export interface Load {
   lf: 0 | 1;
   /** Bullet mass, g. */
   m: number;
-  /** G1 ballistic coefficient. */
-  g1: number;
-  /** G7 ballistic coefficient (Sellier & Bellot publish and use it). */
+  /** G1 ballistic coefficient; absent where the maker prints only G7. */
+  g1?: number;
+  /** G7 ballistic coefficient, where the maker's tables follow G7 (Sellier & Bellot, Lapua, Fiocchi catalogues). */
   g7?: number;
   /** 1 = the maker prints a velocity table but no BC, so `g1` is the value that reproduces that table. */
   bf?: 1;
@@ -48,8 +49,13 @@ export interface Load {
   v: (number | null)[];
   /** Maker's energy at 0, 100, 200, 300 m (J). */
   e: (number | null)[];
+  /** Where the maker's own numbers disagree by more than 3%: e0–e3 energy at 0–300 m against weight and
+   *  velocity, v1–v3 velocity at 100–300 m against the BC (see scripts/ammo/ISSUES.md). */
+  x?: string[];
   /** Source page. */
   u: string;
+  /** Printed catalogue the data come from, and its page (where the maker's site can't be read). */
+  s?: [string, number];
 }
 
 /** Bullet constructions a load list can be narrowed to, in the order they are offered. */
@@ -157,6 +163,28 @@ const L = {
   barrel: { pl: 'lufa', en: 'barrel' },
   bcFitted: { pl: 'wyliczony z tabeli producenta', en: 'worked out from the maker’s table' },
   source: { pl: 'źródło', en: 'source' },
+  catalogue: { pl: 'katalog {c}, str. {p}', en: '{c} catalogue, p. {p}' },
+  issuesTitle: { pl: 'Dane producenta nie zgadzają się ze sobą', en: 'The maker’s own numbers disagree' },
+  issueE: {
+    pl: 'Energia na {d} m: producent podaje {p} J, a z jego masy i prędkości wychodzi {c} J.',
+    en: 'Energy at {d} m: the maker gives {p} J, but its own weight and velocity make {c} J.',
+  },
+  issueV: {
+    pl: 'Prędkość na {d} m: producent podaje {p} m/s, a kalkulator z BC {bc} liczy {c} m/s ({diff}).',
+    en: 'Velocity at {d} m: the maker gives {p} m/s, the calculator gets {c} m/s from BC {bc} ({diff}).',
+  },
+  issueVFit: {
+    pl: 'Prędkość na {d} m: producent podaje {p} m/s, a kalkulator liczy {c} m/s ({diff}). Producent nie podaje BC, a żaden BC nie odtwarza całej jego tabeli.',
+    en: 'Velocity at {d} m: the maker gives {p} m/s, the calculator gets {c} m/s ({diff}). The maker gives no BC, and no BC reproduces its whole table.',
+  },
+  issuesHint: {
+    pl: 'Kalkulator liczy z masy, V0 i BC, więc jego wyniki różnią się tu od tabeli producenta. Jeśli to ważne (np. próg energii), zmierz V0 chronografem.',
+    en: 'The calculator works from weight, V0 and BC, so its results differ from the maker’s table here. Where it matters (an energy floor, say), measure V0 with a chronograph.',
+  },
+  issueLegal: {
+    pl: 'Według tabeli producenta E100 wynosi {e} J i wtedy wynik byłby inny dla: {list}. Dane tego naboju są niespójne, więc zmierz V0 chronografem.',
+    en: 'The maker’s table gives E100 = {e} J, which would change the result for: {list}. This load’s data disagree with each other, so measure V0 with a chronograph.',
+  },
   rifle: { pl: 'Broń i warunki', en: 'Rifle and conditions' },
   zero: { pl: 'Przystrzelanie', en: 'Zero' },
   zeroAt: { pl: 'na {d} m', en: 'at {d} m' },
@@ -302,7 +330,30 @@ function currentLoad(loads: Load[]): Load | null {
   return list.find((x) => x.id === settings.load) ?? list[0] ?? null;
 }
 
-const pickModel = (x: Load): [DragModel, number] => (x.g7 ? ['G7', x.g7] : ['G1', x.g1]);
+const pickModel = (x: Load): [DragModel, number] => (x.g7 ? ['G7', x.g7] : ['G1', x.g1!]);
+
+/** One place where a maker's own numbers disagree: energy against weight and velocity ('e'), or the
+ *  velocity table against the BC ('v'). `calc` is what the weight and velocity, or the BC, give. */
+export interface MakerIssue {
+  kind: 'e' | 'v';
+  /** Distance, m. */
+  d: number;
+  printed: number;
+  calc: number;
+}
+
+/** The disagreements listed in the load's `x`, with the numbers (velocities in the standard atmosphere). */
+export function makerIssues(x: Load): MakerIssue[] {
+  if (!x.x?.length) return [];
+  const [model, bc] = pickModel(x);
+  const shot: Shot = { v0: x.v[0]!, mass: x.m, bc, model, zero: 100, sightHeight: 5 };
+  return x.x.map((code) => {
+    const i = Number(code[1]);
+    return code[0] === 'e'
+      ? { kind: 'e', d: i * 100, printed: x.e[i]!, calc: energy(x.m, x.v[i]!) }
+      : { kind: 'v', d: i * 100, printed: x.v[i]!, calc: trajectory(shot, [i * 100])[0].v };
+  });
+}
 
 /** Shot parameters without the zero. */
 function baseShot(x: Load | null): Omit<Shot, 'zero'> {
@@ -426,7 +477,17 @@ function renderAmmo(loads: Load[], x: Load | null) {
       x.v[0]! < SUBSONIC ? l('subsonic') : '',
       x.lf ? l('pbFree') : '',
     ].filter(Boolean);
-    detail = `<p class="small ball-facts"><strong>${l('maker')}:</strong> ${esc(x.b)} · ${facts.map(esc).join(' · ')} · <a href="${esc(x.u)}" target="_blank" rel="noopener">${l('source')} ↗</a></p>
+    const issues = makerIssues(x);
+    const pct = (i: MakerIssue) => `${i.calc > i.printed ? '+' : '−'}${fmtNum((Math.abs(i.calc - i.printed) / i.printed) * 100, 1)}%`;
+    const issueText = (i: MakerIssue) =>
+      i.kind === 'e'
+        ? l('issueE', { d: i.d, p: fmtNum(i.printed), c: fmtNum(i.calc) })
+        : l(x.bf ? 'issueVFit' : 'issueV', { d: i.d, p: fmtNum(i.printed), c: fmtNum(i.calc), bc: `${model} ${bc}`, diff: pct(i) });
+    const issueNote = issues.length
+      ? `<div class="notice ball-issues"><strong>${l('issuesTitle')}</strong><ul>${issues.map((i) => `<li>${esc(issueText(i))}</li>`).join('')}</ul><p class="small">${l('issuesHint')}</p></div>`
+      : '';
+    detail = `<p class="small ball-facts"><strong>${l('maker')}:</strong> ${esc(x.b)} · ${facts.map(esc).join(' · ')} · <a href="${esc(x.u)}" target="_blank" rel="noopener">${x.s ? esc(l('catalogue', { c: x.s[0], p: x.s[1] })) : l('source')} ↗</a></p>
+      ${issueNote}
       <div class="ball-grid">${field(
         l('ownV'),
         numInput('ownV', settings.ownV, `min="200" max="1400" step="1" placeholder="${x.v[0]}"`),
@@ -496,10 +557,14 @@ function renderLegal(e100: number, dense: Point[], x: Load | null) {
   }).join('');
   const any = FLOORS.some((f) => !(fmj && f.bigGame) && verdict(e100, f) === 'borderline');
   const typeNote = fmj ? l('fmjNote') : x?.t === 'match' ? l('matchNote') : '';
+  // A load whose maker data disagree: say when the maker's own E100 would give another verdict.
+  const makerE100 = x?.x?.length ? x.e[1] : null;
+  const otherVerdict = makerE100 ? FLOORS.filter((f) => !(fmj && f.bigGame) && makerE100 >= f.e100 !== e100 >= f.e100) : [];
   return `<section class="card">
     <h2>${l('legal')}</h2>
     <p class="ball-e100">${l('yours')}: <strong>${fmtNum(e100)} J</strong></p>
     ${typeNote ? `<p class="notice ball-type-note">${typeNote}</p>` : ''}
+    ${otherVerdict.length ? `<p class="notice ball-type-note">${esc(l('issueLegal', { e: fmtNum(makerE100!), list: otherVerdict.map((f) => tt(f.name)).join('; ') }))}</p>` : ''}
     <table class="tbl ball-legal">
       <thead><tr><th>${l('game')}</th><th class="num"></th><th class="num">${l('reach')}</th></tr></thead>
       <tbody>${rows}</tbody>

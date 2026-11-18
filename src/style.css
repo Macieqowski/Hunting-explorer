@@ -871,6 +871,9 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; text-transform: uppercase; le
 .ball-inline select { width: auto; max-width: 100%; }
 .ball-check { display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; margin: 4px 0; cursor: pointer; }
 .ball-facts { overflow-wrap: anywhere; }
+.ball-issues { border-left: 3px solid var(--warn); margin: 0 0 12px; font-size: 0.9rem; }
+.ball-issues ul { margin: 6px 0; padding-left: 20px; }
+.ball-issues p { margin: 0; }
 .ball-rifle-actions { margin: 0 0 10px; }
 .ball-name { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .ball-name input { flex: 1 1 200px; }
