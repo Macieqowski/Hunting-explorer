@@ -46,16 +46,16 @@ jobs:
             CODE_SIGNING_ALLOWED=NO build 2>&1 | grep -E 'error:|warning: .*(BackgroundLocation|PositionPublisher|ViewController)|BUILD' | head -n 80
           test "${PIPESTATUS[0]}" -eq 0
       - name: Start the app in a simulator and check that its plugins are there
-        timeout-minutes: 15
+        timeout-minutes: 20
         run: |
           # Compiling is not enough: the plugins only exist if the app's ViewController registers them.
           UDID=$(xcrun simctl list devices available -j | jq -r '[.devices | to_entries[] | select(.key | test("iOS")) | .value[] | select(.name | test("^iPhone"))][0].udid')
           echo "Simulator $UDID"
           xcrun simctl boot "$UDID"
-          # No "bootstatus": on the runners it can wait many minutes for data migration
-          # (locationd). Installing works as soon as the device is up.
+          # The first boot on a runner takes about 8 minutes (data migration). Launching before it
+          # has finished gives no console at all, so wait for it (only its last lines are shown).
+          xcrun simctl bootstatus "$UDID" -b | tail -n 3
           APP=build/Build/Products/Debug-iphonesimulator/App.app
-          for i in $(seq 1 90); do xcrun simctl install "$UDID" "$APP" 2>/dev/null && break; sleep 5; done
           xcrun simctl install "$UDID" "$APP"
           LOG="$RUNNER_TEMP/app.log"
           xcrun simctl launch --console-pty "$UDID" org.polowanie.app > "$LOG" 2>&1 &
