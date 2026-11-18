@@ -38,6 +38,8 @@ export interface Load {
   g1: number;
   /** G7 ballistic coefficient (Sellier & Bellot publish and use it). */
   g7?: number;
+  /** 1 = the maker prints a velocity table but no BC, so `g1` is the value that reproduces that table. */
+  bf?: 1;
   /** Maker's test barrel length, mm. */
   bl?: number;
   /** Maker's velocity at 0, 100, 200, 300 m (m/s); null where the maker gives none (Sako publishes V0 only). */
@@ -120,6 +122,7 @@ const L = {
   },
   maker: { pl: 'Dane producenta', en: 'Maker’s data' },
   barrel: { pl: 'lufa', en: 'barrel' },
+  bcFitted: { pl: 'wyliczony z tabeli producenta', en: 'worked out from the maker’s table' },
   source: { pl: 'źródło', en: 'source' },
   rifle: { pl: 'Broń i warunki', en: 'Rifle and conditions' },
   zero: { pl: 'Przystrzelanie', en: 'Zero' },
@@ -360,7 +363,7 @@ function renderAmmo(loads: Load[], x: Load | null) {
       `V0 ${x.v[0]} m/s`,
       x.e[0] ? `E0 ${fmtNum(x.e[0])} J` : '',
       x.e[1] ? `E100 ${fmtNum(x.e[1])} J` : '',
-      `BC ${model} ${bc}`,
+      `BC ${model} ${bc}${x.bf ? ` (${l('bcFitted')})` : ''}`,
       x.bl ? `${l('barrel')} ${x.bl} mm` : '',
       x.lf ? l('pbFree') : '',
     ].filter(Boolean);

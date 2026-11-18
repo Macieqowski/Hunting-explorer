@@ -91,7 +91,7 @@ describe('ammunition data', () => {
 
   test('the makers hunters ask for are there', () => {
     const makers = new Set(loads.map((x) => x.mk));
-    for (const m of ['Sellier & Bellot', 'Norma', 'RWS', 'Geco', 'Sako', 'Lapua', 'Hornady', 'Federal']) expect(makers.has(m), m).toBe(true);
+    for (const m of ['Sellier & Bellot', 'Norma', 'RWS', 'Geco', 'Sako', 'Lapua', 'Hornady', 'Federal', 'Remington', 'Winchester', 'Browning', 'Nosler', 'Fiocchi', 'Blaser', 'Brenneke', 'Sax', 'PPU (Prvi Partizan)']) expect(makers.has(m), m).toBe(true);
   });
 
   test('calibres popular in Poland are covered', () => {
