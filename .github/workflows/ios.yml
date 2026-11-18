@@ -1,0 +1,34 @@
+name: iOS app
+
+# Checks that the iPhone app (ios/) still compiles: builds it for the iOS simulator, unsigned.
+# Installing on a phone is done from Xcode on a Mac (docs/ios.md).
+
+on:
+  pull_request:
+    paths:
+      - 'ios/**'
+      - 'capacitor.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Web build + copy into ios/
+        run: npm run ios:sync
+      - name: Xcode version
+        run: xcodebuild -version
+      - name: Build for the simulator
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -target App -configuration Debug \
+            -sdk iphonesimulator -arch arm64 CODE_SIGNING_ALLOWED=NO build 2>&1 | tail -n 80
+          test "${PIPESTATUS[0]}" -eq 0

@@ -45,13 +45,20 @@ Po zmianach w kodzie: `git pull`, `npm run ios:sync` i znowu **▶** w Xcode.
 | App Store | nie | tak |
 | Linki www.polowanie.org otwierają aplikację | nie | tak (po dodaniu apple-app-site-association) |
 
+## Pozycja przy zablokowanym ekranie
+
+Jest (`ios/App/App/BackgroundLocationPlugin.swift` + `PositionPublisher.swift`, odpowiedniki
+`LocationService` i `PositionPublisher` z Androida). iOS usypia stronę po zablokowaniu ekranu, więc
+pozycję do bazy polowania wysyła sama aplikacja przez REST API Firebase. Wystarczy zgoda „Podczas
+używania aplikacji”: udostępnianie włączone przy odblokowanym ekranie trwa dalej po zablokowaniu,
+a w pasku stanu widać niebieski wskaźnik lokalizacji. Nie ma liczby satelitów (iOS jej nie podaje)
+ani powiadomienia z przyciskiem Stop: zatrzymuje się w aplikacji.
+
 ## Co na iPhonie jeszcze nie działa
 
-Wtyczki natywne są na razie tylko na Androida (`android/app/src/main/java/org/polowanie/app/`).
+Pozostałe wtyczki natywne są na razie tylko na Androida (`android/app/src/main/java/org/polowanie/app/`).
 Na iPhonie aplikacja używa wtedy tego, co daje przeglądarka (WKWebView):
 
-- **Pozycja przy zablokowanym ekranie** (BackgroundLocation): naganiacze i myśliwi wysyłają pozycję
-  tylko z włączonym ekranem, jak na stronie. To najważniejsza brakująca rzecz.
 - **Zapisywanie map offline w tle** (TileDownload): zapis działa, ale tylko z otwartą aplikacją.
 - **Alarmy w kieszeni** (Alerts): brak powiadomień i wibracji przy wiadomościach i alarmach.
 - **Kompas** (Compass): kompas z przeglądarki, bez informacji o kalibracji.
@@ -59,5 +66,5 @@ Na iPhonie aplikacja używa wtedy tego, co daje przeglądarka (WKWebView):
 - **Drukowanie i PDF pokotu** (Printer): może nie działać.
 - **Aktualizacje**: aplikacja nie sprawdza wydań APK na GitHubie; nową wersję instaluje się z Xcode.
 
-Działa: mapa, egzaminy, pogoda, okresy, atlas, polowanie zbiorowe z włączonym ekranem, GPS (z Wi-Fi i A-GPS
+Działa: mapa, egzaminy, pogoda, okresy, atlas, polowanie zbiorowe (także z zablokowanym ekranem), GPS (z Wi-Fi i A-GPS
 iPhone'a łapie pozycję szybko), mapy offline, udostępnianie, schowek.

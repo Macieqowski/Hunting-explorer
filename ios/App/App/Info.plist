@@ -66,6 +66,12 @@
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Pozycja pokazuje, gdzie jesteś na mapie, i podczas polowania zbiorowego trafia do prowadzącego.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Podczas polowania zbiorowego Twoja pozycja trafia do prowadzącego także przy zablokowanym ekranie.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Mikrofon służy do odpowiadania głosem na egzaminie ustnym.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
