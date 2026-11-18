@@ -860,6 +860,10 @@ let locatingDistrict = false;
 let hmap: HuntMap | null = null;
 let positions: Position[] = [];
 let posUnsub: Unsubscribe | null = null;
+/** Route plans are readable by leaders only, so the listener follows leadership (handover, pairing). */
+let plansUnsub: Unsubscribe | null = null;
+let plansFor = '';
+let plansDeniedAt = 0;
 let tracksUnsub: Unsubscribe | null = null;
 let showTracks = false;
 /** Field mode: the beaters' tracks of the running drive on the map (remembered on this device). */
@@ -1183,6 +1187,9 @@ function stopLive() {
   seenWounds = null;
   crewUnsubs.forEach((u) => u());
   crewUnsubs = [];
+  plansUnsub?.();
+  plansUnsub = null;
+  plansFor = '';
   routes = new Map();
   seats = new Map();
   phones = new Map();
@@ -1237,7 +1244,36 @@ function ago(ms: number) {
 }
 
 /** Start or stop the position listener depending on whether I may read positions. */
+/** Listen to the route plans while this device leads the hunt; start again when it becomes a leader. */
+function syncPlans() {
+  const id = watched;
+  const want = id && hunt && conn.s === 'ready' && leads(hunt, myUid()) ? id : '';
+  if (want === plansFor && (plansUnsub || !want || Date.now() - plansDeniedAt < 10_000)) return;
+  if (conn.s !== 'ready') return;
+  plansUnsub?.();
+  plansUnsub = null;
+  plansFor = want;
+  if (!want) {
+    routePlans = new Map();
+    return;
+  }
+  plansUnsub = conn.be.watchRoutePlans(
+    want,
+    (x) => {
+      routePlans = x;
+      drawCrew();
+      rerender();
+    },
+    // Denied (e.g. leadership not yet visible to the rules): try again on the next hunt update.
+    () => {
+      plansUnsub = null;
+      plansDeniedAt = Date.now();
+    },
+  );
+}
+
 function syncLive() {
+  syncPlans();
   const id = watched;
   const me = members?.find((p) => p.uid === myUid());
   const allowed = !!(id && hunt && ((me && me.status === 'confirmed') || remoteLead()));
@@ -1282,10 +1318,6 @@ function syncLive() {
         noticeMyRoute();
         drawCrew();
         syncGuide();
-        rerender();
-      }, () => {}),
-      be.watchRoutePlans(id!, (x) => {
-        routePlans = x;
         rerender();
       }, () => {}),
       be.watchAssignments(id!, (x) => {
@@ -3037,7 +3069,14 @@ function drawCrew() {
   } else {
     const f = focus();
     const rs = f ? routes.get(f.id) : undefined;
-    hmap.setRoutes(rs ? [...rs].map(([uid, pts]) => ({ uid, pts, label: label(uid), strong: uid === myUid() })) : []);
+    const plan = f && !rs?.size ? routePlans.get(f.id) : undefined;
+    if (plan && planUsable(plan)) {
+      // Leader, routes not handed out yet: show the plan for the beaters here (or the first variant).
+      const here = hunt?.status === 'live' ? presentBeaters(members ?? [], lastSeen(), now(), presence).length : 0;
+      const n = here || [...plan.variants.keys()].sort((a, b) => a - b)[0] || Math.max(beaters().length, 5);
+      const set = routeSet(plan, n);
+      hmap.setRoutes(set ? set.routes.map((pts, i) => ({ uid: `s:${i}`, pts, label: `${i + 1}`, strong: false })) : []);
+    } else hmap.setRoutes(rs ? [...rs].map(([uid, pts]) => ({ uid, pts, label: label(uid), strong: uid === myUid() })) : []);
   }
   const meets: MeetView[] = [];
   if (hunt?.meet) meets.push({ ...hunt.meet, label: l('meetLabel') });
@@ -4077,7 +4116,7 @@ export function handleHuntClick(el: HTMLElement): boolean {
         const after = e.meet ? `${e.meet.lat},${e.meet.lng}` : '';
         if (before !== after) await be.setDriveMeet(id, e.driveId, e.meet);
         if (routeEdit === e) routeEdit = null;
-        showToast(l('routeSaved'));
+        showToast(l(e.planDirty && !e.dirty ? 'planSaved' : 'routeSaved'));
         drawCrew();
         syncGuide();
       });
