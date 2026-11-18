@@ -747,6 +747,10 @@ describe('crew planning', () => {
     await assertFails(set(ref(db('lead'), 'routePlans/h1/d1/gaps'), 'left'));
     await assertFails(set(ref(db('lead'), 'routePlans/h1/d1/v/21/0'), ROUTE));
     await assertFails(set(ref(db('lead'), 'routePlans/h1/d1/v/3/0'), 'x'));
+    await assertSucceeds(set(ref(db('lead'), 'routePlans/h1/d1/n'), 7));
+    await assertFails(set(ref(db('lead'), 'routePlans/h1/d1/n'), 21));
+    await assertFails(set(ref(db('lead'), 'routePlans/h1/d1/n'), 2.5));
+    await assertFails(set(ref(db('lead'), 'routePlans/h1/d1/n'), '7'));
     await assertFails(set(ref(db('lead'), 'routePlans/h1/d1/other'), 'x'));
     await assertFails(get(ref(db('b'), 'routePlans/h1')));
     await assertSucceeds(get(ref(db('lead'), 'routePlans/h1')));

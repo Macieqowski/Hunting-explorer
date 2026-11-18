@@ -449,6 +449,9 @@
           "gaps": {
             ".validate": "newData.isString() && newData.val().matches(/^(middle|flanks)$/)"
           },
+          "n": {
+            ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= 1 && newData.val() <= 20"
+          },
           "v": {
             "$n": {
               ".validate": "$n.matches(/^([1-9]|1[0-9]|20)$/)",

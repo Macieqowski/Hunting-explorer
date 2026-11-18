@@ -8,6 +8,7 @@ import {
   parseRoutePlans,
   encodeRoutePlan,
   emptyPlan,
+  plannedCount,
   decodeAssigned,
   encodeAssigned,
   parseAssignments,
@@ -138,6 +139,21 @@ describe('stored plan and assignments', () => {
     expect(parseRoutePlans({ d1: enc, d2: { gaps: 'middle' } }).size).toBe(1);
   });
   it('an empty plan stores nothing', () => expect(encodeRoutePlan(emptyPlan())).toBeNull());
+  it('keeps the headcount the leader planned for', () => {
+    const p: RoutePlan = { lines, gaps: 'middle', variants: new Map(), n: 7 };
+    const enc = JSON.parse(JSON.stringify(encodeRoutePlan(p)));
+    expect(enc.n).toBe(7);
+    expect(parseRoutePlan(enc)!.n).toBe(7);
+    expect(parseRoutePlan({ ...enc, n: 21 })!.n).toBeUndefined();
+    expect(parseRoutePlan({ ...enc, n: 2.5 })!.n).toBeUndefined();
+  });
+  it('shows the planned count first, then the first variant, then the fallback', () => {
+    const v = new Map([[4, [straight(0)]], [3, [straight(0)]]]);
+    expect(plannedCount({ lines, gaps: 'middle', variants: v, n: 7 }, 5)).toBe(7);
+    expect(plannedCount({ lines, gaps: 'middle', variants: v }, 5)).toBe(3);
+    expect(plannedCount({ lines, gaps: 'middle', variants: new Map() }, 5)).toBe(5);
+    expect(plannedCount({ lines, gaps: 'middle', variants: new Map() }, 40)).toBe(20);
+  });
   it('assignment strings', () => {
     expect(decodeAssigned(encodeAssigned({ base: 5, slot: 2, pin: true }))).toEqual({ base: 5, slot: 2, pin: true });
     expect(decodeAssigned('5:5')).toBeNull();

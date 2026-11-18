@@ -252,7 +252,7 @@ const LEADER: Guide = {
       steps: [
         'Przy miocie dotknij [[Trasy]]. Otworzy się karta [[Plan miotu]].',
         'Dotknij [[Narysuj linie miotu]] i stuknij na mapie 2 końce linii startu i 2 końce linii końca. Od teraz aplikacja rozłoży równe trasy dla każdej liczby naganiaczy.',
-        'W polu [[Liczba naganiaczy]] wybierz liczbę, np. 5, i obejrzyj trasy na mapie. Trasy są ponumerowane od końca linii startu, który stuknąłeś jako pierwszy.',
+        'W polu [[Liczba naganiaczy]] wybierz liczbę, np. 5, i obejrzyj trasy na mapie. Trasy są ponumerowane od końca linii startu, który stuknąłeś jako pierwszy. Aplikacja zapamięta tę liczbę: tyle tras zobaczysz na mapie i po ponownym otwarciu planu, dopóki naganiacze nie będą na miejscu.',
         'Jeśli teren tego wymaga, popraw trasy ręcznie: wybierz trasę z listy albo stuknij ją na mapie, przeciągnij punkty albo stukaj mapę, żeby dodać punkty pośrednie. Tak powstaje wariant ręczny dla tej liczby osób, oznaczony jako [[ręczny]].',
         'Powtórz to dla innych liczb, np. 3 i 8. Bez linii miotu też się da: wtedy każdą trasę wariantu rysujesz sam.',
         'Wybierz, co ma zostać puste, gdy naganiaczy będzie mniej niż tras: [[trasy w środku (flanki obsadzone)]] albo [[skrajne trasy (flanki)]].',
