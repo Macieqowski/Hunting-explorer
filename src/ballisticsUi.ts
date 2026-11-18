@@ -5,6 +5,7 @@
 import { getLang, tt, fmtNum } from './i18n';
 import {
   trajectory,
+  energy,
   range,
   correctionMrad,
   reachWithEnergy,
@@ -30,23 +31,36 @@ export interface Load {
   n: string;
   /** Bullet type / product line. */
   b: string;
+  /** Bullet construction (see BULLET_TYPES); absent where the maker doesn't say. */
+  t?: BulletType;
   /** 1 = lead-free. */
   lf: 0 | 1;
   /** Bullet mass, g. */
   m: number;
-  /** G1 ballistic coefficient. */
-  g1: number;
-  /** G7 ballistic coefficient (Sellier & Bellot publish and use it). */
+  /** G1 ballistic coefficient; absent where the maker prints only G7. */
+  g1?: number;
+  /** G7 ballistic coefficient, where the maker's tables follow G7 (Sellier & Bellot, Lapua, Fiocchi catalogues). */
   g7?: number;
+  /** 1 = the maker prints a velocity table but no BC, so `g1` is the value that reproduces that table. */
+  bf?: 1;
   /** Maker's test barrel length, mm. */
   bl?: number;
-  /** Maker's velocity at 0, 100, 200, 300 m (m/s). */
+  /** Maker's velocity at 0, 100, 200, 300 m (m/s); null where the maker gives none (Sako publishes V0 only). */
   v: (number | null)[];
   /** Maker's energy at 0, 100, 200, 300 m (J). */
   e: (number | null)[];
+  /** Where the maker's own numbers disagree by more than 3%: e0–e3 energy at 0–300 m against weight and
+   *  velocity, v1–v3 velocity at 100–300 m against the BC (see scripts/ammo/ISSUES.md). */
+  x?: string[];
   /** Source page. */
   u: string;
+  /** Printed catalogue the data come from, and its page (where the maker's site can't be read). */
+  s?: [string, number];
 }
+
+/** Bullet constructions a load list can be narrowed to, in the order they are offered. */
+export const BULLET_TYPES = ['sp', 'tip', 'mono', 'hp', 'match', 'fmj', 'solid', 'lead'] as const;
+export type BulletType = (typeof BULLET_TYPES)[number];
 
 interface AmmoFile {
   checked: string;
@@ -85,6 +99,8 @@ interface Settings {
   wind: number;
   max: number;
   leadFree: boolean;
+  /** Bullet type the load list is narrowed to: a BulletType, 'none' (maker doesn't say) or '' for all. */
+  type: string;
   rifle: string;
   rifles: Rifle[];
 }
@@ -105,6 +121,31 @@ const L = {
   custom: { pl: 'Własny nabój (elaboracja)…', en: 'Own load (handload)…' },
   leadFree: { pl: 'Tylko bezołowiowe', en: 'Lead-free only' },
   noneLeadFree: { pl: 'Brak naboi bezołowiowych w tym kalibrze.', en: 'No lead-free loads in this calibre.' },
+  noneMatching: { pl: 'Brak naboi bezołowiowych z takim pociskiem w tym kalibrze.', en: 'No lead-free loads with this bullet type in this calibre.' },
+  bulletType: { pl: 'Typ pocisku', en: 'Bullet type' },
+  allTypes: { pl: 'wszystkie typy', en: 'all types' },
+  t_sp: { pl: 'półpłaszczowy', en: 'soft point' },
+  t_tip: { pl: 'z końcówką polimerową', en: 'polymer tip' },
+  t_mono: { pl: 'monolityczny (miedź, mosiądz)', en: 'monolithic (copper, brass)' },
+  t_hp: { pl: 'z wgłębieniem wierzchołkowym (HP)', en: 'hollow point (HP)' },
+  t_match: { pl: 'tarczowy (HPBT, OTM)', en: 'match (HPBT, OTM)' },
+  t_fmj: { pl: 'pełnopłaszczowy (FMJ)', en: 'full metal jacket (FMJ)' },
+  t_solid: { pl: 'lity (solid)', en: 'solid' },
+  t_lead: { pl: 'ołowiany', en: 'lead' },
+  t_none: { pl: 'producent nie podaje typu', en: 'type not stated by the maker' },
+  tagFmj: { pl: 'FMJ', en: 'FMJ' },
+  tagMatch: { pl: 'tarczowy', en: 'match' },
+  tagSolid: { pl: 'lity', en: 'solid' },
+  subsonic: { pl: 'poddźwiękowy', en: 'subsonic' },
+  fmjBanned: { pl: 'niedozwolony', en: 'not allowed' },
+  fmjNote: {
+    pl: 'To pocisk pełnopłaszczowy. Na zwierzynę grubą nie wolno go używać niezależnie od energii (§ 3 ust. 3 pkt 1).',
+    en: 'This is a full metal jacket bullet. It may not be used on big game whatever its energy (§ 3(3)(1)).',
+  },
+  matchNote: {
+    pl: 'To pocisk tarczowy: producent przeznacza go do strzelania do tarczy, a przepis wymaga naboi myśliwskich.',
+    en: 'This is a match bullet: the maker intends it for target shooting, and the regulation requires hunting cartridges.',
+  },
   mass: { pl: 'Masa pocisku [g]', en: 'Bullet mass [g]' },
   v0: { pl: 'Prędkość początkowa V0 [m/s]', en: 'Muzzle velocity V0 [m/s]' },
   bc: { pl: 'Współczynnik balistyczny (BC)', en: 'Ballistic coefficient (BC)' },
@@ -120,7 +161,30 @@ const L = {
   },
   maker: { pl: 'Dane producenta', en: 'Maker’s data' },
   barrel: { pl: 'lufa', en: 'barrel' },
+  bcFitted: { pl: 'wyliczony z tabeli producenta', en: 'worked out from the maker’s table' },
   source: { pl: 'źródło', en: 'source' },
+  catalogue: { pl: 'katalog {c}, str. {p}', en: '{c} catalogue, p. {p}' },
+  issuesTitle: { pl: 'Dane producenta nie zgadzają się ze sobą', en: 'The maker’s own numbers disagree' },
+  issueE: {
+    pl: 'Energia na {d} m: producent podaje {p} J, a z jego masy i prędkości wychodzi {c} J.',
+    en: 'Energy at {d} m: the maker gives {p} J, but its own weight and velocity make {c} J.',
+  },
+  issueV: {
+    pl: 'Prędkość na {d} m: producent podaje {p} m/s, a kalkulator z BC {bc} liczy {c} m/s ({diff}).',
+    en: 'Velocity at {d} m: the maker gives {p} m/s, the calculator gets {c} m/s from BC {bc} ({diff}).',
+  },
+  issueVFit: {
+    pl: 'Prędkość na {d} m: producent podaje {p} m/s, a kalkulator liczy {c} m/s ({diff}). Producent nie podaje BC, a żaden BC nie odtwarza całej jego tabeli.',
+    en: 'Velocity at {d} m: the maker gives {p} m/s, the calculator gets {c} m/s ({diff}). The maker gives no BC, and no BC reproduces its whole table.',
+  },
+  issuesHint: {
+    pl: 'Kalkulator liczy z masy, V0 i BC, więc jego wyniki różnią się tu od tabeli producenta. Jeśli to ważne (np. próg energii), zmierz V0 chronografem.',
+    en: 'The calculator works from weight, V0 and BC, so its results differ from the maker’s table here. Where it matters (an energy floor, say), measure V0 with a chronograph.',
+  },
+  issueLegal: {
+    pl: 'Według tabeli producenta E100 wynosi {e} J i wtedy wynik byłby inny dla: {list}. Dane tego naboju są niespójne, więc zmierz V0 chronografem.',
+    en: 'The maker’s table gives E100 = {e} J, which would change the result for: {list}. This load’s data disagree with each other, so measure V0 with a chronograph.',
+  },
   rifle: { pl: 'Broń i warunki', en: 'Rifle and conditions' },
   zero: { pl: 'Przystrzelanie', en: 'Zero' },
   zeroAt: { pl: 'na {d} m', en: 'at {d} m' },
@@ -197,6 +261,7 @@ const DEFAULTS: Settings = {
   wind: 3,
   max: 300,
   leadFree: false,
+  type: '',
   rifle: '',
   rifles: [],
 };
@@ -245,8 +310,17 @@ const calibres = (loads: Load[]) => {
   return [...count.entries()].sort((a, b) => a[0].replace(/^\./, '').localeCompare(b[0].replace(/^\./, ''), 'pl', { numeric: true }));
 };
 
-function loadsFor(loads: Load[]) {
+/** Below this muzzle velocity (m/s) a load is labelled subsonic. */
+const SUBSONIC = 340;
+const typeOf = (x: Load) => x.t ?? 'none';
+
+/** Loads of the chosen calibre, lead-free only if asked: what the bullet type choice is made from. */
+function loadsOfCalibre(loads: Load[]) {
   return loads.filter((x) => x.c === settings.cal && (!settings.leadFree || x.lf));
+}
+
+function loadsFor(loads: Load[]) {
+  return loadsOfCalibre(loads).filter((x) => !settings.type || typeOf(x) === settings.type);
 }
 
 /** The load in use, or null for an own load. Falls back to the first load of the calibre. */
@@ -256,7 +330,30 @@ function currentLoad(loads: Load[]): Load | null {
   return list.find((x) => x.id === settings.load) ?? list[0] ?? null;
 }
 
-const pickModel = (x: Load): [DragModel, number] => (x.g7 ? ['G7', x.g7] : ['G1', x.g1]);
+const pickModel = (x: Load): [DragModel, number] => (x.g7 ? ['G7', x.g7] : ['G1', x.g1!]);
+
+/** One place where a maker's own numbers disagree: energy against weight and velocity ('e'), or the
+ *  velocity table against the BC ('v'). `calc` is what the weight and velocity, or the BC, give. */
+export interface MakerIssue {
+  kind: 'e' | 'v';
+  /** Distance, m. */
+  d: number;
+  printed: number;
+  calc: number;
+}
+
+/** The disagreements listed in the load's `x`, with the numbers (velocities in the standard atmosphere). */
+export function makerIssues(x: Load): MakerIssue[] {
+  if (!x.x?.length) return [];
+  const [model, bc] = pickModel(x);
+  const shot: Shot = { v0: x.v[0]!, mass: x.m, bc, model, zero: 100, sightHeight: 5 };
+  return x.x.map((code) => {
+    const i = Number(code[1]);
+    return code[0] === 'e'
+      ? { kind: 'e', d: i * 100, printed: x.e[i]!, calc: energy(x.m, x.v[i]!) }
+      : { kind: 'v', d: i * 100, printed: x.v[i]!, calc: trajectory(shot, [i * 100])[0].v };
+  });
+}
 
 /** Shot parameters without the zero. */
 function baseShot(x: Load | null): Omit<Shot, 'zero'> {
@@ -289,6 +386,8 @@ export function renderBallistics(onChange: () => void): string {
   if (ammo.status !== 'done') return `<div class="ball"><p class="muted">${l('loading')}</p></div>`;
   const { loads, checked } = ammo.data;
   if (!loads.some((x) => x.c === settings.cal)) settings.cal = DEFAULTS.cal;
+  // a calibre with no load of the chosen bullet type shows all its loads rather than none
+  if (settings.type && !loads.some((x) => x.c === settings.cal && typeOf(x) === settings.type)) settings.type = '';
   const x = currentLoad(loads);
   const base = baseShot(x);
   const z = zeroDistance(base);
@@ -302,7 +401,7 @@ export function renderBallistics(onChange: () => void): string {
     ${renderRifles()}
     ${renderAmmo(loads, x)}
     ${renderConditions(z)}
-    ${renderLegal(e100, dense)}
+    ${renderLegal(e100, dense, x)}
     ${renderChart(table)}
     ${renderTable(table)}
     <p class="muted small">${l('disclaimer', { d: fmtDate(checked) })}</p>
@@ -343,10 +442,25 @@ const numInput = (name: string, value: number | null | string, attrs: string) =>
 function renderAmmo(loads: Load[], x: Load | null) {
   const cals = calibres(loads);
   const list = loadsFor(loads);
-  const loadLabel = (y: Load) => `${y.mk} · ${y.n} · ${fmtNum(y.m, 1)} g · ${y.v[0]} m/s${y.lf ? ` · ${l('pbFree')}` : ''}`;
+  const TAG: Partial<Record<string, keyof typeof L>> = { fmj: 'tagFmj', match: 'tagMatch', solid: 'tagSolid' };
+  const loadLabel = (y: Load) =>
+    [y.mk, y.n, `${fmtNum(y.m, 1)} g`, `${y.v[0]} m/s`, TAG[typeOf(y)] && l(TAG[typeOf(y)]!), y.v[0]! < SUBSONIC && l('subsonic'), y.lf && l('pbFree')]
+      .filter(Boolean)
+      .join(' · ');
+  // bullet types this calibre comes in, with how many loads each
+  const perType = new Map<string, number>();
+  const ofCal = loadsOfCalibre(loads);
+  for (const y of ofCal) perType.set(typeOf(y), (perType.get(typeOf(y)) ?? 0) + 1);
+  const typeSelect = `<select data-ball-field="type">
+      ${opt('', `${l('allTypes')} (${ofCal.length})`, settings.type)}
+      ${[...BULLET_TYPES, 'none' as const].filter((t) => perType.has(t)).map((t) => opt(t, `${l(`t_${t}`)} (${perType.get(t)})`, settings.type)).join('')}
+    </select>`;
   const sel = settings.load === 'custom' ? 'custom' : x?.id ?? '';
+  // A popular calibre has close to a hundred loads: group them by maker so the list can be scanned.
+  const byMaker = new Map<string, Load[]>();
+  for (const y of list) byMaker.set(y.mk, [...(byMaker.get(y.mk) ?? []), y]);
   const loadSelect = `<select data-ball-field="load" aria-label="${esc(l('load'))}">
-      ${list.map((y) => opt(y.id, loadLabel(y), sel)).join('')}
+      ${[...byMaker].map(([mk, ys]) => `<optgroup label="${esc(mk)}">${ys.map((y) => opt(y.id, loadLabel(y), sel)).join('')}</optgroup>`).join('')}
       ${opt('custom', l('custom'), sel)}
     </select>`;
   let detail = '';
@@ -357,11 +471,23 @@ function renderAmmo(loads: Load[], x: Load | null) {
       `V0 ${x.v[0]} m/s`,
       x.e[0] ? `E0 ${fmtNum(x.e[0])} J` : '',
       x.e[1] ? `E100 ${fmtNum(x.e[1])} J` : '',
-      `BC ${model} ${bc}`,
+      `BC ${model} ${bc}${x.bf ? ` (${l('bcFitted')})` : ''}`,
       x.bl ? `${l('barrel')} ${x.bl} mm` : '',
+      x.t ? l(`t_${x.t}`) : '',
+      x.v[0]! < SUBSONIC ? l('subsonic') : '',
       x.lf ? l('pbFree') : '',
     ].filter(Boolean);
-    detail = `<p class="small ball-facts"><strong>${l('maker')}:</strong> ${esc(x.b)} · ${facts.map(esc).join(' · ')} · <a href="${esc(x.u)}" target="_blank" rel="noopener">${l('source')} ↗</a></p>
+    const issues = makerIssues(x);
+    const pct = (i: MakerIssue) => `${i.calc > i.printed ? '+' : '−'}${fmtNum((Math.abs(i.calc - i.printed) / i.printed) * 100, 1)}%`;
+    const issueText = (i: MakerIssue) =>
+      i.kind === 'e'
+        ? l('issueE', { d: i.d, p: fmtNum(i.printed), c: fmtNum(i.calc) })
+        : l(x.bf ? 'issueVFit' : 'issueV', { d: i.d, p: fmtNum(i.printed), c: fmtNum(i.calc), bc: `${model} ${bc}`, diff: pct(i) });
+    const issueNote = issues.length
+      ? `<div class="notice ball-issues"><strong>${l('issuesTitle')}</strong><ul>${issues.map((i) => `<li>${esc(issueText(i))}</li>`).join('')}</ul><p class="small">${l('issuesHint')}</p></div>`
+      : '';
+    detail = `<p class="small ball-facts"><strong>${l('maker')}:</strong> ${esc(x.b)} · ${facts.map(esc).join(' · ')} · <a href="${esc(x.u)}" target="_blank" rel="noopener">${x.s ? esc(l('catalogue', { c: x.s[0], p: x.s[1] })) : l('source')} ↗</a></p>
+      ${issueNote}
       <div class="ball-grid">${field(
         l('ownV'),
         numInput('ownV', settings.ownV, `min="200" max="1400" step="1" placeholder="${x.v[0]}"`),
@@ -380,10 +506,11 @@ function renderAmmo(loads: Load[], x: Load | null) {
     <h2>${l('ammo')}</h2>
     <div class="ball-grid">
       ${field(l('calibre'), `<select data-ball-field="cal">${cals.map(([c, n]) => opt(c, `${c} (${n})`, settings.cal)).join('')}</select>`)}
+      ${field(l('bulletType'), typeSelect)}
       ${field(l('load'), loadSelect, 'wide')}
     </div>
     <label class="ball-check"><input type="checkbox" data-ball-field="leadFree"${settings.leadFree ? ' checked' : ''} /> ${l('leadFree')}</label>
-    ${settings.leadFree && !list.length ? `<p class="muted small">${l('noneLeadFree')}</p>` : ''}
+    ${settings.leadFree && !list.length ? `<p class="muted small">${l(settings.type ? 'noneMatching' : 'noneLeadFree')}</p>` : ''}
     <p class="muted small">${l('loadsCount', { n: list.length })}</p>
     ${detail}
   </section>`;
@@ -414,21 +541,30 @@ function renderConditions(z: { zero: number; gee: boolean; geeFailed: boolean })
 
 const VERDICT_KEY: Record<Verdict, 'ok' | 'borderline' | 'below'> = { ok: 'ok', borderline: 'borderline', below: 'below' };
 
-function renderLegal(e100: number, dense: Point[]) {
+function renderLegal(e100: number, dense: Point[], x: Load | null) {
+  // Full metal jacket bullets are excluded for big game whatever their energy.
+  const fmj = x?.t === 'fmj';
   const rows = FLOORS.map((f) => {
+    const banned = fmj && f.bigGame;
     const v = verdict(e100, f);
     const reach = reachWithEnergy(dense, f.e100);
     const last = dense[dense.length - 1]?.x ?? 0;
     return `<tr>
       <td>${esc(tt(f.name))}<span class="muted small ball-min">${l('min')} ${fmtNum(f.e100)} J</span></td>
-      <td class="num"><span class="ball-v ball-${v}">${l(VERDICT_KEY[v])}</span></td>
-      <td class="num">${reach ? `${reach >= last ? '> ' : ''}${fmtNum(reach)} m` : '—'}</td>
+      <td class="num"><span class="ball-v ball-${banned ? 'below' : v}">${banned ? l('fmjBanned') : l(VERDICT_KEY[v])}</span></td>
+      <td class="num">${reach && !banned ? `${reach >= last ? '> ' : ''}${fmtNum(reach)} m` : '—'}</td>
     </tr>`;
   }).join('');
-  const any = FLOORS.some((f) => verdict(e100, f) === 'borderline');
+  const any = FLOORS.some((f) => !(fmj && f.bigGame) && verdict(e100, f) === 'borderline');
+  const typeNote = fmj ? l('fmjNote') : x?.t === 'match' ? l('matchNote') : '';
+  // A load whose maker data disagree: say when the maker's own E100 would give another verdict.
+  const makerE100 = x?.x?.length ? x.e[1] : null;
+  const otherVerdict = makerE100 ? FLOORS.filter((f) => !(fmj && f.bigGame) && makerE100 >= f.e100 !== e100 >= f.e100) : [];
   return `<section class="card">
     <h2>${l('legal')}</h2>
     <p class="ball-e100">${l('yours')}: <strong>${fmtNum(e100)} J</strong></p>
+    ${typeNote ? `<p class="notice ball-type-note">${typeNote}</p>` : ''}
+    ${otherVerdict.length ? `<p class="notice ball-type-note">${esc(l('issueLegal', { e: fmtNum(makerE100!), list: otherVerdict.map((f) => tt(f.name)).join('; ') }))}</p>` : ''}
     <table class="tbl ball-legal">
       <thead><tr><th>${l('game')}</th><th class="num"></th><th class="num">${l('reach')}</th></tr></thead>
       <tbody>${rows}</tbody>
@@ -527,6 +663,10 @@ function renderTable(pts: Point[]) {
 
 function applyRifle(r: Rifle) {
   Object.assign(settings, { cal: r.cal, load: r.load, ownV: r.ownV, custom: { ...r.custom }, zero: r.zero, sight: r.sight, rifle: r.id });
+  // a saved rifle keeps its load even when the list is narrowed to something else
+  const saved = ammo.status === 'done' ? ammo.data.loads.find((x) => x.id === r.load) : undefined;
+  if (saved && settings.type && typeOf(saved) !== settings.type) settings.type = '';
+  if (saved && settings.leadFree && !saved.lf) settings.leadFree = false;
 }
 
 function rifleFromSettings(id: string, name: string): Rifle {
@@ -596,6 +736,11 @@ export function handleBallisticsChange(el: HTMLElement): boolean {
     case 'leadFree':
       settings.leadFree = (el as HTMLInputElement).checked;
       if (settings.load !== 'custom') settings.load = '';
+      break;
+    case 'type':
+      settings.type = value === 'none' || (BULLET_TYPES as readonly string[]).includes(value) ? value : '';
+      if (settings.load !== 'custom') settings.load = '';
+      settings.ownV = null;
       break;
     case 'ownV':
       settings.ownV = value.trim() ? num(value, 200, 1400, 0) || null : null;

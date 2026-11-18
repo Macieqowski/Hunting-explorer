@@ -3,7 +3,8 @@ from concurrent.futures import ThreadPoolExecutor
 UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120 Safari/537.36'
 B='https://www.norma-ammunition.com'
 def get(u): return subprocess.run(['curl','-sS','-L','--max-time','40','-A',UA,u],capture_output=True,text=True).stdout.replace('\\"','"')
-lines=sorted(set(re.findall(r'urlPath":"(/products/hunting/norma-[a-z0-9-]+)"',get(B+'/products/hunting'))))
+# hunting lines and sport shooting lines (Golden Target, Diamond Line, Range & Training)
+lines=sorted({l for c in ('hunting','shooting') for l in re.findall(r'"(/products/'+c+r'/norma-[a-z0-9-]+)"',get(B+'/products/'+c))})
 urls=set()
 for l in lines:
     p=get(B+l)

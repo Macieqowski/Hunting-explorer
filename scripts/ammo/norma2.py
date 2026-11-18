@@ -5,7 +5,7 @@ B='https://www.norma-ammunition.com'
 def get(u): return subprocess.run(['curl','-sS','-L','--max-time','40','-A',UA,u],capture_output=True,text=True).stdout.replace('\\"','"')
 cals=sorted(set(re.findall(r'href="(/products/calibers/[a-z0-9-]+)"',get(B+'/products/calibers'))))
 def cp(c):
-    p=get(B+c); f=set(re.findall(r'"url":"(/products/hunting/norma-[a-z0-9-]+/[^"]+)"',p)); return c,f
+    p=get(B+c); f=set(re.findall(r'"url":"(/products/(?:hunting|shooting)/norma-[a-z0-9-]+/[^"]+)"',p)); return c,f
 have={x['url'][len(B):] for x in json.load(open(os.environ.get('AMMO_CACHE','.ammo-cache')+'/norma.json'))}
 urls=set()
 with ThreadPoolExecutor(6) as ex:
