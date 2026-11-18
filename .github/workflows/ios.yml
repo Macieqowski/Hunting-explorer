@@ -29,6 +29,9 @@ jobs:
         run: xcodebuild -version
       - name: Build for the simulator
         run: |
-          xcodebuild -project ios/App/App.xcodeproj -target App -configuration Debug \
-            -sdk iphonesimulator -arch arm64 CODE_SIGNING_ALLOWED=NO build 2>&1 | tail -n 80
+          # A scheme build (not -target): only it links the plugins' binary Swift packages.
+          xcodebuild -project ios/App/App.xcodeproj -list
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO build 2>&1 | grep -E 'error:|warning: .*(BackgroundLocation|PositionPublisher|ViewController)|BUILD' | head -n 80
           test "${PIPESTATUS[0]}" -eq 0
