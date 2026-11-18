@@ -9,6 +9,7 @@ import {
   isRunning,
   MAX_VIEW_KM2,
   nativeBackgroundState,
+  saveError,
   prepareDraft,
   removeArea,
   requestPersistence,
@@ -143,6 +144,7 @@ const L = {
     en: 'Keep the screen on and this page open – the browser pauses the download otherwise.',
   },
   paused: { pl: 'Wstrzymane', en: 'Paused' },
+  stoppedBy: { pl: 'Zatrzymał je błąd:', en: 'Stopped by an error:' },
   missing: { pl: 'kafelków nie pobrano', en: 'tiles not downloaded' },
   resume: { pl: 'Wznów', en: 'Resume' },
   savedOn: { pl: 'Zapisano', en: 'Saved' },
@@ -505,7 +507,9 @@ function renderArea(a: SavedArea): string {
       <div class="progress"><span style="width:${pct}%"></span></div>
       ${running ? `<p class="muted small">${screenOffHint()}</p>` : ''}`;
   else if (a.status === 'paused')
-    status = `<p class="small">${l('paused')} · ${pct}%${a.total > a.done ? ` · ${fmtNum(a.total - a.done)} ${l('missing')}` : ''}</p>
+    status = `<p class="small">${l('paused')} · ${pct}%${a.total > a.done ? ` · ${fmtNum(a.total - a.done)} ${l('missing')}` : ''}</p>${
+      saveError(a.id) ? `<p class="muted small">${l('stoppedBy')} ${esc(saveError(a.id))}</p>` : ''
+    }
       <div class="progress"><span style="width:${pct}%"></span></div>`;
   else status = `<p class="muted small">${l('savedOn')} ${date} · ${mb(a.bytes)} · zoom ${a.detail}</p>`;
   const del =

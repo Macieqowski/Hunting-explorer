@@ -247,6 +247,19 @@ let running: Promise<void> = Promise.resolve();
 
 export const isRunning = (id: string) => jobs.has(id);
 
+/** Why an area's last save stopped with an error (shown under it), until it runs again. */
+const lastError = new Map<string, string>();
+export const saveError = (id: string): string | undefined => lastError.get(id);
+
+/** Rejects if `p` takes longer than `ms`: a call that never answers must not hold the queue forever. */
+function within<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${what}: no answer in ${Math.round(ms / 1000)} s`)), ms);
+  });
+  return Promise.race([p, late]).finally(() => clearTimeout(timer));
+}
+
 /** iPhone app: what iOS said about saving in the background ('' until the first status). */
 let bgState = '';
 export const nativeBackgroundState = () => bgState;
@@ -317,11 +330,25 @@ async function setArea(a: SavedArea) {
 function queue(id: string, refresh: boolean) {
   const job: Job = { cancelled: false };
   jobs.set(id, job);
+  lastError.delete(id);
   emit();
-  running = running.then(() => download(id, refresh, job)).catch(() => {}).finally(() => {
-    if (jobs.get(id) === job) jobs.delete(id);
-    emit();
-  });
+  running = running
+    .then(() => download(id, refresh, job))
+    .catch(async (e: unknown) => {
+      // Never left "waiting in queue" with nothing running: paused, with the reason shown.
+      const msg = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+      console.error(`[polowanie] offline save stopped: ${msg}`);
+      if (job.cancelled) return;
+      lastError.set(id, msg);
+      // The app's own download would go on unseen: it stops too (resuming finds the tiles it wrote).
+      void nativeTileDownload()?.cancel({ id }).catch(() => {});
+      const cur = areas.find((x) => x.id === id);
+      if (cur?.status === 'downloading') await setArea({ ...cur, status: 'paused' }).catch(() => {});
+    })
+    .finally(() => {
+      if (jobs.get(id) === job) jobs.delete(id);
+      emit();
+    });
 }
 
 async function download(id: string, refresh: boolean, job: Job) {
@@ -329,7 +356,7 @@ async function download(id: string, refresh: boolean, job: Job) {
   if (!a || job.cancelled) return;
   const units: Unit[] = [];
   let total = 0;
-  const held = new Set(await getAreaKeys(id));
+  const held = new Set(await within(getAreaKeys(id), 60_000, 'getAreaKeys'));
   const list = tileLister(tileAreaOf(a));
   // An older save: its photo tiles are checked and fetched again where they came out black.
   const repairing = !refresh && needsRepair(a);
@@ -352,7 +379,7 @@ async function download(id: string, refresh: boolean, job: Job) {
   }
   const todoCount = units.reduce((s, u) => s + u.tiles.length, 0);
   a = { ...a, total, done: total - todoCount, failed: 0, status: 'downloading' };
-  await setArea(a);
+  await within(setArea(a), 60_000, 'setArea');
 
   const nt = nativeTileDownload();
   if (nt) return downloadInApp(nt, a, units, refresh, job, held);
@@ -468,7 +495,7 @@ async function downloadInApp(nt: NonNullable<ReturnType<typeof nativeTileDownloa
     if (cur && !job.cancelled) await setArea({ ...cur, status: 'paused' });
   };
   try {
-    await nt.start({
+    const started = nt.start({
       id,
       title: `${tt(T.saving)}: ${a.name}`,
       doneTitle: `${tt(T.saved)}: ${a.name}`,
@@ -479,6 +506,7 @@ async function downloadInApp(nt: NonNullable<ReturnType<typeof nativeTileDownloa
       sources: nativeSources(units),
       units: units.map(nativeUnit),
     });
+    await within(started, 120_000, 'TileDownload.start');
   } catch (e) {
     // Android does not let a service start while the app is in the background: resume later.
     console.warn('[polowanie] native tile download did not start', e);
@@ -494,7 +522,10 @@ async function downloadInApp(nt: NonNullable<ReturnType<typeof nativeTileDownloa
       await nt.forget({ id }).catch(() => {});
       return;
     }
-    const s = await nt.status({ id, since }).catch(() => ({ state: 'none' as const }));
+    const s = await within(nt.status({ id, since }), 20_000, 'TileDownload.status').catch((e: unknown) => {
+      console.warn('[polowanie] tile download status failed', e);
+      return { state: 'none' as const };
+    });
     if (s.state === 'none') return pause();
     if (s.bg !== undefined && s.bg !== bgState) {
       bgState = s.bg;
@@ -508,20 +539,20 @@ async function downloadInApp(nt: NonNullable<ReturnType<typeof nativeTileDownloa
       if (!check) gotBytes += size;
       return { url, f: tileFileName(url, u.def.format) };
     });
-    await recordAreaFiles(entries, held);
+    await within(recordAreaFiles(entries, held), 60_000, 'recordAreaFiles');
     for (const e of entries) held.add(e.url);
     since = s.next ?? since;
     const finished = s.state === 'done' || s.state === 'cancelled';
     const cur = areas.find((x) => x.id === id);
     if (!cur || job.cancelled) continue;
     if (finished || (entries.length && Date.now() - keysSaved > 3000)) {
-      await putAreaKeys(id, [...held]);
+      await within(putAreaKeys(id, [...held]), 60_000, 'putAreaKeys');
       keysSaved = Date.now();
     }
     const done = base.done + got;
     const failed = s.failed ?? 0;
     const status = finished ? (failed || done < cur.total ? 'paused' : 'done') : 'downloading';
-    await setArea({ ...cur, done, failed, bytes: base.bytes + gotBytes, status, ...(status === 'done' ? { repaired: REPAIR_VERSION } : {}) });
+    await within(setArea({ ...cur, done, failed, bytes: base.bytes + gotBytes, status, ...(status === 'done' ? { repaired: REPAIR_VERSION } : {}) }), 60_000, 'setArea');
     if (finished) {
       await nt.forget({ id }).catch(() => {});
       return;
