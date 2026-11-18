@@ -244,17 +244,25 @@ const LEADER: Guide = {
     },
     {
       id: 'trasy',
-      title: 'Wyznacz trasy naganiaczy i zbiórkę po miocie',
-      where: ['Teren', 'Mioty', 'Trasy'],
-      text: ['Trasa to linia, którą naganiacz ma przejść: pierwszy punkt to start, ostatni to koniec (przy linii myśliwych). Naganiacz zobaczy ją na mapie i może włączyć prowadzenie ze strzałką i wibracjami.'],
+      title: 'Zaplanuj trasy naganiaczy, zanim wiesz, ilu przyjdzie',
+      where: ['Teren', 'Mioty', 'Trasy', 'Plan miotu'],
+      text: [
+        'Trasa to linia, którą naganiacz ma przejść: pierwszy punkt to start, ostatni to koniec (przy linii myśliwych). Nie musisz wiedzieć, ilu naganiaczy przyjdzie: planujesz trasy dla różnych liczb osób, a w dniu polowania aplikacja sama da każdemu obecnemu naganiaczowi jego trasę.',
+      ],
       steps: [
-        'Przy miocie dotknij [[Trasy]].',
-        'Szybki sposób: dotknij [[Rozłóż tyralierę]], zaznacz naganiaczy, a potem stuknij na mapie 2 końce linii startu i 2 końce linii końca. Aplikacja rozłoży trasy równo.',
-        'Dokładny sposób: wybierz naganiacza z listy i stukaj mapę od startu do końca. Punkty można przeciągać; [[Cofnij punkt]] usuwa ostatni, [[Usuń trasę]] całą trasę.',
+        'Przy miocie dotknij [[Trasy]]. Otworzy się karta [[Plan miotu]].',
+        'Dotknij [[Narysuj linie miotu]] i stuknij na mapie 2 końce linii startu i 2 końce linii końca. Od teraz aplikacja rozłoży równe trasy dla każdej liczby naganiaczy.',
+        'W polu [[Liczba naganiaczy]] wybierz liczbę, np. 5, i obejrzyj trasy na mapie. Trasy są ponumerowane od końca linii startu, który stuknąłeś jako pierwszy.',
+        'Jeśli teren tego wymaga, popraw trasy ręcznie: wybierz trasę z listy albo stuknij ją na mapie, przeciągnij punkty albo stukaj mapę, żeby dodać punkty pośrednie. Tak powstaje wariant ręczny dla tej liczby osób, oznaczony jako [[ręczny]].',
+        'Powtórz to dla innych liczb, np. 3 i 8. Bez linii miotu też się da: wtedy każdą trasę wariantu rysujesz sam.',
+        'Wybierz, co ma zostać puste, gdy naganiaczy będzie mniej niż tras: [[trasy w środku (flanki obsadzone)]] albo [[skrajne trasy (flanki)]].',
         'Dotknij [[Zbiórka po miocie]] i wskaż na mapie, gdzie wszyscy spotykają się po tym miocie.',
         'Dotknij [[Zapisz trasy]].',
       ],
-      tips: ['Trasy można wyznaczyć tylko naganiaczom, którzy już się zapisali.'],
+      tips: [
+        '[[Przywróć z linii]] usuwa ręczne poprawki dla wybranej liczby osób. Na jeden miot możesz mieć do 8 wariantów ręcznych.',
+        'Karta [[Trasy osób]] pokazuje trasy już przydzielone konkretnym naganiaczom. Możesz tam poprawić trasę jednej osoby albo, jak dawniej, rozłożyć tyralierę dla zapisanych naganiaczy przyciskiem [[Rozłóż tyralierę]].',
+      ],
     },
     {
       id: 'stanowiska',
@@ -300,6 +308,25 @@ const LEADER: Guide = {
         'Sprawdź pod mapą, ile osób jest widocznych na mapie. [[Pokaż wszystkich]] dopasowuje mapę do wszystkich uczestników.',
       ],
       tips: ['W czasie miotu wygodny jest [[Tryb terenowy]]: mapa na cały ekran i duże przyciski.'],
+    },
+    {
+      id: 'przydzial',
+      title: 'Przydziel trasy w dniu polowania',
+      where: ['Teren', 'Przydział tras'],
+      text: [
+        'Gdy polowanie trwa, nad listą miotów widać kartę [[Przydział tras]] dla najbliższego miotu. Aplikacja liczy obecnych naganiaczy, wybiera trasy dla tej liczby osób i daje każdemu trasę, której start jest najbliżej niego. Naganiacze z psem dostają trasy w środku miotu.',
+      ],
+      steps: [
+        'Naganiacz liczy się jako obecny, gdy wysyła położenie (ostatnie 5 minut) albo stuknął [[Jestem na miejscu]]. Kogoś bez telefonu dodasz, zaznaczając go na liście; kogoś, kto nie idzie w tym miocie, odznaczysz.',
+        'Przycisk [[z psem]] przy osobie zmienia, czy idzie z psem.',
+        'Żeby dać komuś konkretną trasę, wybierz jej numer obok jego nazwiska. Ta osoba zostaje na tej trasie przy każdym przeliczeniu. [[Odepnij wszystkich]] wraca do przydziału automatycznego.',
+        'Dotknij [[Przydziel teraz]], żeby naganiacze od razu zobaczyli swoje trasy. Jeśli tego nie zrobisz, przydział zapisze się sam przy [[Rozpocznij miot]].',
+        'Jeśli po zapisie ktoś doszedł albo odszedł, zobaczysz [[Przelicz trasy]]. Naganiacz, któremu zmieni się trasa, dostanie powiadomienie z wibracją.',
+      ],
+      tips: [
+        'W trakcie miotu nic nie zmienia się samo. Gdy ktoś dojdzie, karta podpowie [[Dołącz do trasy]] z numerem najbliższej trasy. Gdy ktoś przestanie wysyłać położenie na 10 minut albo się wypisze, zobaczysz ostrzeżenie o luce na jego trasie.',
+        'Jeśli nie ma wariantu na dokładnie tyle osób i nie narysowałeś linii miotu, aplikacja bierze najbliższy wariant: dodatkowe osoby idą w parach na najdłuższych trasach, a przy braku osób część tras zostaje pusta, tak jak wybrałeś w planie.',
+      ],
     },
     {
       id: 'mioty-na-zywo',
@@ -480,9 +507,12 @@ const BEATER: Guide = {
       title: 'Idź swoją trasą',
       where: ['Teren', 'Twoja trasa', 'Prowadź mnie'],
       text: [
-        'Jeśli prowadzący wyznaczył Ci trasę, przed miotem zobaczysz pole [[Twoja trasa]] z nazwą miotu i odległością do startu. Trasa jest też na mapie, a obok niej miejsce zbiórki po miocie.',
+        'Prowadzący przydziela trasy przed każdym miotem, zależnie od tego, ilu naganiaczy przyszło. Do tego czasu zobaczysz napis [[Trasę przydzieli prowadzący przed miotem]].',
+        'Gdy dostaniesz trasę, telefon zawibruje, a przed miotem zobaczysz pole [[Twoja trasa]] z numerem trasy (np. 2 z 6), nazwą miotu i odległością do startu. Trasa jest też na mapie, a obok niej miejsce zbiórki po miocie. Jeśli prowadzący przeliczy trasy, zobaczysz [[Prowadzący zmienił Twoją trasę]].',
       ],
       steps: [
+        'Gdy jesteś na miejscu zbiórki, dotknij [[Jestem na miejscu]], żeby prowadzący policzył Cię przy przydziale tras (położenie wysyłane z telefonu też się liczy).',
+        'Jeśli idziesz z psem, w zakładce [[Informacje]] zaznacz [[Idę z psem]] (albo przy zapisie [[Naganiacz: idę z psem]]). Naganiacze z psami dostają trasy w środku miotu.',
         'Dotknij [[Prowadź mnie]]. Strzałka pokazuje kierunek, a napis: [[Idź na start trasy]], potem [[Na trasie · do końca]] z odległością.',
         'Dotknij [[Włącz kompas]], żeby strzałka obracała się razem z telefonem. Bez kompasu strzałka pokazuje kierunek względem północy (góra to północ).',
         'Gdy zejdziesz z trasy o więcej niż 50 m, telefon zawibruje i pokaże, w którą stronę wrócić.',

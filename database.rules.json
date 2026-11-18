@@ -161,6 +161,12 @@
           "joinedAt": {
             ".validate": "newData.isNumber() && (data.exists() ? newData.val() === data.val() : newData.val() === now)"
           },
+          "dog": {
+            ".validate": "newData.isBoolean()"
+          },
+          "here": {
+            ".validate": "newData.isNumber() && (data.val() === newData.val() || newData.val() === now)"
+          },
           "$other": {
             ".validate": false
           }
@@ -428,6 +434,42 @@
         "$d": {
           "$uid": {
             ".validate": "newData.isString() && newData.val().length <= 800 && newData.val().matches(/^-?[0-9.]+,-?[0-9.]+(;-?[0-9.]+,-?[0-9.]+)+$/)"
+          }
+        }
+      }
+    },
+    "routePlans": {
+      "$h": {
+        ".read": "auth != null && (root.child('hunts/' + $h + '/leaderUid').val() === auth.uid || root.child('hunts/' + $h + '/leaders/' + auth.uid).isString())",
+        ".write": "auth != null && (root.child('hunts/' + $h + '/leaderUid').val() === auth.uid || root.child('hunts/' + $h + '/leaders/' + auth.uid).isString())",
+        "$d": {
+          "lines": {
+            ".validate": "newData.isString() && newData.val().matches(/^-?[0-9.]+,-?[0-9.]+(;-?[0-9.]+,-?[0-9.]+){3}$/)"
+          },
+          "gaps": {
+            ".validate": "newData.isString() && newData.val().matches(/^(middle|flanks)$/)"
+          },
+          "v": {
+            "$n": {
+              ".validate": "$n.matches(/^([1-9]|1[0-9]|20)$/)",
+              "$slot": {
+                ".validate": "$slot.matches(/^(1?[0-9])$/) && newData.isString() && newData.val().length <= 800 && newData.val().matches(/^-?[0-9.]+,-?[0-9.]+(;-?[0-9.]+,-?[0-9.]+)+$/)"
+              }
+            }
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "routeAssign": {
+      "$h": {
+        ".read": "auth != null && (root.child('participants/' + $h + '/' + auth.uid + '/status').val() === 'confirmed' || root.child('hunts/' + $h + '/leaderUid').val() === auth.uid || root.child('hunts/' + $h + '/leaders/' + auth.uid).isString())",
+        ".write": "auth != null && (root.child('hunts/' + $h + '/leaderUid').val() === auth.uid || root.child('hunts/' + $h + '/leaders/' + auth.uid).isString())",
+        "$d": {
+          "$uid": {
+            ".validate": "newData.isString() && newData.val().matches(/^([1-9]|1[0-9]|20):(1?[0-9])!?$/)"
           }
         }
       }

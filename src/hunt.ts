@@ -92,6 +92,10 @@ export interface Participant {
   role: Role;
   status: ParticipantStatus;
   joinedAt: number;
+  /** Beater: walks with a dog (gets a middle route). */
+  dog?: boolean;
+  /** Beater: tapped "I'm here" at this time (counts as present for route assignment). */
+  here?: number | null;
 }
 
 export const LIMITS = { name: 40, huntName: 80, place: 200, notes: 1000, districtLabel: 200 } as const;
@@ -323,6 +327,8 @@ export function parseParticipants(v: unknown): Participant[] {
       role: o.role as Role,
       status: o.status === 'confirmed' ? 'confirmed' : 'registered',
       joinedAt: typeof o.joinedAt === 'number' ? o.joinedAt : 0,
+      ...(o.dog === true ? { dog: true } : {}),
+      ...(typeof o.here === 'number' ? { here: o.here } : {}),
     });
   }
   return sortParticipants(out);

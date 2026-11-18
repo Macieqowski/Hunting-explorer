@@ -10,7 +10,7 @@ import { parseStands, encodeStands } from './stands';
 import { newInviteToken, inviteExpiry, parseInvites, PAIR_MS } from './invite';
 import { HuntError, type FirebaseConfig, type HuntBackend } from './huntBackend';
 import { parseAlarm, parseAlarms, parseAlerts, parseKits, alarmRecord, alertRecord } from './huntAlarm';
-import { encodePt, encodeRoute, parseAllRoutes, parseSeats, parsePhones, parseTransport, parseMessages, parseAcks, parseCarcassMarks, cleanPhone, cleanSeat, cleanMessage, CARCASS_KINDS, CREW_LIMITS } from './huntCrew';
+import { encodePt, encodeRoute, encodeRoutePlan, encodeAssigned, parseRoutePlans, parseAssignments, parseAllRoutes, parseSeats, parsePhones, parseTransport, parseMessages, parseAcks, parseCarcassMarks, cleanPhone, cleanSeat, cleanMessage, CARCASS_KINDS, CREW_LIMITS } from './huntCrew';
 
 function wrap(e: unknown): HuntError {
   const msg = String((e as Error)?.message ?? e);
@@ -194,6 +194,8 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
           [`shots/${id}`]: null,
           [`shotSpots/${id}`]: null,
           [`routes/${id}`]: null,
+          [`routePlans/${id}`]: null,
+          [`routeAssign/${id}`]: null,
           [`seats/${id}`]: null,
           [`phones/${id}`]: null,
           [`transport/${id}`]: null,
@@ -228,22 +230,22 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
       );
     },
 
-    join: (id, name, role, passphrase, phone) =>
+    join: (id, name, role, passphrase, phone, dog) =>
       guard(
         update(root, {
           [`joins/${id}/${uid}`]: passphrase.trim(),
           [`club/members/${uid}`]: passphrase.trim(),
-          [`participants/${id}/${uid}`]: { name: cleanText(name, LIMITS.name), role, status: 'registered', joinedAt: serverTimestamp() },
+          [`participants/${id}/${uid}`]: { name: cleanText(name, LIMITS.name), role, status: 'registered', joinedAt: serverTimestamp(), ...(dog && role === 'beater' ? { dog: true } : {}) },
           [`userHunts/${uid}/${id}`]: true,
           ...phoneRec(id, phone),
         }),
       ),
 
-    joinByInvite: (id, name, role, token, phone) =>
+    joinByInvite: (id, name, role, token, phone, dog) =>
       guard(
         update(root, {
           [`inviteJoins/${id}/${uid}`]: token,
-          [`participants/${id}/${uid}`]: { name: cleanText(name, LIMITS.name), role, status: 'registered', joinedAt: serverTimestamp() },
+          [`participants/${id}/${uid}`]: { name: cleanText(name, LIMITS.name), role, status: 'registered', joinedAt: serverTimestamp(), ...(dog && role === 'beater' ? { dog: true } : {}) },
           [`userHunts/${uid}/${id}`]: true,
           ...phoneRec(id, phone),
         }),
@@ -416,7 +418,8 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
       return key;
     },
 
-    deleteDrive: (id, driveId) => guard(update(root, { [`drives/${id}/${driveId}`]: null, [`routes/${id}/${driveId}`]: null, [`seats/${id}/${driveId}`]: null })),
+    deleteDrive: (id, driveId) =>
+      guard(update(root, { [`drives/${id}/${driveId}`]: null, [`routes/${id}/${driveId}`]: null, [`routePlans/${id}/${driveId}`]: null, [`routeAssign/${id}/${driveId}`]: null, [`seats/${id}/${driveId}`]: null })),
 
     startDrive: (id, driveId, running) =>
       guard(
@@ -539,6 +542,27 @@ export async function connect(cfg: FirebaseConfig): Promise<HuntBackend> {
           routes.size ? Object.fromEntries([...routes].filter(([, r]) => r.length >= 2).map(([who, r]) => [who, encodeRoute(r.slice(0, CREW_LIMITS.routePoints))])) : null,
         ),
       ),
+
+    watchRoutePlans: (id, cb, onDenied) => watch(`routePlans/${id}`, parseRoutePlans, cb, onDenied),
+
+    saveRoutePlan: (id, driveId, plan) => guard(set(child(root, `routePlans/${id}/${driveId}`), plan ? encodeRoutePlan(plan) : null)),
+
+    watchAssignments: (id, cb, onDenied) => watch(`routeAssign/${id}`, parseAssignments, cb, onDenied),
+
+    saveAssignment: (id, driveId, assigned, routes) =>
+      guard(
+        update(root, {
+          [`routeAssign/${id}/${driveId}`]: assigned.size ? Object.fromEntries([...assigned].map(([who, a]) => [who, encodeAssigned(a)])) : null,
+          [`routes/${id}/${driveId}`]: routes.size ? Object.fromEntries([...routes].filter(([, r]) => r.length >= 2).map(([who, r]) => [who, encodeRoute(r)])) : null,
+        }),
+      ),
+
+    addToRoute: (id, driveId, who, a, route) =>
+      guard(update(root, { [`routeAssign/${id}/${driveId}/${who}`]: encodeAssigned(a), [`routes/${id}/${driveId}/${who}`]: encodeRoute(route) })),
+
+    setDog: (id, who, dog) => guard(update(child(root, `participants/${id}/${who}`), { dog: dog || null })),
+
+    setHere: (id, here) => guard(update(child(root, `participants/${id}/${uid}`), { here: here ? serverTimestamp() : null })),
 
     watchSeats: (id, cb, onDenied) => watch(`seats/${id}`, parseSeats, cb, onDenied),
 

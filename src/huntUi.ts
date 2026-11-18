@@ -53,6 +53,19 @@ import { fold, districtSlug } from './data';
 import { createHuntMap, type HuntMap, type PersonInfo, type DriveView, type SightView, type ShotView, type RouteView, type MeetView, type SeatView, type AlarmView } from './huntMap';
 import {
   spreadRoutes,
+  routeSet,
+  routesFromLines,
+  assignRoutes,
+  presentBeaters,
+  planUsable,
+  emptyPlan,
+  nearestRoute,
+  sameAssignment,
+  GAP_MS,
+  PLAN_LIMITS,
+  type RoutePlan,
+  type RouteSet,
+  type Assigned,
   focusDrive,
   standForSeat,
   cleanSeat,
@@ -545,6 +558,69 @@ const L = {
   routeSaved: { pl: 'Zapisano trasy.', en: 'Routes saved.' },
   routeNoBeaters: { pl: 'Na polowanie nie zapisał się jeszcze żaden naganiacz.', en: 'No beaters have signed up yet.' },
   routeMine: { pl: 'Twoja trasa', en: 'Your route' },
+  routeOf: { pl: 'z', en: 'of' },
+  routeLater: { pl: 'Trasę przydzieli prowadzący przed miotem', en: 'The leader gives you a route before the drive' },
+  routeChanged: { pl: 'Prowadzący zmienił Twoją trasę', en: 'The leader changed your route' },
+  routeGiven: { pl: 'Masz trasę na miot', en: 'You have a route for the drive' },
+  planTab: { pl: 'Plan miotu', en: 'Drive plan' },
+  peopleTab: { pl: 'Trasy osób', en: 'Routes per person' },
+  planHint: {
+    pl: 'Nie musisz wiedzieć, ilu przyjdzie naganiaczy. Narysuj linie miotu, a trasy rozłożą się dla każdej liczby osób. Dla wybranej liczby możesz poprawić trasy ręcznie.',
+    en: 'You do not need to know how many beaters come. Draw the drive lines and routes are spread for any number. For a chosen number you can adjust the routes by hand.',
+  },
+  planLines: { pl: 'Linie miotu', en: 'Drive lines' },
+  planLinesDraw: { pl: 'Narysuj linie miotu', en: 'Draw the drive lines' },
+  planLinesRedraw: { pl: 'Narysuj linie od nowa', en: 'Redraw the lines' },
+  planLinesHint: { pl: 'Stuknij 2 końce linii startu i 2 końce linii końca (przy myśliwych).', en: "Tap both ends of the start line and both ends of the end line (at the hunters)." },
+  planLinesOk: { pl: 'linie narysowane', en: 'lines drawn' },
+  planLinesNone: { pl: 'brak linii', en: 'no lines' },
+  planCount: { pl: 'Liczba naganiaczy', en: 'Number of beaters' },
+  planManual: { pl: 'ręczny', en: 'by hand' },
+  planFromLines: { pl: 'Trasy z linii (podgląd). Wybierz trasę i stukaj mapę albo przeciągnij punkt, żeby ją poprawić.', en: 'Routes from the lines (preview). Pick a route and tap the map, or drag a point, to adjust it.' },
+  planNoLines: { pl: 'Brak linii: wybierz trasę i stukaj mapę od startu do końca.', en: 'No lines: pick a route and tap the map from start to end.' },
+  planManualInfo: { pl: 'Wariant ręczny. Narysowane trasy:', en: 'Hand-made variant. Routes drawn:' },
+  planReset: { pl: 'Przywróć z linii', en: 'Back to the lines' },
+  planDropVariant: { pl: 'Usuń wariant', en: 'Delete this variant' },
+  planRoute: { pl: 'Trasa', en: 'Route' },
+  planEdge: { pl: 'skrajna', en: 'outer' },
+  planVariants: { pl: 'Warianty ręczne', en: 'Hand-made variants' },
+  planGaps: { pl: 'Gdy naganiaczy jest mniej niż tras, puste zostają', en: 'With fewer beaters than routes, leave empty' },
+  planGapsMiddle: { pl: 'trasy w środku (flanki obsadzone)', en: 'routes in the middle (flanks covered)' },
+  planGapsFlanks: { pl: 'skrajne trasy (flanki)', en: 'the outer routes (flanks)' },
+  planMax: { pl: 'Najwyżej 8 wariantów ręcznych na miot.', en: 'At most 8 hand-made variants per drive.' },
+  planSaved: { pl: 'Zapisano plan miotu.', en: 'Drive plan saved.' },
+  planBadge: { pl: 'plan', en: 'plan' },
+  asTitle: { pl: 'Przydział tras', en: 'Route assignment' },
+  asPresent: { pl: 'Obecnych naganiaczy', en: 'Beaters here' },
+  asFromVariant: { pl: 'wariant ręczny na', en: 'hand-made variant for' },
+  asFromLines: { pl: 'trasy z linii dla', en: 'routes from the lines for' },
+  asNearest: { pl: 'najbliższy wariant:', en: 'nearest variant:' },
+  asPairs: { pl: 'w parach na trasach', en: 'in pairs on routes' },
+  asEmpty: { pl: 'puste trasy', en: 'empty routes' },
+  asNoRoutes: { pl: 'Nikt nie jest jeszcze obecny. Naganiacz liczy się, gdy wysyła położenie albo stuknie „Jestem na miejscu”.', en: 'Nobody is here yet. A beater counts once they share their location or tap "I am here".' },
+  asHere: { pl: 'obecny', en: 'here' },
+  asAuto: { pl: 'auto', en: 'auto' },
+  asDog: { pl: 'z psem', en: 'with a dog' },
+  asNoFix: { pl: 'brak położenia', en: 'no location' },
+  asTapped: { pl: 'jest na miejscu', en: 'is here' },
+  asSaved: { pl: 'Zapisano. Naganiacze widzą swoje trasy.', en: 'Saved. The beaters see their routes.' },
+  asChanged: { pl: 'Obecność się zmieniła od zapisu.', en: 'Who is here changed since saving.' },
+  asRecalc: { pl: 'Przelicz trasy', en: 'Recalculate routes' },
+  asAutoNote: { pl: 'Zapisze się samo przy „Rozpocznij miot”.', en: 'Saved automatically at "Start drive".' },
+  asNow: { pl: 'Przydziel teraz', en: 'Assign now' },
+  asUnpin: { pl: 'Odepnij wszystkich', en: 'Unpin everyone' },
+  asLate: { pl: 'doszedł w trakcie miotu', en: 'came during the drive' },
+  asJoin: { pl: 'Dołącz do trasy', en: 'Join route' },
+  asGap: { pl: 'Luka: trasa', en: 'Gap: route' },
+  asGapLost: { pl: 'brak położenia od', en: 'no location for' },
+  asGapLeft: { pl: 'wypisał się', en: 'left the hunt' },
+  asDone: { pl: 'Przydzielono trasy.', en: 'Routes assigned.' },
+  hereBtn: { pl: 'Jestem na miejscu', en: 'I am here' },
+  hereOn: { pl: 'Jesteś na miejscu', en: 'You are here' },
+  hereOff: { pl: 'Odznacz', en: 'Undo' },
+  dogMine: { pl: 'Idę z psem', en: 'I walk with a dog' },
+  dogJoin: { pl: 'Naganiacz: idę z psem', en: 'Beater: I walk with a dog' },
+  dogHint: { pl: 'Naganiacze z psami dostają trasy w środku miotu.', en: 'Beaters with dogs get routes in the middle of the drive.' },
   routeGuide: { pl: 'Prowadź mnie', en: 'Guide me' },
   gToStart: { pl: 'Idź na start trasy', en: 'Go to the start of your route' },
   gOnRoute: { pl: 'Na trasie · do końca', en: 'On your route · to the end:' },
@@ -926,16 +1002,32 @@ let seenMsgs: Set<string> | null = null;
 const shelvedMsgs = new Set<string>();
 /** Ready carcasses already announced to me as a carrier; null until the first check. */
 let seenCarcasses: Set<string> | null = null;
+/** Leaders only: route plans by drive (lines and hand-made variants for a headcount). */
+let routePlans = new Map<string, RoutePlan>();
+/** Who got which planned route, by drive. */
+let assignments = new Map<string, Map<string, Assigned>>();
+/** Leader's ticks on who is here (this device, whole hunt): uid → here or not. */
+const presence = new Map<string, boolean>();
+/** Leader's pins before saving: driveId → uid → route index. */
+const assignPins = new Map<string, Map<string, number>>();
+/** My route for the next drive, last seen (beater): to tell them when the leader changes it. */
+let myRouteKey: string | null = null;
 /** The leader's route editor for one drive. */
 let routeEdit: {
   driveId: string;
+  tab: 'plan' | 'people';
   routes: Map<string, Route>;
   sel: string | null;
-  mode: 'route' | 'spread' | 'meet';
+  mode: 'route' | 'spread' | 'meet' | 'lines';
   spread: Pt[];
   spreadUids: Set<string>;
   meet: Pt | null;
   dirty: boolean;
+  plan: RoutePlan;
+  /** Headcount shown in the plan tab, and the route picked there. */
+  n: number;
+  slot: number | null;
+  planDirty: boolean;
 } | null = null;
 /** Picking a point on the map for the hunt's meeting point or a carcass. */
 let pickMode: { kind: 'huntMeet' } | { kind: 'carcass'; shotId: string } | null = null;
@@ -1101,6 +1193,11 @@ function stopLive() {
   seenMsgs = null;
   seenCarcasses = null;
   routeEdit = null;
+  routePlans = new Map();
+  assignments = new Map();
+  presence.clear();
+  assignPins.clear();
+  myRouteKey = null;
   pickMode = null;
   guideDismissed = null;
   guideCarcass = null;
@@ -1182,8 +1279,17 @@ function syncLive() {
     crewUnsubs = [
       be.watchRoutes(id!, (r) => {
         routes = r;
+        noticeMyRoute();
         drawCrew();
         syncGuide();
+        rerender();
+      }, () => {}),
+      be.watchRoutePlans(id!, (x) => {
+        routePlans = x;
+        rerender();
+      }, () => {}),
+      be.watchAssignments(id!, (x) => {
+        assignments = x;
         rerender();
       }, () => {}),
       be.watchSeats(id!, (x) => {
@@ -2159,7 +2265,8 @@ function renderLive(h: Hunt, me: Participant): string {
     h.status === 'live' && !remote
       ? `<a class="h-sos" href="#/wypadek" data-nav="aid">${ic('aid', 24)}<span><strong>${l('alarmSos')}</strong><small>${l('alarmSosSub')}</small></span>${ic('chevron', 20)}</a>`
       : '';
-  return `${t}${isLead ? '' : errorBox()}${alarmCards(isLead, remote)}${enter}${start}${sos}${mine}${msgs}${report}${share}${renderDrives(h, isLead)}${drawing || planning ? '' : `${isLead ? renderSeatsLeader() : ''}${renderStands(isLead)}`}
+  const assign = isLead && !drawing && !planning ? renderAssign(h) : '';
+  return `${t}${isLead ? '' : errorBox()}${alarmCards(isLead, remote)}${enter}${start}${sos}${mine}${assign}${msgs}${report}${share}${renderDrives(h, isLead)}${drawing || planning ? '' : `${isLead ? renderSeatsLeader() : ''}${renderStands(isLead)}`}
     <div class="hm-bar"${drawing ? ' hidden' : ''}><div class="hm-counts">${liveCounts()}</div>
       <div class="hm-tools">
         ${iShare ? `<button type="button" class="btn small ghost" data-hunt="centerMe">${ic('locate', 16)} ${l('centerMe')}</button>` : ''}
@@ -2237,7 +2344,7 @@ function renderField(h: Hunt, me: Participant, isLead: boolean): string {
         : fieldPanel === 'people'
           ? renderMembers(myUid(), isLead)
           : fieldPanel === 'drives'
-            ? `${renderDrives(h, isLead, true)}${isLead ? renderSeatsLeader() : renderMySeat(me)}`
+            ? `${isLead ? renderAssign(h) : ''}${renderDrives(h, isLead, true)}${isLead ? renderSeatsLeader() : renderMySeat(me)}`
             : `${renderCarcasses(isLead)}${renderPokot(pokotCtx(h))}<h4>${l('sightings')}</h4><div class="hs-list">${sightListHtml()}</div>`;
     panel = `<div class="hf-scrim" data-hunt="fieldPanel" data-panel=""></div>
       <section class="hf-panel" role="dialog" aria-label="${esc(panelTitle[fieldPanel])}">
@@ -2306,7 +2413,7 @@ function renderDrives(h: Hunt, isLeader: boolean, forceOpen = false): string {
         confirming === `drive:${d.id}`
           ? `<button type="button" class="btn small danger" data-hunt="driveDelete" data-drive="${esc(d.id)}"${btnBusy()}>${l('dDeleteSure')}</button>
              <button type="button" class="btn small ghost" data-hunt="unconfirm">${l('cancel')}</button>`
-          : `${startEnd}<button type="button" class="btn small ghost" data-hunt="routeEdit" data-drive="${esc(d.id)}">${l('routes')}${routes.get(d.id)?.size ? ` (${routes.get(d.id)!.size})` : ''}</button><button type="button" class="btn small ghost" data-hunt="driveEdit" data-drive="${esc(d.id)}">${l('editDrive')}</button>
+          : `${startEnd}<button type="button" class="btn small ghost" data-hunt="routeEdit" data-drive="${esc(d.id)}">${l('routes')}${routes.get(d.id)?.size ? ` (${routes.get(d.id)!.size})` : ''}${planUsable(routePlans.get(d.id)) ? ` · ${l('planBadge')}` : ''}</button><button type="button" class="btn small ghost" data-hunt="driveEdit" data-drive="${esc(d.id)}">${l('editDrive')}</button>
              <button type="button" class="btn small ghost" data-hunt="askDriveDelete" data-drive="${esc(d.id)}" aria-label="${l('remove')} ${esc(d.name)}">${ic('x', 16)}</button>`;
     }
     return `<li class="hd-drive hd-${st}"><span class="hd-num">${i + 1}</span>
@@ -2424,6 +2531,39 @@ function renderStands(isLeader: boolean): string {
 
 /** The leader picked a KMZ/KML file: read it and put its points into this hunt. */
 export function handleHuntChange(el: HTMLElement): boolean {
+  if (el instanceof HTMLSelectElement && 'planN' in el.dataset) {
+    if (routeEdit) {
+      routeEdit.n = Math.min(PLAN_LIMITS.maxBeaters, Math.max(1, Number(el.value) || 1));
+      routeEdit.slot = null;
+      routeEdit.mode = 'route';
+      drawCrew();
+      rerender();
+    }
+    return true;
+  }
+  if (el instanceof HTMLSelectElement && 'planGaps' in el.dataset) {
+    if (routeEdit) {
+      routeEdit.plan.gaps = el.value === 'flanks' ? 'flanks' : 'middle';
+      routeEdit.planDirty = true;
+    }
+    return true;
+  }
+  if (el instanceof HTMLSelectElement && el.dataset.assignPin) {
+    const d = upcoming();
+    if (d) {
+      const pins = new Map(pinsFor(d.id));
+      if (el.value === '') pins.delete(el.dataset.assignPin);
+      else pins.set(el.dataset.assignPin, Number(el.value));
+      assignPins.set(d.id, pins);
+      rerender();
+    }
+    return true;
+  }
+  if (el instanceof HTMLInputElement && el.dataset.assignHere) {
+    presence.set(el.dataset.assignHere, el.checked);
+    rerender();
+    return true;
+  }
   if (el instanceof HTMLInputElement && 'huntKit' in el.dataset) {
     const id = watched;
     const box = el.closest('.hr-kitpick');
@@ -2560,6 +2700,7 @@ function renderJoin(h: Hunt): string {
     ${guidesRow(l('guideJoin'), ['hunter', 'beater'])}
     ${field('join', 'pname', l('fYourName'), storedName(), { max: LIMITS.name, req: true, hint: l('fYourNameHint'), auto: 'name' })}
     ${field('join', 'phone', l('fPhone'), '', { type: 'tel', auto: 'tel', hint: l('fPhoneHint') })}
+    <label class="h-check"><input type="checkbox" name="dog" data-hunt-field="join"${draft.get('join.dog') === 'on' ? ' checked' : ''}> ${l('dogJoin')}</label>
     ${guest ? '' : field('join', 'pass', l('fPass'), '', { req: true, hint: l('fPassHint'), auto: 'off' })}
     ${errorBox()}
     <div class="h-actions"><button type="submit" class="btn"${btnBusy()}>${l('join')}</button></div>
@@ -2575,7 +2716,15 @@ function renderMe(me: Participant, isLeader: boolean): string {
       : `<button type="button" class="btn ghost" data-hunt="askWithdraw">${l('withdraw')}</button>`;
   return `<div class="notice h-me">${roleIcon(me.role, 22)}<div><strong>${l('youAre')} ${l(`r_${me.role}`).toLocaleLowerCase(locale())}</strong>
       ${me.status === 'registered' ? `<br><span class="small">${l('youPending')}</span>` : ''}</div>
-      ${withdraw ? `<div class="h-actions">${withdraw}</div>` : ''}</div>${me.status === 'confirmed' ? `${renderPhone()}${renderKit()}` : ''}${!isLeader ? errorBox() : ''}`;
+      ${withdraw ? `<div class="h-actions">${withdraw}</div>` : ''}</div>${me.role === 'beater' ? renderBeaterFlags(me) : ''}${me.status === 'confirmed' ? `${renderPhone()}${renderKit()}` : ''}${!isLeader ? errorBox() : ''}`;
+}
+
+/** Beater: "I walk with a dog" and "I'm here" (both used when the leader's app hands out routes). */
+function renderBeaterFlags(me: Participant): string {
+  return `<div class="card hr-flags">
+    <button type="button" class="btn small ghost hr-dog" data-hunt="dogSet" data-uid="${esc(me.uid)}" aria-pressed="${!!me.dog}">${ic(me.dog ? 'check' : 'paw', 16)} ${l('dogMine')}</button>
+    <span class="small muted">${l('dogHint')}</span>
+    ${hunt?.status === 'live' ? hereButton(me) : ''}</div>`;
 }
 
 function renderInvite(h: Hunt): string {
@@ -2843,7 +2992,30 @@ function drawCrew() {
   const e = routeEdit;
   const ppl = people();
   const label = (uid: string) => ppl.get(uid)?.name ?? '?';
-  if (e) {
+  if (e && e.tab === 'plan') {
+    const manual = e.plan.variants.has(e.n);
+    const views: RouteView[] = planRoutes(e).map((pts, i) => ({ uid: `s:${i}`, pts, label: `${i + 1}`, strong: false }));
+    if (e.mode === 'lines' && e.spread.length) views.push({ uid: '__spread', pts: e.spread, label: `${l('routeSpreadStep')} ${e.spread.length}/4`, strong: true });
+    hmap.setRoutes(views, {
+      sel: e.mode === 'route' && e.slot != null && manual ? `s:${e.slot}` : null,
+      onSelect: (uid) => {
+        if (!uid.startsWith('s:')) return;
+        e.slot = +uid.slice(2);
+        e.mode = 'route';
+        ensureVariant(e);
+        drawCrew();
+        rerender();
+      },
+      onMove: (i, lat, lng) => {
+        const v = e.slot != null ? ensureVariant(e) : null;
+        const r = v && e.slot != null ? v[e.slot] : null;
+        if (!r || !r[i]) return;
+        r[i] = { lat: +lat.toFixed(6), lng: +lng.toFixed(6) };
+        e.planDirty = true;
+        drawCrew();
+      },
+    });
+  } else if (e) {
     const views: RouteView[] = [...e.routes].map(([uid, pts]) => ({ uid, pts, label: label(uid), strong: false }));
     if (e.mode === 'spread' && e.spread.length) views.push({ uid: '__spread', pts: e.spread, label: `${l('routeSpreadStep')} ${e.spread.length}/4`, strong: true });
     hmap.setRoutes(views, {
@@ -2891,6 +3063,23 @@ function onMapTap(lat: number, lng: number) {
       e.meet = p;
       e.mode = 'route';
       e.dirty = true;
+    } else if (e.mode === 'lines') {
+      e.spread.push(p);
+      if (e.spread.length === 4) {
+        e.plan.lines = [e.spread[0], e.spread[1], e.spread[2], e.spread[3]];
+        e.spread = [];
+        e.mode = 'route';
+        e.planDirty = true;
+      }
+    } else if (e.tab === 'plan') {
+      if (e.slot == null) return;
+      const v = ensureVariant(e);
+      const r = v?.[e.slot];
+      if (!r || r.length >= CREW_LIMITS.routePoints) return;
+      // A route that already has its start and end gets a waypoint where it bends the least.
+      if (r.length >= 2) r.splice(insertAt(r, p), 0, p);
+      else r.push(p);
+      e.planDirty = true;
     } else if (e.mode === 'spread') {
       e.spread.push(p);
       if (e.spread.length === 4) {
@@ -2945,7 +3134,10 @@ function guideTarget(): GuideTarget | null {
   }
   const d = upcoming();
   const r = d ? routes.get(d.id)?.get(myUid()) : undefined;
-  if (d && r && guideDismissed !== d.id) return { kind: 'route', route: r, started: d.startedAt != null, title: `${l('routeMine')} · ${d.name}` };
+  if (d && r && guideDismissed !== d.id) {
+    const a = assignments.get(d.id)?.get(myUid());
+    return { kind: 'route', route: r, started: d.startedAt != null, title: `${l('routeMine')}${a ? ` ${a.slot + 1} ${l('routeOf')} ${a.base}` : ''} · ${d.name}` };
+  }
   return null;
 }
 
@@ -3181,14 +3373,253 @@ function renderMyRoute(me: Participant): string {
   const r = d ? routes.get(d.id)?.get(me.uid) : undefined;
   const g = guideCardHtml();
   if (g) return g;
-  if (!d || !r || hunt?.status !== 'live') return '';
+  if (!d || hunt?.status !== 'live') return '';
+  if (!r) {
+    if (me.role !== 'beater' || me.status !== 'confirmed' || d.startedAt != null) return '';
+    return `<div class="hr-seatcard card"><span>${roleIcon('beater', 18)} ${l('routeLater')} · <strong>${esc(d.name)}</strong></span>${hereButton(me)}</div>`;
+  }
   const pos = myPos();
-  return `<div class="hr-seatcard card"><span>${roleIcon('beater', 18)} ${l('routeMine')} · <strong>${esc(d.name)}</strong>${pos ? ` · ${ic('navigate', 13)} ${fmtDist(distanceM(pos, r[0]))}` : ''}</span>
+  const a = assignments.get(d.id)?.get(me.uid);
+  const no = a ? ` ${a.slot + 1} ${l('routeOf')} ${a.base}` : '';
+  return `<div class="hr-seatcard card"><span>${roleIcon('beater', 18)} ${l('routeMine')}${no} · <strong>${esc(d.name)}</strong>${pos ? ` · ${ic('navigate', 13)} ${fmtDist(distanceM(pos, r[0]))}` : ''}</span>
     <button type="button" class="btn small" data-hunt="guideOn">${ic('navigate', 16)} ${l('routeGuide')}</button></div>`;
 }
 
-/** Leader: draw the beaters' routes and the meeting point of one drive. */
+/** Beater: "I'm here" (counts them in for the route assignment even without a location). */
+function hereButton(me: Participant): string {
+  if (me.role !== 'beater' || me.status !== 'confirmed' || hunt?.status === 'ended') return '';
+  return me.here
+    ? `<span class="small hr-here">${ic('check', 16)} ${l('hereOn')} <button type="button" class="btn small ghost" data-hunt="hereToggle">${l('hereOff')}</button></span>`
+    : `<button type="button" class="btn small" data-hunt="hereToggle"${btnBusy()}>${ic('check', 16)} ${l('hereBtn')}</button>`;
+}
+
+/** Beater: tell them when their route for the next drive appears or changes. */
+function noticeMyRoute() {
+  const me = (members ?? []).find((p) => p.uid === myUid());
+  if (!me || me.role !== 'beater' || hunt?.status !== 'live') return;
+  const d = upcoming();
+  const r = d ? routes.get(d.id)?.get(me.uid) : undefined;
+  const key = d && r ? `${d.id}|${r.map((p) => `${p.lat},${p.lng}`).join(';')}` : '';
+  const prev = myRouteKey;
+  myRouteKey = key;
+  if (prev == null || !key || prev === key) return;
+  const sameDrive = prev.split('|')[0] === d!.id;
+  const text = sameDrive && prev ? l('routeChanged') : `${l('routeGiven')} ${d!.name}`;
+  showToast(text);
+  alertUser(hunt?.name ?? 'Polowanie', text, [...BUZZ.message]);
+}
+
+// ---------------------------------------------------------------- route assignment (leader)
+
+const lastSeen = () => new Map(positions.map((p) => [p.uid, p.ts] as [string, number]));
+
+/** The pins for a drive: what the leader set on this device, else the saved ones. */
+function pinsFor(driveId: string): Map<string, number> {
+  const local = assignPins.get(driveId);
+  if (local) return local;
+  const saved = assignments.get(driveId);
+  return new Map([...(saved ?? [])].filter(([, a]) => a.pin).map(([uid, a]) => [uid, a.slot] as [string, number]));
+}
+
+/** Who would walk which route of a drive now: present beaters, the routes for them, the match. */
+function assignPreview(driveId: string): { set: RouteSet | null; present: Participant[]; map: Map<string, number>; pins: Map<string, number> } | null {
+  const plan = routePlans.get(driveId);
+  if (!planUsable(plan)) return null;
+  const present = presentBeaters(members ?? [], lastSeen(), now(), presence);
+  const set = routeSet(plan, present.length);
+  const pins = pinsFor(driveId);
+  if (!set) return { set: null, present, map: new Map(), pins };
+  const pos = new Map(positions.map((p) => [p.uid, { lat: p.lat, lng: p.lng }] as [string, Pt]));
+  const map = assignRoutes(present.map((p) => ({ uid: p.uid, name: p.name, pos: pos.get(p.uid) ?? null, dog: !!p.dog })), set, pins);
+  return { set, present, map, pins };
+}
+
+/** Save the assignment shown now (and the routes it gives); true when there was one to save. */
+async function saveAssign(be: HuntBackend, id: string, driveId: string): Promise<boolean> {
+  const pv = assignPreview(driveId);
+  if (!pv?.set || !pv.map.size) return false;
+  const base = pv.set.routes.length;
+  const assigned = new Map<string, Assigned>();
+  const rs = new Map<string, Route>();
+  for (const [uid, slot] of pv.map) {
+    assigned.set(uid, { base, slot, pin: pv.pins.has(uid) });
+    rs.set(uid, pv.set.routes[slot]);
+  }
+  await be.saveAssignment(id, driveId, assigned, rs);
+  assignPins.delete(driveId);
+  return true;
+}
+
+function assignSourceText(set: RouteSet, n: number): string {
+  const counts = new Map<number, number>();
+  for (const x of set.slots) counts.set(x, (counts.get(x) ?? 0) + 1);
+  const pairs = [...counts].filter(([, c]) => c > 1).map(([x]) => x + 1);
+  const drawn = set.routes.map((r, i) => (r.length >= 2 ? i : -1)).filter((i) => i >= 0);
+  const empty = drawn.filter((i) => !counts.has(i)).map((i) => i + 1);
+  let t = set.source === 'lines' ? `${l('asFromLines')} ${n}` : set.source === 'variant' ? `${l('asFromVariant')} ${set.base}` : `${l('asNearest')} ${set.base}`;
+  if (pairs.length) t += ` · ${l('asPairs')} ${pairs.join(', ')}`;
+  if (empty.length) t += ` · ${l('asEmpty')} ${empty.join(', ')}`;
+  return t;
+}
+
+/** Leader: the assignment card for the drive to come, or late arrivals and gaps during it. */
+function renderAssign(h: Hunt): string {
+  const d = upcoming();
+  if (!d || h.status !== 'live' || routeEdit) return '';
+  const pv = assignPreview(d.id);
+  if (!pv) return '';
+  const saved = assignments.get(d.id);
+  const t = now();
+  const seen = lastSeen();
+  const all = beaters().filter((p) => p.status === 'confirmed');
+  if (d.startedAt != null) {
+    // Running: nothing moves by itself. Offer a route to late beaters, warn about gaps.
+    if (!saved?.size) return '';
+    // Late beaters join the routes walked now (the saved headcount), not a new spread.
+    const set = routeSet(routePlans.get(d.id), saved.values().next().value!.base);
+    const rows: string[] = [];
+    const posOf = (uid: string) => positions.find((p) => p.uid === uid) ?? null;
+    for (const p of pv.present) {
+      if (saved.has(p.uid) || !set) continue;
+      const k = nearestRoute(set.routes, posOf(p.uid));
+      if (k == null) continue;
+      rows.push(`<li>${roleIcon('beater', 16)} <strong>${esc(p.name)}</strong> ${l('asLate')} <button type="button" class="btn small" data-hunt="assignJoin" data-uid="${esc(p.uid)}" data-slot="${k}" data-base="${set.routes.length}">${l('asJoin')} ${k + 1}</button></li>`);
+    }
+    for (const [uid, a] of saved) {
+      const p = all.find((x) => x.uid === uid);
+      const ts = seen.get(uid);
+      if (p && ts != null && t - ts < GAP_MS) continue;
+      // Without a phone (ticked in by the leader) or only "I'm here": no location to watch.
+      if (p && ts == null && (p.here || presence.get(uid))) continue;
+      const why = !p ? l('asGapLeft') : ts != null ? `${l('asGapLost')} ${Math.round((t - ts) / 60e3)} min` : l('asNoFix');
+      rows.push(`<li class="hr-gap">${ic('alert', 16)} ${l('asGap')} ${a.slot + 1} (${esc(p?.name ?? personName(uid))}): ${why}</li>`);
+    }
+    return rows.length ? `<div class="card hr-assign"><strong>${l('asTitle')} · ${esc(d.name)}</strong><ul class="hr-alist">${rows.join('')}</ul></div>` : '';
+  }
+  const set = pv.set;
+  const k = set?.routes.length ?? 0;
+  const rows = all
+    .map((p) => {
+      const here = pv.present.some((x) => x.uid === p.uid);
+      const slot = pv.map.get(p.uid);
+      const ts = seen.get(p.uid);
+      const note = p.here ? l('asTapped') : ts != null ? `${Math.max(0, Math.round((t - ts) / 60e3))} min` : l('asNoFix');
+      const pin = pv.pins.get(p.uid);
+      const opts = set
+        ? `<select data-assign-pin="${esc(p.uid)}" aria-label="${esc(l('planRoute'))} · ${esc(p.name)}"${here ? '' : ' disabled'}>
+            <option value="">${l('asAuto')}${slot != null && pin == null ? ` (${slot + 1})` : ''}</option>
+            ${set.routes.map((r, i) => (r.length >= 2 ? `<option value="${i}"${pin === i ? ' selected' : ''}>${l('planRoute')} ${i + 1}</option>` : '')).join('')}</select>`
+        : '';
+      return `<li class="${here ? '' : 'hr-away'}"><label class="hr-acheck"><input type="checkbox" data-assign-here="${esc(p.uid)}"${here ? ' checked' : ''}> <span>${esc(p.name)}</span></label>
+        <button type="button" class="btn small ghost hr-dog" data-hunt="dogSet" data-uid="${esc(p.uid)}" aria-pressed="${!!p.dog}" title="${esc(l('asDog'))}">${ic('paw', 16)} <span>${l('asDog')}</span></button>
+        <small class="muted">${esc(note)}</small>
+        ${here && slot != null ? `<strong class="hr-slot">${slot + 1}</strong>` : ''}${opts}</li>`;
+    })
+    .join('');
+  const same = set ? sameAssignment(saved, pv.map, k) : false;
+  const status = !set
+    ? `<p class="small muted">${l('asNoRoutes')}</p>`
+    : saved?.size
+      ? same
+        ? `<p class="small hmsg-ok">${ic('check', 16)} ${l('asSaved')}</p>`
+        : `<p class="small">${l('asChanged')}</p><div class="h-actions"><button type="button" class="btn small" data-hunt="assignSave"${btnBusy()}>${l('asRecalc')}</button></div>`
+      : `<p class="small muted">${l('asAutoNote')}</p><div class="h-actions"><button type="button" class="btn small" data-hunt="assignSave"${btnBusy()}>${l('asNow')}</button></div>`;
+  return `<details class="hd-box hr-assign" open><summary><strong>${l('asTitle')} · ${esc(d.name)}</strong> <span class="muted">· ${l('asPresent')}: ${pv.present.length}</span></summary>
+    ${set ? `<p class="small">${esc(assignSourceText(set, pv.present.length))}</p>` : ''}
+    <ul class="hr-alist">${rows || `<li class="muted small">${l('routeNoBeaters')}</li>`}</ul>
+    ${pv.pins.size ? `<button type="button" class="btn small ghost" data-hunt="assignUnpin">${l('asUnpin')}</button>` : ''}
+    ${status}</details>`;
+}
+
+/** Leader: the drive plan (lines, variants) and the beaters' routes and meeting point of one drive. */
 function renderRouteEditor(): string {
+  const e = routeEdit!;
+  const d = drives.find((x) => x.id === e.driveId);
+  const tabs = `<div class="hr-tabs" role="tablist">
+    <button type="button" role="tab" class="btn small${e.tab === 'plan' ? '' : ' ghost'}" aria-selected="${e.tab === 'plan'}" data-hunt="routeTab" data-tab="plan">${l('planTab')}</button>
+    <button type="button" role="tab" class="btn small${e.tab === 'people' ? '' : ' ghost'}" aria-selected="${e.tab === 'people'}" data-hunt="routeTab" data-tab="people">${l('peopleTab')}${e.routes.size ? ` (${e.routes.size})` : ''}</button></div>`;
+  return `<div class="card hr-edit"><strong>${l('routesTitle')} · ${esc(d?.name ?? '')}</strong>
+    ${tabs}
+    ${e.tab === 'plan' ? renderPlanTab() : renderPeopleRoutes()}
+    ${errorBox()}
+    <div class="h-actions"><button type="button" class="btn small" data-hunt="routeSave"${btnBusy()}>${l('routeSave')}</button>
+      <button type="button" class="btn small ghost" data-hunt="routeCancel">${l('cancel')}</button></div></div>`;
+}
+
+/** The routes the plan tab shows for the chosen headcount: the hand-made variant, else from the lines. */
+function planRoutes(e: NonNullable<typeof routeEdit>): Route[] {
+  const v = e.plan.variants.get(e.n);
+  if (v) return Array.from({ length: e.n }, (_, i) => v[i] ?? []);
+  return routesFromLines(e.plan, e.n) ?? Array.from({ length: e.n }, () => []);
+}
+
+/** Editing a route of a headcount without its own variant makes one (a copy of what is shown). */
+function ensureVariant(e: NonNullable<typeof routeEdit>): Route[] | null {
+  const v = e.plan.variants.get(e.n);
+  if (v) {
+    while (v.length < e.n) v.push([]);
+    return v;
+  }
+  if (e.plan.variants.size >= PLAN_LIMITS.variants) {
+    formError = l('planMax');
+    rerender();
+    return null;
+  }
+  const copy = planRoutes(e).map((r) => r.map((p) => ({ ...p })));
+  e.plan.variants.set(e.n, copy);
+  e.planDirty = true;
+  return copy;
+}
+
+function renderPlanTab(): string {
+  const e = routeEdit!;
+  const manual = e.plan.variants.has(e.n);
+  const rs = planRoutes(e);
+  const hint =
+    e.mode === 'lines'
+      ? `${l('planLinesHint')} <strong>${l('routeSpreadStep')} ${e.spread.length + 1}/4: ${l(e.spread.length < 2 ? 'routeSpreadStart' : 'routeSpreadEnd')}</strong>`
+      : e.mode === 'meet'
+        ? l('routeMeetHint')
+        : l('planHint');
+  const opts = Array.from({ length: PLAN_LIMITS.maxBeaters }, (_, i) => i + 1)
+    .map((n) => `<option value="${n}"${n === e.n ? ' selected' : ''}>${n}${e.plan.variants.has(n) ? ` · ${l('planManual')}` : ''}</option>`)
+    .join('');
+  const chips = [...e.plan.variants.keys()]
+    .sort((a, b) => a - b)
+    .map((n) => `<button type="button" class="btn small${n === e.n ? '' : ' ghost'}" data-hunt="planN" data-n="${n}">${n}</button>`)
+    .join('');
+  const drawn = rs.filter((r) => r.length >= 2).length;
+  const info = manual ? `${l('planManualInfo')} ${drawn}/${e.n}.` : e.plan.lines ? l('planFromLines') : l('planNoLines');
+  const list = rs
+    .map((r, i) => {
+      const on = e.slot === i && e.mode === 'route';
+      const side = (i === 0 || i === e.n - 1) && e.n > 1 ? ` (${l('planEdge')})` : '';
+      return `<li class="${on ? 'hr-on' : ''}"><button type="button" data-hunt="planSlot" data-slot="${i}">${roleIcon('beater', 16)} <span>${l('planRoute')} ${i + 1}${side}</span>
+        <small class="muted">${r.length >= 2 ? `${r.length} ${l('routePts')} · ${fmtDist(routeLen(r))}` : l('routeNone')}</small></button></li>`;
+    })
+    .join('');
+  const sel = e.slot != null && e.mode === 'route' ? rs[e.slot] : null;
+  return `<p class="small${e.mode !== 'route' ? ' hr-picking' : ''}">${hint}</p>
+    <div class="hr-planrow"><span>${l('planLines')}: <strong>${e.plan.lines ? l('planLinesOk') : l('planLinesNone')}</strong></span>
+      <button type="button" class="btn small ghost" data-hunt="planLines" aria-pressed="${e.mode === 'lines'}">${l(e.plan.lines ? 'planLinesRedraw' : 'planLinesDraw')}</button></div>
+    <label class="hr-planrow">${l('planCount')}: <select data-plan-n>${opts}</select></label>
+    ${chips ? `<div class="hr-planrow"><span class="small">${l('planVariants')}:</span> ${chips}</div>` : ''}
+    <p class="small muted">${info}</p>
+    <ul class="hr-beaters">${list}</ul>
+    <div class="h-actions">
+      ${sel ? `<button type="button" class="btn small ghost" data-hunt="planUndo"${sel.length ? '' : ' disabled'}>${ic('undo', 16)} ${l('routeUndo')}</button>
+      <button type="button" class="btn small ghost danger-text" data-hunt="planClear"${sel.length ? '' : ' disabled'}>${l('routeDel')}</button>` : ''}
+      ${manual ? `<button type="button" class="btn small ghost" data-hunt="planReset">${l(e.plan.lines ? 'planReset' : 'planDropVariant')}</button>` : ''}
+      <button type="button" class="btn small ghost" data-hunt="routeMeet" aria-pressed="${e.mode === 'meet'}">${ic('flag', 16)} ${l('routeMeet')}</button>
+      ${e.meet ? `<button type="button" class="btn small ghost" data-hunt="routeMeetClear">${l('routeMeetClear')}</button>` : ''}
+    </div>
+    <label class="hr-planrow small">${l('planGaps')}: <select data-plan-gaps>
+      <option value="middle"${e.plan.gaps === 'middle' ? ' selected' : ''}>${l('planGapsMiddle')}</option>
+      <option value="flanks"${e.plan.gaps === 'flanks' ? ' selected' : ''}>${l('planGapsFlanks')}</option></select></label>`;
+}
+
+/** The per-person tab: routes of beaters who signed up (or got them from the plan). */
+function renderPeopleRoutes(): string {
   const e = routeEdit!;
   const d = drives.find((x) => x.id === e.driveId);
   const bs = beaters();
@@ -3208,8 +3639,8 @@ function renderRouteEditor(): string {
         .join('')}</ul>`
     : `<p class="muted small">${l('routeNoBeaters')}</p>`;
   const sel = e.sel && e.mode === 'route' ? e.routes.get(e.sel) : null;
-  return `<div class="card hr-edit"><strong>${l('routesTitle')} · ${esc(d?.name ?? '')}</strong>
-    <p class="small${e.mode !== 'route' ? ' hr-picking' : ''}">${hint}</p>
+  void d;
+  return `<p class="small${e.mode !== 'route' ? ' hr-picking' : ''}">${hint}</p>
     ${list}
     <div class="h-actions">
       ${e.sel && e.mode === 'route' ? `<button type="button" class="btn small ghost" data-hunt="routeUndo"${sel?.length ? '' : ' disabled'}>${ic('undo', 16)} ${l('routeUndo')}</button>
@@ -3218,9 +3649,21 @@ function renderRouteEditor(): string {
       <button type="button" class="btn small ghost" data-hunt="routeMeet" aria-pressed="${e.mode === 'meet'}">${ic('flag', 16)} ${l('routeMeet')}</button>
       ${e.meet ? `<button type="button" class="btn small ghost" data-hunt="routeMeetClear">${l('routeMeetClear')}</button>` : ''}
     </div>
-    ${errorBox()}
-    <div class="h-actions"><button type="button" class="btn small" data-hunt="routeSave"${btnBusy()}>${l('routeSave')}</button>
-      <button type="button" class="btn small ghost" data-hunt="routeCancel">${l('cancel')}</button></div></div>`;
+`;
+}
+
+/** Where a new waypoint goes in a route: between the two points it lengthens the route least. */
+function insertAt(r: Route, p: Pt): number {
+  let best = 1;
+  let bd = Infinity;
+  for (let i = 0; i + 1 < r.length; i++) {
+    const d = distanceM(r[i], p) + distanceM(p, r[i + 1]) - distanceM(r[i], r[i + 1]);
+    if (d < bd) {
+      bd = d;
+      best = i + 1;
+    }
+  }
+  return best;
 }
 
 const routeLen = (r: Route) => r.slice(1).reduce((s, p, i) => s + distanceM(r[i], p), 0);
@@ -3451,13 +3894,120 @@ export function handleHuntClick(el: HTMLElement): boolean {
       formError = '';
       const copy = new Map([...(routes.get(d.id) ?? new Map<string, Route>())].map(([u, r]) => [u, r.map((p) => ({ ...p }))]));
       const bs = beaters();
-      routeEdit = { driveId: d.id, routes: copy, sel: bs[0]?.uid ?? null, mode: 'route', spread: [], spreadUids: new Set(bs.map((b) => b.uid)), meet: d.meet, dirty: false };
+      const src = routePlans.get(d.id);
+      const plan: RoutePlan = src
+        ? { lines: src.lines ? (src.lines.map((p) => ({ ...p })) as RoutePlan['lines']) : null, gaps: src.gaps, variants: new Map([...src.variants].map(([n, rs]) => [n, rs.map((r) => r.map((p) => ({ ...p })))])) }
+        : emptyPlan();
+      const present = presentBeaters(members ?? [], lastSeen(), now(), presence).length;
+      const n = Math.min(PLAN_LIMITS.maxBeaters, Math.max(1, present || [...plan.variants.keys()].sort((a, b) => a - b)[0] || Math.max(bs.length, 5)));
+      routeEdit = {
+        driveId: d.id,
+        tab: copy.size && !planUsable(src) ? 'people' : 'plan',
+        routes: copy,
+        sel: bs[0]?.uid ?? null,
+        mode: 'route',
+        spread: [],
+        spreadUids: new Set(bs.map((b) => b.uid)),
+        meet: d.meet,
+        dirty: false,
+        plan,
+        n,
+        slot: null,
+        planDirty: false,
+      };
       syncGuide();
       setTimeout(() => {
         drawCrew();
         document.querySelector('.hr-edit')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
       }, 0);
       break;
+    }
+    case 'routeTab':
+      if (routeEdit) {
+        routeEdit.tab = el.dataset.tab === 'people' ? 'people' : 'plan';
+        routeEdit.mode = 'route';
+        routeEdit.spread = [];
+        drawCrew();
+      }
+      break;
+    case 'planLines':
+      if (routeEdit) {
+        routeEdit.mode = routeEdit.mode === 'lines' ? 'route' : 'lines';
+        routeEdit.spread = [];
+        drawCrew();
+      }
+      break;
+    case 'planN':
+      if (routeEdit) {
+        routeEdit.n = Math.min(PLAN_LIMITS.maxBeaters, Math.max(1, Number(el.dataset.n) || 1));
+        routeEdit.slot = null;
+        routeEdit.mode = 'route';
+        drawCrew();
+      }
+      break;
+    case 'planSlot':
+      if (routeEdit) {
+        routeEdit.slot = Number(el.dataset.slot);
+        routeEdit.mode = 'route';
+        routeEdit.spread = [];
+        const r = planRoutes(routeEdit)[routeEdit.slot];
+        if (r?.length) hmap?.centerOnPoint(r[0].lat, r[0].lng);
+        drawCrew();
+      }
+      break;
+    case 'planUndo':
+    case 'planClear':
+      if (routeEdit && routeEdit.slot != null) {
+        const v = ensureVariant(routeEdit);
+        const r = v?.[routeEdit.slot];
+        if (r) {
+          if (action === 'planUndo') r.pop();
+          else r.length = 0;
+          routeEdit.planDirty = true;
+        }
+        drawCrew();
+      }
+      break;
+    case 'planReset':
+      if (routeEdit) {
+        routeEdit.plan.variants.delete(routeEdit.n);
+        routeEdit.planDirty = true;
+        drawCrew();
+      }
+      break;
+    case 'dogSet':
+      if (id && uid) {
+        const p = (members ?? []).find((x) => x.uid === uid);
+        if (p) run((be) => be.setDog(id, uid, !p.dog));
+      }
+      return true;
+    case 'hereToggle':
+      if (id) {
+        const me = (members ?? []).find((x) => x.uid === myUid());
+        run((be) => be.setHere(id, !me?.here));
+      }
+      return true;
+    case 'assignSave': {
+      const d = upcoming();
+      if (id && d)
+        run(async (be) => {
+          if (await saveAssign(be, id, d.id)) showToast(l('asDone'));
+        });
+      return true;
+    }
+    case 'assignUnpin': {
+      const d = upcoming();
+      if (d) assignPins.set(d.id, new Map());
+      break;
+    }
+    case 'assignJoin': {
+      const d = upcoming();
+      const slot = Number(el.dataset.slot);
+      const base = Number(el.dataset.base);
+      const set = d ? routeSet(routePlans.get(d.id), base) : null;
+      const r = set?.routes[slot];
+      if (id && d && uid && r) run((be) => be.addToRoute(id, d.id, uid, { base, slot, pin: true }, r));
+      return true;
     }
     case 'routeSel':
       if (routeEdit) {
@@ -3517,8 +4067,12 @@ export function handleHuntClick(el: HTMLElement): boolean {
       if (!e || !id) break;
       const d = drives.find((x) => x.id === e.driveId);
       run(async (be) => {
+        if (e.planDirty) {
+          for (const [n, rs] of e.plan.variants) if (!rs.some((r) => r.length >= 2)) e.plan.variants.delete(n);
+          await be.saveRoutePlan(id, e.driveId, planUsable(e.plan) ? e.plan : null);
+        }
         const keep = new Map([...e.routes].filter(([, r]) => r.length >= 2));
-        await be.saveRoutes(id, e.driveId, keep);
+        if (e.dirty || !e.planDirty) await be.saveRoutes(id, e.driveId, keep);
         const before = d?.meet ? `${d.meet.lat},${d.meet.lng}` : '';
         const after = e.meet ? `${e.meet.lat},${e.meet.lng}` : '';
         if (before !== after) await be.setDriveMeet(id, e.driveId, e.meet);
@@ -3853,7 +4407,13 @@ export function handleHuntClick(el: HTMLElement): boolean {
       if (id) run((be) => be.deleteDrive(id, el.dataset.drive!));
       return true;
     case 'driveStart':
-      if (id) run((be) => be.startDrive(id, el.dataset.drive!, drives.filter((d) => driveState(d) === 'active').map((d) => d.id)));
+      if (id)
+        run(async (be) => {
+          const dId = el.dataset.drive!;
+          // The planned routes go to the beaters who are here, unless the leader saved them already.
+          if (!assignments.get(dId)?.size && planUsable(routePlans.get(dId))) await saveAssign(be, id, dId);
+          await be.startDrive(id, dId, drives.filter((d) => driveState(d) === 'active').map((d) => d.id));
+        });
       return true;
     case 'driveEnd':
       if (id) run((be) => be.endDrive(id, el.dataset.drive!));
@@ -4048,7 +4608,7 @@ export function handleHuntInput(el: HTMLElement): boolean {
   const form = el.dataset.huntField;
   if (!form) return false;
   const input = el as HTMLInputElement;
-  draft.set(`${form}.${input.name}`, input.value);
+  draft.set(`${form}.${input.name}`, input.type === 'checkbox' ? (input.checked ? 'on' : '') : input.value);
   if (input.name === 'districtQ' || (form === 'transport' && input.name.endsWith('Sel'))) rerender();
   return true;
 }
@@ -4219,6 +4779,7 @@ export function handleHuntSubmit(form: HTMLFormElement): boolean {
     if (!validPersonName(v('pname'))) badFields.add('pname');
     if (!token && !v('pass').trim()) badFields.add('pass');
     const phone = v('phone').trim() ? cleanPhone(v('phone')) : null;
+    const dog = role === 'beater' && !!form.querySelector<HTMLInputElement>('input[name="dog"]')?.checked;
     if (v('phone').trim() && !phone) badFields.add('phone');
     if (badFields.size) {
       formError = !validPersonName(v('pname')) ? l('errPersonName') : badFields.has('phone') ? l('errPhone') : l('errPass');
@@ -4229,7 +4790,7 @@ export function handleHuntSubmit(form: HTMLFormElement): boolean {
     run(async (be) => {
       if (token) {
         try {
-          await be.joinByInvite(id, v('pname'), role, token, phone);
+          await be.joinByInvite(id, v('pname'), role, token, phone, dog);
         } catch (e) {
           // Expired or revoked: fall back to the passphrase form.
           if (e instanceof HuntError && e.code === 'denied') {
@@ -4241,7 +4802,7 @@ export function handleHuntSubmit(form: HTMLFormElement): boolean {
         guestToken = null;
         // Drop the token from the address bar, so it is not shared further by accident.
         go(id);
-      } else await be.join(id, v('pname'), role, v('pass'), phone);
+      } else await be.join(id, v('pname'), role, v('pass'), phone, dog);
       clearDraft('join');
       mine = { s: 'idle' };
       // The participant list was unreadable before joining; listen again now that we are in.
